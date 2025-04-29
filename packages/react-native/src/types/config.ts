@@ -104,10 +104,6 @@ export interface TProjectStyling extends TBaseStyling {
   allowStyleOverwrite: boolean;
 }
 
-export interface TSurveyStyling extends TBaseStyling {
-  overwriteThemeStyling?: boolean | null;
-}
-
 export interface TWebViewOnMessageData {
   onFinished?: boolean | null;
   onDisplay?: boolean | null;

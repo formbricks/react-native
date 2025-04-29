@@ -1,6 +1,9 @@
 // utils.test.ts
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { mockProjectId, mockSurveyId } from "@/lib/common/tests/__mocks__/config.mock";
+import {
+  mockProjectId,
+  mockSurveyId,
+} from "@/lib/common/tests/__mocks__/config.mock";
 import {
   diffInDays,
   filterSurveys,
@@ -13,10 +16,9 @@ import {
 import type {
   TEnvironmentState,
   TEnvironmentStateProject,
-  TEnvironmentStateSurvey,
-  TSurveyStyling,
   TUserState,
 } from "@/types/config";
+import { TSurvey } from "@/types/survey";
 
 const mockSurveyId1 = "e3kxlpnzmdp84op9qzxl9olj";
 const mockSurveyId2 = "qo9rwjmms42hoy3k85fp8vgu";
@@ -91,7 +93,7 @@ describe("utils.ts", () => {
     // We'll create a minimal environment state
     let environment: TEnvironmentState;
     let user: TUserState;
-    const baseSurvey: Partial<TEnvironmentStateSurvey> = {
+    const baseSurvey: Partial<TSurvey> = {
       id: mockSurveyId,
       displayOption: "displayOnce",
       displayLimit: 1,
@@ -133,7 +135,11 @@ describe("utils.ts", () => {
       user.data.userId = "user_abc";
       // environment has a single survey
       environment.data.surveys = [
-        { ...baseSurvey, id: mockSurveyId1, segment: { id: mockSegmentId1 } } as TEnvironmentStateSurvey,
+        {
+          ...baseSurvey,
+          id: mockSurveyId1,
+          segment: { id: mockSegmentId1 },
+        } as TSurvey,
       ];
 
       const result = filterSurveys(environment, user);
@@ -143,7 +149,11 @@ describe("utils.ts", () => {
     test("returns surveys if user has no userId but displayOnce and no displays yet", () => {
       // userId is null => it won't segment filter
       environment.data.surveys = [
-        { ...baseSurvey, id: mockSurveyId1, displayOption: "displayOnce" } as TEnvironmentStateSurvey,
+        {
+          ...baseSurvey,
+          id: mockSurveyId1,
+          displayOption: "displayOnce",
+        } as TSurvey,
       ];
 
       const result = filterSurveys(environment, user);
@@ -153,7 +163,11 @@ describe("utils.ts", () => {
 
     test("skips surveys that already displayed if displayOnce is used", () => {
       environment.data.surveys = [
-        { ...baseSurvey, id: mockSurveyId1, displayOption: "displayOnce" } as TEnvironmentStateSurvey,
+        {
+          ...baseSurvey,
+          id: mockSurveyId1,
+          displayOption: "displayOnce",
+        } as TSurvey,
       ];
       user.data.displays = [{ surveyId: mockSurveyId1, createdAt: new Date() }];
 
@@ -163,7 +177,11 @@ describe("utils.ts", () => {
 
     test("skips surveys if user responded to them and displayOption=displayMultiple", () => {
       environment.data.surveys = [
-        { ...baseSurvey, id: mockSurveyId1, displayOption: "displayMultiple" } as TEnvironmentStateSurvey,
+        {
+          ...baseSurvey,
+          id: mockSurveyId1,
+          displayOption: "displayMultiple",
+        } as TSurvey,
       ];
       user.data.responses = [mockSurveyId1];
 
@@ -178,7 +196,7 @@ describe("utils.ts", () => {
           id: mockSurveyId1,
           displayOption: "displaySome",
           displayLimit: 2,
-        } as TEnvironmentStateSurvey,
+        } as TSurvey,
       ];
       // user has 1 display of s1
       user.data.displays = [{ surveyId: mockSurveyId1, createdAt: new Date() }];
@@ -191,7 +209,11 @@ describe("utils.ts", () => {
     test("filters out surveys if recontactDays not met", () => {
       // Suppose survey uses project fallback (7 days)
       environment.data.surveys = [
-        { ...baseSurvey, id: mockSurveyId1, displayOption: "displayOnce" } as TEnvironmentStateSurvey,
+        {
+          ...baseSurvey,
+          id: mockSurveyId1,
+          displayOption: "displayOnce",
+        } as TSurvey,
       ];
       // user last displayAt is only 3 days ago
       user.data.lastDisplayAt = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
@@ -210,7 +232,7 @@ describe("utils.ts", () => {
           id: mockSurveyId1,
           displayOption: "respondMultiple",
           recontactDays: null,
-        } as TEnvironmentStateSurvey,
+        } as TSurvey,
       ];
       const result = filterSurveys(environment, user);
       expect(result).toHaveLength(1);
@@ -225,13 +247,13 @@ describe("utils.ts", () => {
           id: mockSurveyId1,
           segment: { id: mockSegmentId1 },
           displayOption: "respondMultiple",
-        } as TEnvironmentStateSurvey,
+        } as TSurvey,
         {
           ...baseSurvey,
           id: mockSurveyId2,
           segment: { id: mockSegmentId2 },
           displayOption: "respondMultiple",
-        } as TEnvironmentStateSurvey,
+        } as TSurvey,
       ];
 
       const result = filterSurveys(environment, user);
@@ -254,8 +276,8 @@ describe("utils.ts", () => {
         styling: {
           overwriteThemeStyling: true,
           brandColor: { light: "#000" },
-        } as TSurveyStyling,
-      } as TEnvironmentStateSurvey;
+        } as TSurvey["styling"],
+      } as TSurvey;
 
       const result = getStyling(project, survey);
       // should get project styling
@@ -271,8 +293,8 @@ describe("utils.ts", () => {
         styling: {
           overwriteThemeStyling: false,
           brandColor: { light: "#000" },
-        } as TSurveyStyling,
-      } as TEnvironmentStateSurvey;
+        } as TSurvey["styling"],
+      } as TSurvey;
 
       const result = getStyling(project, survey);
       // should get project styling still
@@ -288,8 +310,8 @@ describe("utils.ts", () => {
         styling: {
           overwriteThemeStyling: true,
           brandColor: { light: "#000" },
-        } as TSurveyStyling,
-      } as TEnvironmentStateSurvey;
+        } as TSurvey["styling"],
+      } as TSurvey;
 
       const result = getStyling(project, survey);
       expect(result).toEqual(survey.styling);
@@ -314,7 +336,7 @@ describe("utils.ts", () => {
             enabled: true,
           },
         ],
-      } as unknown as TEnvironmentStateSurvey;
+      } as unknown as TSurvey;
       expect(getDefaultLanguageCode(survey)).toBe("fr");
     });
 
@@ -324,7 +346,7 @@ describe("utils.ts", () => {
           { language: { code: "en" }, default: false, enabled: true },
           { language: { code: "fr" }, default: false, enabled: true },
         ],
-      } as unknown as TEnvironmentStateSurvey;
+      } as unknown as TSurvey;
       expect(getDefaultLanguageCode(survey)).toBeUndefined();
     });
   });
@@ -336,7 +358,7 @@ describe("utils.ts", () => {
     test("returns 'default' if no language param is passed", () => {
       const survey = {
         languages: [{ language: { code: "en" }, default: true, enabled: true }],
-      } as unknown as TEnvironmentStateSurvey;
+      } as unknown as TSurvey;
       const code = getLanguageCode(survey, undefined);
       expect(code).toBe("default");
     });
@@ -347,7 +369,7 @@ describe("utils.ts", () => {
           { language: { code: "en" }, default: true, enabled: true },
           { language: { code: "fr" }, default: false, enabled: true },
         ],
-      } as unknown as TEnvironmentStateSurvey;
+      } as unknown as TSurvey;
       const code = getLanguageCode(survey, "en");
       expect(code).toBe("default");
     });
@@ -358,7 +380,7 @@ describe("utils.ts", () => {
           { language: { code: "en" }, default: true, enabled: true },
           { language: { code: "fr" }, default: false, enabled: false },
         ],
-      } as unknown as TEnvironmentStateSurvey;
+      } as unknown as TSurvey;
       const code = getLanguageCode(survey, "fr");
       expect(code).toBeUndefined();
     });
@@ -366,10 +388,18 @@ describe("utils.ts", () => {
     test("returns the language code if found and enabled", () => {
       const survey = {
         languages: [
-          { language: { code: "en", alias: "English" }, default: true, enabled: true },
-          { language: { code: "fr", alias: "fr-FR" }, default: false, enabled: true },
+          {
+            language: { code: "en", alias: "English" },
+            default: true,
+            enabled: true,
+          },
+          {
+            language: { code: "fr", alias: "fr-FR" },
+            default: false,
+            enabled: true,
+          },
         ],
-      } as unknown as TEnvironmentStateSurvey;
+      } as unknown as TSurvey;
       expect(getLanguageCode(survey, "fr")).toBe("fr");
       expect(getLanguageCode(survey, "fr-FR")).toBe("fr");
     });

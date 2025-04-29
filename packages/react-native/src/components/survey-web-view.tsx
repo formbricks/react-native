@@ -3,8 +3,8 @@ import { RNConfig } from "@/lib/common/config";
 import { Logger } from "@/lib/common/logger";
 import { filterSurveys, getLanguageCode, getStyling } from "@/lib/common/utils";
 import { SurveyStore } from "@/lib/survey/store";
-import { type TEnvironmentStateSurvey, type TUserState, ZJsRNWebViewOnMessageData } from "@/types/config";
-import type { SurveyContainerProps } from "@/types/survey";
+import { type TUserState, ZJsRNWebViewOnMessageData } from "@/types/config";
+import type { TSurvey, SurveyContainerProps } from "@/types/survey";
 import React, { type JSX, useEffect, useRef, useState } from "react";
 import { Modal } from "react-native";
 import { WebView, type WebViewMessageEvent } from "react-native-webview";
@@ -16,10 +16,12 @@ logger.configure({ logLevel: "debug" });
 const surveyStore = SurveyStore.getInstance();
 
 interface SurveyWebViewProps {
-  survey: TEnvironmentStateSurvey;
+  survey: TSurvey;
 }
 
-export function SurveyWebView({ survey }: SurveyWebViewProps): JSX.Element | undefined {
+export function SurveyWebView({
+  survey,
+}: SurveyWebViewProps): JSX.Element | undefined {
   const webViewRef = useRef(null);
   const [isSurveyRunning, setIsSurveyRunning] = useState(false);
   const [showSurvey, setShowSurvey] = useState(false);
@@ -36,7 +38,9 @@ export function SurveyWebView({ survey }: SurveyWebViewProps): JSX.Element | und
     if (isMultiLanguageSurvey) {
       const displayLanguage = getLanguageCode(survey, language);
       if (!displayLanguage) {
-        logger.debug(`Survey "${survey.name}" is not available in specified language.`);
+        logger.debug(
+          `Survey "${survey.name}" is not available in specified language.`
+        );
         setIsSurveyRunning(false);
         setShowSurvey(false);
         surveyStore.resetSurvey();
@@ -56,7 +60,9 @@ export function SurveyWebView({ survey }: SurveyWebViewProps): JSX.Element | und
     }
 
     if (survey.delay) {
-      logger.debug(`Delaying survey "${survey.name}" by ${String(survey.delay)} seconds`);
+      logger.debug(
+        `Delaying survey "${survey.name}" by ${String(survey.delay)} seconds`
+      );
       const timerId = setTimeout(() => {
         setShowSurvey(true);
       }, survey.delay * 1000);
@@ -70,7 +76,8 @@ export function SurveyWebView({ survey }: SurveyWebViewProps): JSX.Element | und
   }, [survey.delay, isSurveyRunning, survey.name]);
 
   const onCloseSurvey = (): void => {
-    const { environment: environmentState, user: personState } = appConfig.get();
+    const { environment: environmentState, user: personState } =
+      appConfig.get();
     const filteredSurveys = filterSurveys(environmentState, personState);
 
     appConfig.update({
@@ -84,9 +91,12 @@ export function SurveyWebView({ survey }: SurveyWebViewProps): JSX.Element | und
     setShowSurvey(false);
   };
 
-  const surveyPlacement = survey.projectOverwrites?.placement ?? project.placement;
-  const clickOutside = survey.projectOverwrites?.clickOutsideClose ?? project.clickOutsideClose;
-  const darkOverlay = survey.projectOverwrites?.darkOverlay ?? project.darkOverlay;
+  const surveyPlacement =
+    survey.projectOverwrites?.placement ?? project.placement;
+  const clickOutside =
+    survey.projectOverwrites?.clickOutsideClose ?? project.clickOutsideClose;
+  const darkOverlay =
+    survey.projectOverwrites?.darkOverlay ?? project.darkOverlay;
 
   return (
     <Modal
@@ -96,7 +106,8 @@ export function SurveyWebView({ survey }: SurveyWebViewProps): JSX.Element | und
       onRequestClose={() => {
         setShowSurvey(false);
         setIsSurveyRunning(false);
-      }}>
+      }}
+    >
       <WebView
         ref={webViewRef}
         originWhitelist={["*"]}
@@ -112,7 +123,8 @@ export function SurveyWebView({ survey }: SurveyWebViewProps): JSX.Element | und
             appUrl: appConfig.get().appUrl,
             clickOutside: surveyPlacement === "center" ? clickOutside : true,
             darkOverlay,
-            getSetIsResponseSendingFinished: (_f: (value: boolean) => void) => undefined,
+            getSetIsResponseSendingFinished: (_f: (value: boolean) => void) =>
+              undefined,
             isWebEnvironment: false,
           }),
         }}
@@ -136,20 +148,27 @@ export function SurveyWebView({ survey }: SurveyWebViewProps): JSX.Element | und
         onMessage={(event: WebViewMessageEvent) => {
           try {
             const { data } = event.nativeEvent;
-            const unvalidatedMessage = JSON.parse(data) as { type: string; data: unknown };
+            const unvalidatedMessage = JSON.parse(data) as {
+              type: string;
+              data: unknown;
+            };
 
             // debugger
             if (unvalidatedMessage.type === "Console") {
-              console.info(`[Console] ${JSON.stringify(unvalidatedMessage.data)}`);
+              console.info(
+                `[Console] ${JSON.stringify(unvalidatedMessage.data)}`
+              );
             }
 
-            const validatedMessage = ZJsRNWebViewOnMessageData.safeParse(unvalidatedMessage);
+            const validatedMessage =
+              ZJsRNWebViewOnMessageData.safeParse(unvalidatedMessage);
             if (!validatedMessage.success) {
               logger.error("Error parsing message from WebView.");
               return;
             }
 
-            const { onDisplayCreated, onResponseCreated, onClose } = validatedMessage.data;
+            const { onDisplayCreated, onResponseCreated, onClose } =
+              validatedMessage.data;
             if (onDisplayCreated) {
               const existingDisplays = appConfig.get().user.data.displays;
               const newDisplay = { surveyId: survey.id, createdAt: new Date() };
@@ -166,7 +185,10 @@ export function SurveyWebView({ survey }: SurveyWebViewProps): JSX.Element | und
                 },
               };
 
-              const filteredSurveys = filterSurveys(previousConfig.environment, updatedPersonState);
+              const filteredSurveys = filterSurveys(
+                previousConfig.environment,
+                updatedPersonState
+              );
 
               appConfig.update({
                 ...previousConfig,
@@ -185,7 +207,10 @@ export function SurveyWebView({ survey }: SurveyWebViewProps): JSX.Element | und
                 },
               };
 
-              const filteredSurveys = filterSurveys(appConfig.get().environment, newPersonState);
+              const filteredSurveys = filterSurveys(
+                appConfig.get().environment,
+                newPersonState
+              );
 
               appConfig.update({
                 ...appConfig.get(),
@@ -206,7 +231,9 @@ export function SurveyWebView({ survey }: SurveyWebViewProps): JSX.Element | und
   );
 }
 
-const renderHtml = (options: Partial<SurveyContainerProps> & { appUrl?: string }): string => {
+const renderHtml = (
+  options: Partial<SurveyContainerProps> & { appUrl?: string }
+): string => {
   return `
   <!doctype html>
   <html>

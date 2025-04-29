@@ -3,8 +3,8 @@ import { Logger } from "@/lib/common/logger";
 import { shouldDisplayBasedOnPercentage } from "@/lib/common/utils";
 import { track, trackAction, triggerSurvey } from "@/lib/survey/action";
 import { SurveyStore } from "@/lib/survey/store";
-import { type TEnvironmentStateSurvey } from "@/types/config";
 import { type Mock, beforeEach, describe, expect, test, vi } from "vitest";
+import type { TSurvey } from "@/types/survey";
 
 vi.mock("@/lib/common/config", () => ({
   RNConfig: {
@@ -75,16 +75,20 @@ describe("survey/action.ts", () => {
 
     // Mock instances
     getInstanceRn.mockReturnValue(mockAppConfig as unknown as RNConfig);
-    getInstanceSurveyStore.mockReturnValue(mockSurveyStore as unknown as SurveyStore);
+    getInstanceSurveyStore.mockReturnValue(
+      mockSurveyStore as unknown as SurveyStore
+    );
     getInstanceLogger.mockReturnValue(mockLogger as unknown as Logger);
   });
 
   describe("triggerSurvey", () => {
     test("does not trigger survey if displayPercentage criteria is not met", () => {
-      const shouldDisplayBasedOnPercentageMock = vi.mocked(shouldDisplayBasedOnPercentage);
+      const shouldDisplayBasedOnPercentageMock = vi.mocked(
+        shouldDisplayBasedOnPercentage
+      );
       shouldDisplayBasedOnPercentageMock.mockReturnValueOnce(false);
 
-      triggerSurvey(mockSurvey as unknown as TEnvironmentStateSurvey);
+      triggerSurvey(mockSurvey as unknown as TSurvey);
 
       // Ensure survey is not set
       expect(mockSurveyStore.setSurvey).not.toHaveBeenCalled();
@@ -95,10 +99,12 @@ describe("survey/action.ts", () => {
 
     test("triggers survey if displayPercentage criteria is met", () => {
       // Mock `shouldDisplayBasedOnPercentage` to return true
-      const shouldDisplayBasedOnPercentageMock = vi.mocked(shouldDisplayBasedOnPercentage);
+      const shouldDisplayBasedOnPercentageMock = vi.mocked(
+        shouldDisplayBasedOnPercentage
+      );
       shouldDisplayBasedOnPercentageMock.mockReturnValueOnce(true);
 
-      triggerSurvey(mockSurvey as unknown as TEnvironmentStateSurvey);
+      triggerSurvey(mockSurvey as unknown as TSurvey);
 
       // Ensure survey is set
       expect(mockSurveyStore.setSurvey).toHaveBeenCalledWith(mockSurvey);
@@ -132,13 +138,17 @@ describe("survey/action.ts", () => {
 
       // Ensure no surveys are triggered
       expect(mockSurveyStore.setSurvey).not.toHaveBeenCalled();
-      expect(mockLogger.debug).toHaveBeenCalledWith("No active surveys to display");
+      expect(mockLogger.debug).toHaveBeenCalledWith(
+        "No active surveys to display"
+      );
     });
 
     test("logs tracked action name", () => {
       trackAction("testAction");
 
-      expect(mockLogger.debug).toHaveBeenCalledWith('Formbricks: Action "testAction" tracked');
+      expect(mockLogger.debug).toHaveBeenCalledWith(
+        'Formbricks: Action "testAction" tracked'
+      );
     });
   });
 

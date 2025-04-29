@@ -2,23 +2,33 @@ import { RNConfig } from "@/lib/common/config";
 import { Logger } from "@/lib/common/logger";
 import { shouldDisplayBasedOnPercentage } from "@/lib/common/utils";
 import { SurveyStore } from "@/lib/survey/store";
-import type { TEnvironmentStateSurvey } from "@/types/config";
-import { type InvalidCodeError, type NetworkError, type Result, err, okVoid } from "@/types/error";
+import type { TSurvey } from "@/types/survey";
+import {
+  type InvalidCodeError,
+  type NetworkError,
+  type Result,
+  err,
+  okVoid,
+} from "@/types/error";
 import { fetch } from "@react-native-community/netinfo";
 
 /**
  * Triggers the display of a survey if it meets the display percentage criteria
  * @param survey - The survey configuration to potentially display
  */
-export const triggerSurvey = (survey: TEnvironmentStateSurvey): void => {
+export const triggerSurvey = (survey: TSurvey): void => {
   const surveyStore = SurveyStore.getInstance();
   const logger = Logger.getInstance();
 
   // Check if the survey should be displayed based on displayPercentage
   if (survey.displayPercentage) {
-    const shouldDisplaySurvey = shouldDisplayBasedOnPercentage(survey.displayPercentage);
+    const shouldDisplaySurvey = shouldDisplayBasedOnPercentage(
+      survey.displayPercentage
+    );
     if (!shouldDisplaySurvey) {
-      logger.debug(`Survey display of "${survey.name}" skipped based on displayPercentage.`);
+      logger.debug(
+        `Survey display of "${survey.name}" skipped based on displayPercentage.`
+      );
       return; // skip displaying the survey
     }
   }
@@ -32,7 +42,10 @@ export const triggerSurvey = (survey: TEnvironmentStateSurvey): void => {
  * @param alias - Optional alias for the action name
  * @returns Result indicating success or network error
  */
-export const trackAction = (name: string, alias?: string): Result<void, NetworkError> => {
+export const trackAction = (
+  name: string,
+  alias?: string
+): Result<void, NetworkError> => {
   const logger = Logger.getInstance();
   const appConfig = RNConfig.getInstance();
 
@@ -79,8 +92,10 @@ export const track = async (
       return err({
         code: "network_error",
         status: 500,
-        message: "No internet connection. Please check your connection and try again.",
-        responseMessage: "No internet connection. Please check your connection and try again.",
+        message:
+          "No internet connection. Please check your connection and try again.",
+        responseMessage:
+          "No internet connection. Please check your connection and try again.",
         url: new URL(`${appConfig.get().appUrl}/js/surveys.umd.cjs`),
       });
     }
@@ -91,7 +106,9 @@ export const track = async (
       },
     } = appConfig.get();
 
-    const codeActionClasses = actionClasses.filter((action) => action.type === "code");
+    const codeActionClasses = actionClasses.filter(
+      (action) => action.type === "code"
+    );
     const actionClass = codeActionClasses.find((action) => action.key === code);
 
     if (!actionClass) {

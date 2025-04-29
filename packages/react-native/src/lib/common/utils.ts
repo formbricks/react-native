@@ -1,12 +1,11 @@
 import type {
   TEnvironmentState,
   TEnvironmentStateProject,
-  TEnvironmentStateSurvey,
   TProjectStyling,
-  TSurveyStyling,
   TUserState,
 } from "@/types/config";
 import type { Result } from "@/types/error";
+import type { TSurvey } from "@/types/survey";
 
 // Helper function to calculate difference in days between two dates
 export const diffInDays = (date1: Date, date2: Date): number => {
@@ -41,19 +40,25 @@ export const wrapThrowsAsync =
 export const filterSurveys = (
   environmentState: TEnvironmentState,
   userState: TUserState
-): TEnvironmentStateSurvey[] => {
+): TSurvey[] => {
   const { project, surveys } = environmentState.data;
-  const { displays, responses, lastDisplayAt, segments, userId } = userState.data;
+  const { displays, responses, lastDisplayAt, segments, userId } =
+    userState.data;
 
   // Function to filter surveys based on displayOption criteria
-  let filteredSurveys = surveys.filter((survey: TEnvironmentStateSurvey) => {
+  let filteredSurveys = surveys.filter((survey: TSurvey) => {
     switch (survey.displayOption) {
       case "respondMultiple":
         return true;
       case "displayOnce":
-        return displays.filter((display) => display.surveyId === survey.id).length === 0;
+        return (
+          displays.filter((display) => display.surveyId === survey.id)
+            .length === 0
+        );
       case "displayMultiple":
-        return responses.filter((surveyId) => surveyId === survey.id).length === 0;
+        return (
+          responses.filter((surveyId) => surveyId === survey.id).length === 0
+        );
 
       case "displaySome":
         if (survey.displayLimit === null) {
@@ -66,7 +71,10 @@ export const filterSurveys = (
         }
 
         // Otherwise, check if displays length is less than displayLimit
-        return displays.filter((display) => display.surveyId === survey.id).length < survey.displayLimit;
+        return (
+          displays.filter((display) => display.surveyId === survey.id).length <
+          survey.displayLimit
+        );
 
       default:
         throw Error("Invalid displayOption");
@@ -84,12 +92,16 @@ export const filterSurveys = (
     // The previous approach checked the last display for each survey which is why we still have a surveyId in the displays array.
     // TODO: Remove the surveyId from the displays array
     if (survey.recontactDays !== null) {
-      return diffInDays(new Date(), new Date(lastDisplayAt)) >= survey.recontactDays;
+      return (
+        diffInDays(new Date(), new Date(lastDisplayAt)) >= survey.recontactDays
+      );
     }
 
     // use recontactDays of the project if survey does not have recontactDays
     if (project.recontactDays) {
-      return diffInDays(new Date(), new Date(lastDisplayAt)) >= project.recontactDays;
+      return (
+        diffInDays(new Date(), new Date(lastDisplayAt)) >= project.recontactDays
+      );
     }
 
     // if no recontactDays is set, show the survey
@@ -113,8 +125,8 @@ export const filterSurveys = (
 
 export const getStyling = (
   project: TEnvironmentStateProject,
-  survey: TEnvironmentStateSurvey
-): TProjectStyling | TSurveyStyling => {
+  survey: TSurvey
+): TProjectStyling | TSurvey["styling"] => {
   // allow style overwrite is enabled from the project
   if (project.styling.allowStyleOverwrite) {
     // survey style overwrite is disabled
@@ -130,15 +142,20 @@ export const getStyling = (
   return project.styling;
 };
 
-export const getDefaultLanguageCode = (survey: TEnvironmentStateSurvey): string | undefined => {
+export const getDefaultLanguageCode = (survey: TSurvey): string | undefined => {
   const defaultSurveyLanguage = survey.languages.find((surveyLanguage) => {
     return surveyLanguage.default;
   });
   if (defaultSurveyLanguage) return defaultSurveyLanguage.language.code;
 };
 
-export const getLanguageCode = (survey: TEnvironmentStateSurvey, language?: string): string | undefined => {
-  const availableLanguageCodes = survey.languages.map((surveyLanguage) => surveyLanguage.language.code);
+export const getLanguageCode = (
+  survey: TSurvey,
+  language?: string
+): string | undefined => {
+  const availableLanguageCodes = survey.languages.map(
+    (surveyLanguage) => surveyLanguage.language.code
+  );
   if (!language) return "default";
 
   const selectedLanguage = survey.languages.find((surveyLanguage) => {
@@ -160,7 +177,9 @@ export const getLanguageCode = (survey: TEnvironmentStateSurvey, language?: stri
   return selectedLanguage.language.code;
 };
 
-export const shouldDisplayBasedOnPercentage = (displayPercentage: number): boolean => {
+export const shouldDisplayBasedOnPercentage = (
+  displayPercentage: number
+): boolean => {
   const randomNum = Math.floor(Math.random() * 10000) / 100;
   return randomNum <= displayPercentage;
 };

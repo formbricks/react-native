@@ -1,6 +1,9 @@
-import { mockSurveyId, mockSurveyName } from "@/lib/survey/tests/__mocks__/store.mock";
+import {
+  mockSurveyId,
+  mockSurveyName,
+} from "@/lib/survey/tests/__mocks__/store.mock";
 import { SurveyStore } from "@/lib/survey/store";
-import type { TEnvironmentStateSurvey } from "@/types/config";
+import type { TSurvey } from "@/types/survey";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 describe("SurveyStore", () => {
@@ -27,10 +30,10 @@ describe("SurveyStore", () => {
     });
 
     test("returns current survey when set", () => {
-      const mockSurvey: TEnvironmentStateSurvey = {
+      const mockSurvey: TSurvey = {
         id: mockSurveyId,
         name: mockSurveyName,
-      } as TEnvironmentStateSurvey;
+      } as TSurvey;
 
       store.setSurvey(mockSurvey);
       expect(store.getSurvey()).toBe(mockSurvey);
@@ -40,10 +43,10 @@ describe("SurveyStore", () => {
   describe("setSurvey", () => {
     test("updates survey and notifies listeners when survey changes", () => {
       const listener = vi.fn();
-      const mockSurvey: TEnvironmentStateSurvey = {
+      const mockSurvey: TSurvey = {
         id: mockSurveyId,
         name: mockSurveyName,
-      } as TEnvironmentStateSurvey;
+      } as TSurvey;
 
       store.subscribe(listener);
       store.setSurvey(mockSurvey);
@@ -54,10 +57,10 @@ describe("SurveyStore", () => {
 
     test("does not notify listeners when setting same survey", () => {
       const listener = vi.fn();
-      const mockSurvey: TEnvironmentStateSurvey = {
+      const mockSurvey: TSurvey = {
         id: mockSurveyId,
         name: mockSurveyName,
-      } as TEnvironmentStateSurvey;
+      } as TSurvey;
 
       store.setSurvey(mockSurvey);
       store.subscribe(listener);
@@ -70,10 +73,10 @@ describe("SurveyStore", () => {
   describe("resetSurvey", () => {
     test("resets survey to null and notifies listeners", () => {
       const listener = vi.fn();
-      const mockSurvey: TEnvironmentStateSurvey = {
+      const mockSurvey: TSurvey = {
         id: mockSurveyId,
         name: mockSurveyName,
-      } as TEnvironmentStateSurvey;
+      } as TSurvey;
 
       store.setSurvey(mockSurvey);
       store.subscribe(listener);
@@ -96,27 +99,30 @@ describe("SurveyStore", () => {
   describe("subscribe", () => {
     test("adds listener and returns unsubscribe function", () => {
       const listener = vi.fn();
-      const mockSurvey: TEnvironmentStateSurvey = {
+      const mockSurvey: TSurvey = {
         id: mockSurveyId,
         name: mockSurveyName,
-      } as TEnvironmentStateSurvey;
+      } as TSurvey;
 
       const unsubscribe = store.subscribe(listener);
       store.setSurvey(mockSurvey);
       expect(listener).toHaveBeenCalledTimes(1);
 
       unsubscribe();
-      store.setSurvey({ ...mockSurvey, name: "Updated Survey" } as TEnvironmentStateSurvey);
+      store.setSurvey({
+        ...mockSurvey,
+        name: "Updated Survey",
+      } as TSurvey);
       expect(listener).toHaveBeenCalledTimes(1); // Still 1, not called after unsubscribe
     });
 
     test("multiple listeners receive updates", () => {
       const listener1 = vi.fn();
       const listener2 = vi.fn();
-      const mockSurvey: TEnvironmentStateSurvey = {
+      const mockSurvey: TSurvey = {
         id: mockSurveyId,
         name: mockSurveyName,
-      } as TEnvironmentStateSurvey;
+      } as TSurvey;
 
       store.subscribe(listener1);
       store.subscribe(listener2);

@@ -1,4 +1,4 @@
-import type { TProjectStyling, TSurveyStyling } from "@/types/config";
+import type { TProjectStyling } from "@/types/config";
 import type { TResponseData, TResponseUpdate } from "@/types/response";
 import type { TFileUploadParams, TUploadFileConfig } from "@/types/storage";
 
@@ -17,7 +17,7 @@ export type TJsFileUploadParams = {
 
 export interface SurveyBaseProps {
   survey: TSurvey;
-  styling: TSurveyStyling | TProjectStyling;
+  styling: TSurvey["styling"] | TProjectStyling;
   isBrandingEnabled: boolean;
   getSetIsError?: (getSetError: (value: boolean) => void) => void;
   getSetIsResponseSendingFinished?: (
@@ -231,7 +231,13 @@ export type TSurvey = {
   projectOverwrites: {
     brandColor?: string | null;
     highlightBorderColor?: string | null;
-    placement?: "topLeft" | "topRight" | "bottomLeft" | "bottomRight" | null;
+    placement?:
+      | "topLeft"
+      | "topRight"
+      | "bottomLeft"
+      | "bottomRight"
+      | "center"
+      | null;
     clickOutsideClose?: boolean | null;
     darkOverlay?: boolean | null;
   } | null;
@@ -289,11 +295,26 @@ export type TSurvey = {
   };
   displayPercentage: number;
   styling?: {
-    allowStyleOverwrite?: boolean | null;
-    brandColor?: string | null;
-    backgroundColor?: string | null;
-    highlightBorderColor?: string | null;
-    textColor?: string | null;
-    borderColor?: string | null;
+    brandColor?: {
+      light: string;
+      dark?: string | null;
+    } | null;
+    backgroundColor?: {
+      light: string;
+      dark?: string | null;
+    } | null;
+    highlightBorderColor?: {
+      light: string;
+      dark?: string | null;
+    } | null;
+    textColor?: {
+      light: string;
+      dark?: string | null;
+    } | null;
+    borderColor?: {
+      light: string;
+      dark?: string | null;
+    } | null;
+    overwriteThemeStyling?: boolean | null;
   };
 };
