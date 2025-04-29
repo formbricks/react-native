@@ -1,49 +1,32 @@
 /* eslint-disable import/no-extraneous-dependencies -- required for Prisma types */
-import type { ActionClass, Language, Project, Segment, Survey, SurveyLanguage } from "@prisma/client";
-import { z } from "zod";
 import { type TResponseUpdate } from "@/types/response";
 import { type TFileUploadParams } from "@/types/storage";
-
-export type TEnvironmentStateSurvey = Pick<
-  Survey,
-  | "id"
-  | "name"
-  | "welcomeCard"
-  | "questions"
-  | "variables"
-  | "type"
-  | "showLanguageSwitch"
-  | "endings"
-  | "autoClose"
-  | "status"
-  | "recontactDays"
-  | "displayLimit"
-  | "displayOption"
-  | "hiddenFields"
-  | "delay"
-  | "projectOverwrites"
-> & {
-  languages: (SurveyLanguage & { language: Language })[];
-  triggers: { actionClass: ActionClass }[];
-  segment?: Segment;
-  displayPercentage: number;
-  type: "link" | "app";
-  styling?: TSurveyStyling;
-};
+import { z } from "zod";
+import { type TActionClass } from "./action-class";
+import { type TProject } from "./project";
+import { type TSurvey } from "./survey";
 
 export type TEnvironmentStateProject = Pick<
-  Project,
-  "id" | "recontactDays" | "clickOutsideClose" | "darkOverlay" | "placement" | "inAppSurveyBranding"
+  TProject,
+  | "id"
+  | "recontactDays"
+  | "clickOutsideClose"
+  | "darkOverlay"
+  | "placement"
+  | "inAppSurveyBranding"
 > & {
   styling: TProjectStyling;
 };
 
-export type TEnvironmentStateActionClass = Pick<ActionClass, "id" | "key" | "type" | "name" | "noCodeConfig">;
+export type TEnvironmentStateActionClass = Pick<
+  TActionClass,
+  "id" | "key" | "type" | "name" | "noCodeConfig"
+>;
 
 export interface TEnvironmentState {
   expiresAt: Date;
   data: {
-    surveys: TEnvironmentStateSurvey[];
+    surveys: TSurvey[];
     actionClasses: TEnvironmentStateActionClass[];
     project: TEnvironmentStateProject;
   };
@@ -67,7 +50,7 @@ export interface TConfig {
   appUrl: string;
   environment: TEnvironmentState;
   user: TUserState;
-  filteredSurveys: TEnvironmentStateSurvey[];
+  filteredSurveys: TSurvey[];
   status: {
     value: "success" | "error";
     expiresAt: Date | null;
