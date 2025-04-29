@@ -4,7 +4,7 @@
 [![MIT License](https://img.shields.io/badge/License-MIT-red.svg?style=flat-square)](https://opensource.org/licenses/MIT)
 
 Please see [Formbricks Docs](https://formbricks.com/docs).
-Specifically, [Framework Guides](https://formbricks.com/docs/getting-started/framework-guides).
+Specifically, [Framework Guides](https://formbricks.com/docs/xm-and-surveys/surveys/website-app-surveys/framework-guides).
 
 ## What is Formbricks
 
@@ -27,7 +27,10 @@ export default function App() {
   return (
     <View>
       {/* Your app code */}
-      <Formbricks appUrl="https://app.formbricks.com" environmentId="your-environment-id" />
+      <Formbricks
+        appUrl="https://app.formbricks.com"
+        environmentId="your-environment-id"
+      />
     </View>
   );
 }
