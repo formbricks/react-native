@@ -6,7 +6,7 @@ import { SurveyStore } from "@/lib/survey/store";
 import { type TUserState, ZJsRNWebViewOnMessageData } from "@/types/config";
 import type { TSurvey, SurveyContainerProps } from "@/types/survey";
 import React, { type JSX, useEffect, useRef, useState } from "react";
-import { Modal } from "react-native";
+import { KeyboardAvoidingView, Modal, View, StyleSheet } from "react-native";
 import { WebView, type WebViewMessageEvent } from "react-native-webview";
 
 const appConfig = RNConfig.getInstance();
@@ -16,12 +16,12 @@ logger.configure({ logLevel: "debug" });
 const surveyStore = SurveyStore.getInstance();
 
 interface SurveyWebViewProps {
-  survey: TSurvey;
+  readonly survey: TSurvey;
 }
 
-export function SurveyWebView({
-  survey,
-}: SurveyWebViewProps): JSX.Element | undefined {
+export function SurveyWebView(
+  props: SurveyWebViewProps
+): JSX.Element | undefined {
   const webViewRef = useRef(null);
   const [isSurveyRunning, setIsSurveyRunning] = useState(false);
   const [showSurvey, setShowSurvey] = useState(false);
@@ -29,17 +29,17 @@ export function SurveyWebView({
   const project = appConfig.get().environment.data.project;
   const language = appConfig.get().user.data.language;
 
-  const styling = getStyling(project, survey);
+  const styling = getStyling(project, props.survey);
   const isBrandingEnabled = project.inAppSurveyBranding;
-  const isMultiLanguageSurvey = survey.languages.length > 1;
+  const isMultiLanguageSurvey = props.survey.languages.length > 1;
   const [languageCode, setLanguageCode] = useState("default");
 
   useEffect(() => {
     if (isMultiLanguageSurvey) {
-      const displayLanguage = getLanguageCode(survey, language);
+      const displayLanguage = getLanguageCode(props.survey, language);
       if (!displayLanguage) {
         logger.debug(
-          `Survey "${survey.name}" is not available in specified language.`
+          `Survey "${props.survey.name}" is not available in specified language.`
         );
         setIsSurveyRunning(false);
         setShowSurvey(false);
@@ -51,7 +51,7 @@ export function SurveyWebView({
     } else {
       setIsSurveyRunning(true);
     }
-  }, [isMultiLanguageSurvey, language, survey]);
+  }, [isMultiLanguageSurvey, language, props.survey]);
 
   useEffect(() => {
     if (!isSurveyRunning) {
@@ -59,13 +59,13 @@ export function SurveyWebView({
       return;
     }
 
-    if (survey.delay) {
+    if (props.survey.delay) {
       logger.debug(
-        `Delaying survey "${survey.name}" by ${String(survey.delay)} seconds`
+        `Delaying survey "${props.survey.name}" by ${String(props.survey.delay)} seconds`
       );
       const timerId = setTimeout(() => {
         setShowSurvey(true);
-      }, survey.delay * 1000);
+      }, props.survey.delay * 1000);
 
       return () => {
         clearTimeout(timerId);
@@ -73,7 +73,7 @@ export function SurveyWebView({
     }
 
     setShowSurvey(true);
-  }, [survey.delay, isSurveyRunning, survey.name]);
+  }, [props.survey.delay, isSurveyRunning, props.survey.name]);
 
   const onCloseSurvey = (): void => {
     const { environment: environmentState, user: personState } =
@@ -92,11 +92,12 @@ export function SurveyWebView({
   };
 
   const surveyPlacement =
-    survey.projectOverwrites?.placement ?? project.placement;
+    props.survey.projectOverwrites?.placement ?? project.placement;
   const clickOutside =
-    survey.projectOverwrites?.clickOutsideClose ?? project.clickOutsideClose;
+    props.survey.projectOverwrites?.clickOutsideClose ??
+    project.clickOutsideClose;
   const darkOverlay =
-    survey.projectOverwrites?.darkOverlay ?? project.darkOverlay;
+    props.survey.projectOverwrites?.darkOverlay ?? project.darkOverlay;
 
   return (
     <Modal
@@ -108,128 +109,158 @@ export function SurveyWebView({
         setIsSurveyRunning(false);
       }}
     >
-      <WebView
-        ref={webViewRef}
-        originWhitelist={["*"]}
-        source={{
-          html: renderHtml({
-            environmentId: appConfig.get().environmentId,
-            contactId: appConfig.get().user.data.contactId ?? undefined,
-            survey,
-            isBrandingEnabled,
-            styling,
-            languageCode,
-            placement: surveyPlacement,
-            appUrl: appConfig.get().appUrl,
-            clickOutside: surveyPlacement === "center" ? clickOutside : true,
-            darkOverlay,
-            getSetIsResponseSendingFinished: (_f: (value: boolean) => void) =>
-              undefined,
-            isWebEnvironment: false,
-          }),
-        }}
-        style={{ backgroundColor: "transparent" }}
-        contentMode="mobile"
-        javaScriptEnabled
-        domStorageEnabled
-        startInLoadingState
-        mixedContentMode="always"
-        allowFileAccess
-        allowFileAccessFromFileURLs
-        allowUniversalAccessFromFileURLs
-        onShouldStartLoadWithRequest={(event) => {
-          // prevent webview from redirecting if users taps on formbricks link.
-          if (event.url.startsWith("https://formbricks")) {
-            return false;
-          }
+      <View style={styles.modalContainer}>
+        <KeyboardAvoidingView
+          behavior="padding"
+          style={styles.keyboardAvoidingView}
+        >
+          <WebView
+            ref={webViewRef}
+            originWhitelist={["*"]}
+            source={{
+              html: renderHtml({
+                environmentId: appConfig.get().environmentId,
+                contactId: appConfig.get().user.data.contactId ?? undefined,
+                survey: props.survey,
+                isBrandingEnabled,
+                styling,
+                languageCode,
+                placement: surveyPlacement,
+                appUrl: appConfig.get().appUrl,
+                clickOutside:
+                  surveyPlacement === "center" ? clickOutside : true,
+                darkOverlay,
+                getSetIsResponseSendingFinished: (
+                  _f: (value: boolean) => void
+                ) => undefined,
+                isWebEnvironment: false,
+              }),
+            }}
+            style={styles.webView}
+            contentMode="mobile"
+            javaScriptEnabled
+            domStorageEnabled
+            startInLoadingState
+            scrollEnabled={false}
+            mixedContentMode="always"
+            allowFileAccess
+            webviewDebuggingEnabled
+            allowFileAccessFromFileURLs
+            allowUniversalAccessFromFileURLs
+            onShouldStartLoadWithRequest={(event) => {
+              // prevent webview from redirecting if users taps on formbricks link.
+              if (event.url.startsWith("https://formbricks")) {
+                return false;
+              }
 
-          return true;
-        }}
-        onMessage={(event: WebViewMessageEvent) => {
-          try {
-            const { data } = event.nativeEvent;
-            const unvalidatedMessage = JSON.parse(data) as {
-              type: string;
-              data: unknown;
-            };
+              return true;
+            }}
+            onMessage={(event: WebViewMessageEvent) => {
+              try {
+                const { data } = event.nativeEvent;
+                const unvalidatedMessage = JSON.parse(data) as {
+                  type: string;
+                  data: unknown;
+                };
 
-            // debugger
-            if (unvalidatedMessage.type === "Console") {
-              console.info(
-                `[Console] ${JSON.stringify(unvalidatedMessage.data)}`
-              );
-            }
+                // debugger
+                if (unvalidatedMessage.type === "Console") {
+                  console.info(
+                    `[Console] ${JSON.stringify(unvalidatedMessage.data)}`
+                  );
+                }
 
-            const validatedMessage =
-              ZJsRNWebViewOnMessageData.safeParse(unvalidatedMessage);
-            if (!validatedMessage.success) {
-              logger.error("Error parsing message from WebView.");
-              return;
-            }
+                const validatedMessage =
+                  ZJsRNWebViewOnMessageData.safeParse(unvalidatedMessage);
+                if (!validatedMessage.success) {
+                  logger.error("Error parsing message from WebView.");
+                  return;
+                }
 
-            const { onDisplayCreated, onResponseCreated, onClose } =
-              validatedMessage.data;
-            if (onDisplayCreated) {
-              const existingDisplays = appConfig.get().user.data.displays;
-              const newDisplay = { surveyId: survey.id, createdAt: new Date() };
+                const { onDisplayCreated, onResponseCreated, onClose } =
+                  validatedMessage.data;
+                if (onDisplayCreated) {
+                  const existingDisplays = appConfig.get().user.data.displays;
+                  const newDisplay = {
+                    surveyId: props.survey.id,
+                    createdAt: new Date(),
+                  };
 
-              const displays = [...existingDisplays, newDisplay];
-              const previousConfig = appConfig.get();
+                  const displays = [...existingDisplays, newDisplay];
+                  const previousConfig = appConfig.get();
 
-              const updatedPersonState = {
-                ...previousConfig.user,
-                data: {
-                  ...previousConfig.user.data,
-                  displays,
-                  lastDisplayAt: new Date(),
-                },
-              };
+                  const updatedPersonState = {
+                    ...previousConfig.user,
+                    data: {
+                      ...previousConfig.user.data,
+                      displays,
+                      lastDisplayAt: new Date(),
+                    },
+                  };
 
-              const filteredSurveys = filterSurveys(
-                previousConfig.environment,
-                updatedPersonState
-              );
+                  const filteredSurveys = filterSurveys(
+                    previousConfig.environment,
+                    updatedPersonState
+                  );
 
-              appConfig.update({
-                ...previousConfig,
-                environment: previousConfig.environment,
-                user: updatedPersonState,
-                filteredSurveys,
-              });
-            }
-            if (onResponseCreated) {
-              const responses = appConfig.get().user.data.responses;
-              const newPersonState: TUserState = {
-                ...appConfig.get().user,
-                data: {
-                  ...appConfig.get().user.data,
-                  responses: [...responses, survey.id],
-                },
-              };
+                  appConfig.update({
+                    ...previousConfig,
+                    environment: previousConfig.environment,
+                    user: updatedPersonState,
+                    filteredSurveys,
+                  });
+                }
+                if (onResponseCreated) {
+                  const responses = appConfig.get().user.data.responses;
+                  const newPersonState: TUserState = {
+                    ...appConfig.get().user,
+                    data: {
+                      ...appConfig.get().user.data,
+                      responses: [...responses, props.survey.id],
+                    },
+                  };
 
-              const filteredSurveys = filterSurveys(
-                appConfig.get().environment,
-                newPersonState
-              );
+                  const filteredSurveys = filterSurveys(
+                    appConfig.get().environment,
+                    newPersonState
+                  );
 
-              appConfig.update({
-                ...appConfig.get(),
-                environment: appConfig.get().environment,
-                user: newPersonState,
-                filteredSurveys,
-              });
-            }
-            if (onClose) {
-              onCloseSurvey();
-            }
-          } catch (error) {
-            logger.error(`Error handling WebView message: ${error as string}`);
-          }
-        }}
-      />
+                  appConfig.update({
+                    ...appConfig.get(),
+                    environment: appConfig.get().environment,
+                    user: newPersonState,
+                    filteredSurveys,
+                  });
+                }
+                if (onClose) {
+                  onCloseSurvey();
+                }
+              } catch (error) {
+                logger.error(
+                  `Error handling WebView message: ${error as string}`
+                );
+              }
+            }}
+          />
+        </KeyboardAvoidingView>
+      </View>
     </Modal>
   );
 }
+
+const styles = StyleSheet.create({
+  modalContainer: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+  },
+  keyboardAvoidingView: {
+    flex: 1,
+  },
+  webView: {
+    flex: 1,
+    backgroundColor: "transparent",
+  },
+});
 
 const renderHtml = (
   options: Partial<SurveyContainerProps> & { appUrl?: string }
