@@ -17,6 +17,10 @@ vi.mock("@/lib/user/update-queue", () => ({
   },
 }));
 
+function delay(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 describe("User Attributes", () => {
   const mockUpdateQueue = {
     updateAttributes: vi.fn(),
@@ -27,7 +31,9 @@ describe("User Attributes", () => {
     vi.clearAllMocks();
 
     const getInstanceUpdateQueue = vi.spyOn(UpdateQueue, "getInstance");
-    getInstanceUpdateQueue.mockReturnValue(mockUpdateQueue as unknown as UpdateQueue);
+    getInstanceUpdateQueue.mockReturnValue(
+      mockUpdateQueue as unknown as UpdateQueue
+    );
   });
 
   describe("setAttributes", () => {
@@ -35,7 +41,9 @@ describe("User Attributes", () => {
       const result = await setAttributes(mockAttributes);
 
       // Verify UpdateQueue methods were called correctly
-      expect(mockUpdateQueue.updateAttributes).toHaveBeenCalledWith(mockAttributes);
+      expect(mockUpdateQueue.updateAttributes).toHaveBeenCalledWith(
+        mockAttributes
+      );
       expect(mockUpdateQueue.processUpdates).toHaveBeenCalled();
 
       // Verify result is ok
@@ -50,8 +58,14 @@ describe("User Attributes", () => {
       await setAttributes(secondAttributes);
 
       expect(mockUpdateQueue.updateAttributes).toHaveBeenCalledTimes(2);
-      expect(mockUpdateQueue.updateAttributes).toHaveBeenNthCalledWith(1, firstAttributes);
-      expect(mockUpdateQueue.updateAttributes).toHaveBeenNthCalledWith(2, secondAttributes);
+      expect(mockUpdateQueue.updateAttributes).toHaveBeenNthCalledWith(
+        1,
+        firstAttributes
+      );
+      expect(mockUpdateQueue.updateAttributes).toHaveBeenNthCalledWith(
+        2,
+        secondAttributes
+      );
       expect(mockUpdateQueue.processUpdates).toHaveBeenCalledTimes(2);
     });
 
@@ -59,12 +73,7 @@ describe("User Attributes", () => {
       const attributes = { name: mockAttributes.name };
 
       // Mock processUpdates to be async
-      mockUpdateQueue.processUpdates.mockImplementation(
-        () =>
-          new Promise((resolve) => {
-            setTimeout(resolve, 100);
-          })
-      );
+      mockUpdateQueue.processUpdates.mockImplementation(() => delay(100));
 
       const result = await setAttributes(attributes);
 

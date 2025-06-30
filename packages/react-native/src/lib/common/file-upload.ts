@@ -1,9 +1,12 @@
 /* eslint-disable no-console -- used for error logging */
-import { type TUploadFileConfig, type TUploadFileResponse } from "@/types/storage";
+import {
+  type TUploadFileConfig,
+  type TUploadFileResponse,
+} from "@/types/storage";
 
 export class StorageAPI {
-  private appUrl: string;
-  private environmentId: string;
+  private readonly appUrl: string;
+  private readonly environmentId: string;
 
   constructor(appUrl: string, environmentId: string) {
     this.appUrl = appUrl;
@@ -29,13 +32,16 @@ export class StorageAPI {
       surveyId,
     };
 
-    const response = await fetch(`${this.appUrl}/api/v1/client/${this.environmentId}/storage`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
-    });
+    const response = await fetch(
+      `${this.appUrl}/api/v1/client/${this.environmentId}/storage`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      }
+    );
 
     if (!response.ok) {
       throw new Error(`Upload failed with status: ${String(response.status)}`);
@@ -45,7 +51,13 @@ export class StorageAPI {
 
     const { data } = json;
 
-    const { signedUrl, fileUrl, signingData, presignedFields, updatedFileName } = data;
+    const {
+      signedUrl,
+      fileUrl,
+      signingData,
+      presignedFields,
+      updatedFileName,
+    } = data;
 
     let localUploadDetails: Record<string, string> = {};
 
@@ -86,7 +98,10 @@ export class StorageAPI {
 
     let uploadResponse: Response = {} as Response;
 
-    const signedUrlCopy = signedUrl.replace("http://localhost:3000", this.appUrl);
+    const signedUrlCopy = signedUrl.replace(
+      "http://localhost:3000",
+      this.appUrl
+    );
 
     try {
       uploadResponse = await fetch(signedUrlCopy, {
@@ -114,12 +129,16 @@ export class StorageAPI {
       // if s3 is used, we'll use the text response:
       const errorText = await uploadResponse.text();
       if (presignedFields && errorText.includes("EntityTooLarge")) {
-        const error = new Error("File size exceeds the size limit for your plan");
+        const error = new Error(
+          "File size exceeds the size limit for your plan"
+        );
         error.name = "FileTooLargeError";
         throw error;
       }
 
-      throw new Error(`Upload failed with status: ${String(uploadResponse.status)}`);
+      throw new Error(
+        `Upload failed with status: ${String(uploadResponse.status)}`
+      );
     }
 
     return fileUrl;

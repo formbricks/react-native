@@ -21,30 +21,24 @@ describe("CommandQueue", () => {
   test("executes commands in FIFO order", async () => {
     const executionOrder: string[] = [];
 
+    function delayedResult<T>(value: T, delayMs = 10): Promise<T> {
+      return new Promise((resolve) =>
+        setTimeout(() => resolve(value), delayMs)
+      );
+    }
+
     // Mock commands with proper Result returns
     const cmdA = vi.fn(async (): Promise<Result<void, unknown>> => {
-      return new Promise((resolve) => {
-        setTimeout(() => {
-          executionOrder.push("A");
-          resolve({ ok: true, data: undefined });
-        }, 10);
-      });
+      executionOrder.push("A");
+      return delayedResult({ ok: true, data: undefined });
     });
     const cmdB = vi.fn(async (): Promise<Result<void, unknown>> => {
-      return new Promise((resolve) => {
-        setTimeout(() => {
-          executionOrder.push("B");
-          resolve({ ok: true, data: undefined });
-        }, 10);
-      });
+      executionOrder.push("B");
+      return delayedResult({ ok: true, data: undefined });
     });
     const cmdC = vi.fn(async (): Promise<Result<void, unknown>> => {
-      return new Promise((resolve) => {
-        setTimeout(() => {
-          executionOrder.push("C");
-          resolve({ ok: true, data: undefined });
-        }, 10);
-      });
+      executionOrder.push("C");
+      return delayedResult({ ok: true, data: undefined });
     });
 
     // We'll assume checkSetup always ok for this test
@@ -107,12 +101,14 @@ describe("CommandQueue", () => {
 
   test("logs errors if a command throws or returns error", async () => {
     // Spy on console.error to see if it's called
-    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {
-      return {
-        ok: true,
-        data: undefined,
-      };
-    });
+    const consoleErrorSpy = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {
+        return {
+          ok: true,
+          data: undefined,
+        };
+      });
 
     // Force checkSetup to succeed
     vi.mocked(checkSetup).mockReturnValue({ ok: true, data: undefined });
@@ -131,7 +127,10 @@ describe("CommandQueue", () => {
     queue.add(failingCmd, true);
     await queue.wait();
 
-    expect(consoleErrorSpy).toHaveBeenCalledWith("🧱 Formbricks - Global error: ", expect.any(Error));
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      "🧱 Formbricks - Global error: ",
+      expect.any(Error)
+    );
     consoleErrorSpy.mockRestore();
   });
 

@@ -10,9 +10,7 @@ export class Logger {
   private logLevel: LogLevel = "error";
 
   static getInstance(): Logger {
-    if (!Logger.instance) {
-      Logger.instance = new Logger();
-    }
+    Logger.instance ??= new Logger();
     return Logger.instance;
   }
 

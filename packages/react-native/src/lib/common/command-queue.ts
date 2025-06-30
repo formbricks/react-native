@@ -4,8 +4,10 @@ import { wrapThrowsAsync } from "@/lib/common/utils";
 import type { Result } from "@/types/error";
 
 export class CommandQueue {
-  private queue: {
-    command: (...args: any[]) => Promise<Result<void, unknown>> | Result<void, unknown> | Promise<void>;
+  private readonly queue: {
+    command: (
+      ...args: any[]
+    ) => Promise<Result<void, unknown>> | Result<void, unknown> | Promise<void>;
     checkSetup: boolean;
     commandArgs: any[];
   }[] = [];
@@ -14,11 +16,17 @@ export class CommandQueue {
   private commandPromise: Promise<void> | null = null;
 
   public add<A>(
-    command: (...args: A[]) => Promise<Result<void, unknown>> | Result<void, unknown> | Promise<void>,
+    command: (
+      ...args: A[]
+    ) => Promise<Result<void, unknown>> | Result<void, unknown> | Promise<void>,
     shouldCheckSetup = true,
     ...args: A[]
   ): void {
-    this.queue.push({ command, checkSetup: shouldCheckSetup, commandArgs: args });
+    this.queue.push({
+      command,
+      checkSetup: shouldCheckSetup,
+      commandArgs: args,
+    });
 
     if (!this.running) {
       this.commandPromise = new Promise((resolve) => {
@@ -52,7 +60,10 @@ export class CommandQueue {
       }
 
       const executeCommand = async (): Promise<Result<void, unknown>> => {
-        return (await currentItem.command.apply(null, currentItem.commandArgs)) as Result<void, unknown>;
+        return (await currentItem.command.apply(
+          null,
+          currentItem.commandArgs
+        )) as Result<void, unknown>;
       };
 
       const result = await wrapThrowsAsync(executeCommand)();

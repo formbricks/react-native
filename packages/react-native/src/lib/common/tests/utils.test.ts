@@ -25,6 +25,10 @@ const mockSurveyId2 = "qo9rwjmms42hoy3k85fp8vgu";
 const mockSegmentId1 = "p6yrnz3s2tvoe5r0l28unq7k";
 const mockSegmentId2 = "wz43zrxeddhb1uo9cicustar";
 
+function delay(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 describe("utils.ts", () => {
   // ---------------------------------------------------------------------------------
   // diffInDays
@@ -54,9 +58,7 @@ describe("utils.ts", () => {
   describe("wrapThrowsAsync()", () => {
     test("returns ok on success", async () => {
       const fn = vi.fn(async (x: number) => {
-        await new Promise((r) => {
-          setTimeout(r, 10);
-        });
+        await delay(10);
         return x * 2;
       });
 
@@ -71,9 +73,7 @@ describe("utils.ts", () => {
 
     test("returns err on error", async () => {
       const fn = vi.fn(async () => {
-        await new Promise((r) => {
-          setTimeout(r, 10);
-        });
+        await delay(10);
         throw new Error("Something broke");
       });
       const wrapped = wrapThrowsAsync(fn);
@@ -359,7 +359,7 @@ describe("utils.ts", () => {
       const survey = {
         languages: [{ language: { code: "en" }, default: true, enabled: true }],
       } as unknown as TSurvey;
-      const code = getLanguageCode(survey, undefined);
+      const code = getLanguageCode(survey);
       expect(code).toBe("default");
     });
 

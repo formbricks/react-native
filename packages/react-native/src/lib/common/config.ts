@@ -24,9 +24,7 @@ export class RNConfig {
   }
 
   static getInstance(): RNConfig {
-    if (!RNConfig.instance) {
-      RNConfig.instance = new RNConfig();
-    }
+    RNConfig.instance ??= new RNConfig();
 
     return RNConfig.instance;
   }
@@ -46,7 +44,9 @@ export class RNConfig {
 
   public get(): TConfig {
     if (!this.config) {
-      throw new Error("config is null, maybe the init function was not called?");
+      throw new Error(
+        "config is null, maybe the init function was not called?"
+      );
     }
     return this.config;
   }
@@ -77,7 +77,10 @@ export class RNConfig {
 
   private async saveToStorage(): Promise<Result<void>> {
     return wrapThrowsAsync(async () => {
-      await AsyncStorage.setItem(RN_ASYNC_STORAGE_KEY, JSON.stringify(this.config));
+      await AsyncStorage.setItem(
+        RN_ASYNC_STORAGE_KEY,
+        JSON.stringify(this.config)
+      );
     })();
   }
 
