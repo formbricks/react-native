@@ -9,7 +9,7 @@ const logger = Logger.getInstance();
 export class UpdateQueue {
   private static instance: UpdateQueue | null = null;
   private updates: TUpdates | null = null;
-  private debounceTimeout: NodeJS.Timeout | null = null;
+  private debounceTimeout: ReturnType<typeof setTimeout> | null = null;
   private readonly DEBOUNCE_DELAY = 500;
 
   private constructor() {}
@@ -84,7 +84,8 @@ export class UpdateQueue {
 
           if (Object.keys(currentUpdates).length > 0) {
             // Get userId from either updates or config
-            const effectiveUserId = currentUpdates.userId ?? config.get().user.data.userId;
+            const effectiveUserId =
+              currentUpdates.userId ?? config.get().user.data.userId;
             const isLanguageInUpdates = currentUpdates.attributes?.language;
 
             if (!effectiveUserId && isLanguageInUpdates) {
@@ -103,7 +104,8 @@ export class UpdateQueue {
 
               logger.debug("Updated language successfully");
 
-              const { language: _, ...remainingAttributes } = currentUpdates.attributes ?? {};
+              const { language: _, ...remainingAttributes } =
+                currentUpdates.attributes ?? {};
 
               // remove language from attributes
               currentUpdates = {
@@ -112,7 +114,10 @@ export class UpdateQueue {
               };
             }
 
-            if (Object.keys(currentUpdates.attributes ?? {}).length > 0 && !effectiveUserId) {
+            if (
+              Object.keys(currentUpdates.attributes ?? {}).length > 0 &&
+              !effectiveUserId
+            ) {
               const errorMessage =
                 "Formbricks can't set attributes without a userId! Please set a userId first with the setUserId function";
               logger.error(errorMessage);
@@ -147,7 +152,10 @@ export class UpdateQueue {
         }
       };
 
-      this.debounceTimeout = setTimeout(() => void handler(), this.DEBOUNCE_DELAY);
+      this.debounceTimeout = setTimeout(
+        () => void handler(),
+        this.DEBOUNCE_DELAY
+      );
     });
   }
 }

@@ -30,7 +30,8 @@ export default function App(): JSX.Element {
           display: "flex",
           flexDirection: "column",
           gap: 10,
-        }}>
+        }}
+      >
         <Button
           title="Trigger Code Action"
           onPress={() => {
@@ -42,7 +43,7 @@ export default function App(): JSX.Element {
         />
 
         <Button
-          title="Set User Id"
+          title="Set userId"
           onPress={() => {
             setUserId("random-user-id").catch((error: unknown) => {
               // eslint-disable-next-line no-console -- logging is allowed in demo apps
@@ -69,10 +70,12 @@ export default function App(): JSX.Element {
         <Button
           title="Set User Attributes (single)"
           onPress={() => {
-            setAttribute("testSingleAttr", "testSingleAttr").catch((error: unknown) => {
-              // eslint-disable-next-line no-console -- logging is allowed in demo apps
-              console.error("Error setting user attributes:", error);
-            });
+            setAttribute("testSingleAttr", "testSingleAttr").catch(
+              (error: unknown) => {
+                // eslint-disable-next-line no-console -- logging is allowed in demo apps
+                console.error("Error setting user attributes:", error);
+              }
+            );
           }}
         />
 
@@ -101,7 +104,9 @@ export default function App(): JSX.Element {
 
       <Formbricks
         appUrl={process.env.EXPO_PUBLIC_APP_URL as string}
-        environmentId={process.env.EXPO_PUBLIC_FORMBRICKS_ENVIRONMENT_ID as string}
+        environmentId={
+          process.env.EXPO_PUBLIC_FORMBRICKS_ENVIRONMENT_ID as string
+        }
       />
     </View>
   );
