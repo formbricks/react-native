@@ -1,10 +1,7 @@
 import AsyncStorageModule from "@react-native-async-storage/async-storage";
 
-const AsyncStorageWithDefault =
-  AsyncStorageModule as typeof AsyncStorageModule & {
-    default?: typeof AsyncStorageModule;
-  };
-
-const AsyncStorage = AsyncStorageWithDefault.default ?? AsyncStorageModule;
+const AsyncStorage =
+  // @ts-expect-error: Some bundlers put the module on .default
+  AsyncStorageModule.default ?? AsyncStorageModule;
 
 export { AsyncStorage };
