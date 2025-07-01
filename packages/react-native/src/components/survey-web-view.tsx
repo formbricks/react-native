@@ -9,32 +9,42 @@ import React, { type JSX, useEffect, useRef, useState } from "react";
 import { Modal } from "react-native";
 import { WebView, type WebViewMessageEvent } from "react-native-webview";
 
-const appConfig = RNConfig.getInstance();
 const logger = Logger.getInstance();
 logger.configure({ logLevel: "debug" });
 
 const surveyStore = SurveyStore.getInstance();
 
 interface SurveyWebViewProps {
-  survey: TSurvey;
+  readonly survey: TSurvey;
 }
 
-export function SurveyWebView({
-  survey,
-}: SurveyWebViewProps): JSX.Element | undefined {
+export function SurveyWebView(
+  props: SurveyWebViewProps
+): JSX.Element | undefined {
   const webViewRef = useRef(null);
   const [isSurveyRunning, setIsSurveyRunning] = useState(false);
   const [showSurvey, setShowSurvey] = useState(false);
-
-  const project = appConfig.get().environment.data.project;
-  const language = appConfig.get().user.data.language;
-
-  const styling = getStyling(project, survey);
-  const isBrandingEnabled = project.inAppSurveyBranding;
-  const isMultiLanguageSurvey = survey.languages.length > 1;
+  const [appConfig, setAppConfig] = useState<RNConfig | null>(null);
   const [languageCode, setLanguageCode] = useState("default");
 
   useEffect(() => {
+    const fetchConfig = async () => {
+      const config = await RNConfig.getInstance();
+      setAppConfig(config);
+    };
+
+    void fetchConfig();
+  }, []);
+
+  const isMultiLanguageSurvey = props.survey.languages.length > 1;
+
+  useEffect(() => {
+    if (!appConfig) {
+      return;
+    }
+
+    const language = appConfig.get().user.data.language;
+
     if (isMultiLanguageSurvey) {
       const displayLanguage = getLanguageCode(survey, language);
       if (!displayLanguage) {
@@ -51,7 +61,7 @@ export function SurveyWebView({
     } else {
       setIsSurveyRunning(true);
     }
-  }, [isMultiLanguageSurvey, language, survey]);
+  }, [isMultiLanguageSurvey, props.survey, appConfig]);
 
   useEffect(() => {
     if (!isSurveyRunning) {
@@ -74,6 +84,14 @@ export function SurveyWebView({
 
     setShowSurvey(true);
   }, [survey.delay, isSurveyRunning, survey.name]);
+
+  if (!appConfig) {
+    return;
+  }
+
+  const project = appConfig.get().environment.data.project;
+  const styling = getStyling(project, props.survey);
+  const isBrandingEnabled = project.inAppSurveyBranding;
 
   const onCloseSurvey = (): void => {
     const { environment: environmentState, user: personState } =

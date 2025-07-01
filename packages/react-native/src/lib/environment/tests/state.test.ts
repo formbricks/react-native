@@ -9,7 +9,16 @@ import {
   fetchEnvironmentState,
 } from "@/lib/environment/state";
 import type { TEnvironmentState } from "@/types/config";
-import { type Mock, type MockInstance, afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import {
+  type Mock,
+  type MockInstance,
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  test,
+  vi,
+} from "vitest";
 
 // Mock the FormbricksAPI so we can control environment.getState
 vi.mock("@/lib/common/api", () => ({
@@ -65,7 +74,10 @@ describe("environment/state.ts", () => {
         return {
           getEnvironmentState: vi.fn().mockResolvedValue({
             ok: true,
-            data: { data: { foo: "bar" }, expiresAt: new Date(Date.now() + 1000 * 60 * 30) },
+            data: {
+              data: { foo: "bar" },
+              expiresAt: new Date(Date.now() + 1000 * 60 * 30),
+            },
           }),
         };
       });
@@ -85,7 +97,11 @@ describe("environment/state.ts", () => {
     });
 
     test("returns err(...) if environment.getState is not ok", async () => {
-      const mockError = { code: "forbidden", status: 403, message: "Access denied" };
+      const mockError = {
+        code: "forbidden",
+        status: 403,
+        message: "Access denied",
+      };
 
       (ApiClient as unknown as Mock).mockImplementationOnce(() => {
         return {
@@ -129,13 +145,15 @@ describe("environment/state.ts", () => {
       if (!result.ok) {
         expect(result.error.code).toBe(mockNetworkError.code);
         expect(result.error.message).toBe(mockNetworkError.message);
-        expect(result.error.responseMessage).toBe(mockNetworkError.responseMessage);
+        expect(result.error.responseMessage).toBe(
+          mockNetworkError.responseMessage
+        );
       }
     });
   });
 
   describe("addEnvironmentStateExpiryCheckListener()", () => {
-    let mockRNConfig: MockInstance<() => RNConfig>;
+    let mockRNConfig: MockInstance<() => Promise<RNConfig>>;
     let mockLoggerInstance: MockInstance<() => Logger>;
 
     const mockLogger = {
@@ -159,7 +177,7 @@ describe("environment/state.ts", () => {
         }),
       };
 
-      mockRNConfig.mockReturnValue(mockConfig as unknown as RNConfig);
+      mockRNConfig.mockReturnValue(mockConfig as unknown as Promise<RNConfig>);
 
       mockLoggerInstance = vi.spyOn(Logger, "getInstance");
       mockLoggerInstance.mockReturnValue(mockLogger as unknown as Logger);
@@ -188,7 +206,7 @@ describe("environment/state.ts", () => {
         },
       };
 
-      mockRNConfig.mockReturnValue(mockConfig as unknown as RNConfig);
+      mockRNConfig.mockReturnValue(mockConfig as unknown as Promise<RNConfig>);
 
       (ApiClient as Mock).mockImplementation(() => ({
         getEnvironmentState: vi.fn().mockResolvedValue({
@@ -221,11 +239,13 @@ describe("environment/state.ts", () => {
         update: vi.fn(),
       };
 
-      mockRNConfig.mockReturnValue(mockConfig as unknown as RNConfig);
+      mockRNConfig.mockReturnValue(mockConfig as unknown as Promise<RNConfig>);
 
       // Mock API to throw an error
       (ApiClient as Mock).mockImplementation(() => ({
-        getEnvironmentState: vi.fn().mockRejectedValue(new Error("Network error")),
+        getEnvironmentState: vi
+          .fn()
+          .mockRejectedValue(new Error("Network error")),
       }));
 
       addEnvironmentStateExpiryCheckListener();
@@ -250,7 +270,7 @@ describe("environment/state.ts", () => {
         update: vi.fn(),
       };
 
-      mockRNConfig.mockReturnValue(mockConfig as unknown as RNConfig);
+      mockRNConfig.mockReturnValue(mockConfig as unknown as Promise<RNConfig>);
 
       const apiMock = vi.fn().mockImplementation(() => ({
         getEnvironmentState: vi.fn(),

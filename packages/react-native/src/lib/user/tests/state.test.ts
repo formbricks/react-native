@@ -1,6 +1,17 @@
-import { type MockInstance, afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import {
+  type MockInstance,
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  test,
+  vi,
+} from "vitest";
 import { RNConfig } from "@/lib/common/config";
-import { addUserStateExpiryCheckListener, clearUserStateExpiryCheckListener } from "@/lib/user/state";
+import {
+  addUserStateExpiryCheckListener,
+  clearUserStateExpiryCheckListener,
+} from "@/lib/user/state";
 
 const mockUserId = "user_123";
 
@@ -14,7 +25,7 @@ vi.mock("@/lib/common/config", () => ({
 }));
 
 describe("User State Expiry Check Listener", () => {
-  let mockRNConfig: MockInstance<() => RNConfig>;
+  let mockRNConfig: MockInstance<() => Promise<RNConfig>>;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -35,7 +46,7 @@ describe("User State Expiry Check Listener", () => {
       update: vi.fn(),
     };
 
-    mockRNConfig.mockReturnValue(mockConfig as unknown as RNConfig);
+    mockRNConfig.mockReturnValue(mockConfig as unknown as Promise<RNConfig>);
 
     addUserStateExpiryCheckListener();
 
@@ -59,7 +70,7 @@ describe("User State Expiry Check Listener", () => {
       update: vi.fn(),
     };
 
-    mockRNConfig.mockReturnValue(mockConfig as unknown as RNConfig);
+    mockRNConfig.mockReturnValue(mockConfig as unknown as Promise<RNConfig>);
 
     addUserStateExpiryCheckListener();
     vi.advanceTimersByTime(60_000); // Fast-forward 1 minute
@@ -75,7 +86,7 @@ describe("User State Expiry Check Listener", () => {
       update: vi.fn(),
     };
 
-    mockRNConfig.mockReturnValue(mockConfig as unknown as RNConfig);
+    mockRNConfig.mockReturnValue(mockConfig as unknown as Promise<RNConfig>);
 
     addUserStateExpiryCheckListener();
     addUserStateExpiryCheckListener(); // Call again to check if it prevents multiple intervals
@@ -91,7 +102,7 @@ describe("User State Expiry Check Listener", () => {
       update: vi.fn(),
     };
 
-    mockRNConfig.mockReturnValue(mockConfig as unknown as RNConfig);
+    mockRNConfig.mockReturnValue(mockConfig as unknown as Promise<RNConfig>);
 
     addUserStateExpiryCheckListener();
     clearUserStateExpiryCheckListener();

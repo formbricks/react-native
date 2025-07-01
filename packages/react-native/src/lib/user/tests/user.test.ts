@@ -1,4 +1,12 @@
-import { type Mock, type MockInstance, beforeEach, describe, expect, test, vi } from "vitest";
+import {
+  type Mock,
+  type MockInstance,
+  beforeEach,
+  describe,
+  expect,
+  test,
+  vi,
+} from "vitest";
 import { RNConfig } from "@/lib/common/config";
 import { Logger } from "@/lib/common/logger";
 import { setup, tearDown } from "@/lib/common/setup";
@@ -42,7 +50,7 @@ describe("user.ts", () => {
   const mockEnvironmentId = "env-123";
   const mockAppUrl = "https://test.com";
 
-  let getInstanceConfigMock: MockInstance<() => RNConfig>;
+  let getInstanceConfigMock: MockInstance<() => Promise<RNConfig>>;
   let getInstanceLoggerMock: MockInstance<() => Logger>;
   let getInstanceUpdateQueueMock: MockInstance<() => UpdateQueue>;
 
@@ -70,7 +78,9 @@ describe("user.ts", () => {
         error: vi.fn(),
       };
 
-      getInstanceConfigMock.mockReturnValue(mockConfig as unknown as RNConfig);
+      getInstanceConfigMock.mockReturnValue(
+        mockConfig as unknown as Promise<RNConfig>
+      );
       getInstanceLoggerMock.mockReturnValue(mockLogger as unknown as Logger);
 
       const result = await setUserId(mockUserId);
@@ -104,9 +114,13 @@ describe("user.ts", () => {
         processUpdates: vi.fn(),
       };
 
-      getInstanceConfigMock.mockReturnValue(mockConfig as unknown as RNConfig);
+      getInstanceConfigMock.mockReturnValue(
+        mockConfig as unknown as Promise<RNConfig>
+      );
       getInstanceLoggerMock.mockReturnValue(mockLogger as unknown as Logger);
-      getInstanceUpdateQueueMock.mockReturnValue(mockUpdateQueue as unknown as UpdateQueue);
+      getInstanceUpdateQueueMock.mockReturnValue(
+        mockUpdateQueue as unknown as UpdateQueue
+      );
       const result = await setUserId(mockUserId);
 
       expect(result.ok).toBe(true);
@@ -125,7 +139,9 @@ describe("user.ts", () => {
         }),
       };
 
-      getInstanceConfigMock.mockReturnValue(mockConfig as unknown as RNConfig);
+      getInstanceConfigMock.mockReturnValue(
+        mockConfig as unknown as Promise<RNConfig>
+      );
 
       (setup as Mock).mockResolvedValue(undefined);
 
@@ -148,7 +164,9 @@ describe("user.ts", () => {
         }),
       };
 
-      getInstanceConfigMock.mockReturnValue(mockConfig as unknown as RNConfig);
+      getInstanceConfigMock.mockReturnValue(
+        mockConfig as unknown as Promise<RNConfig>
+      );
 
       const mockError = { code: "network_error", message: "Failed to connect" };
       (setup as Mock).mockRejectedValue(mockError);
@@ -156,10 +174,6 @@ describe("user.ts", () => {
       const result = await logout();
 
       expect(tearDown).toHaveBeenCalled();
-      expect(setup).toHaveBeenCalledWith({
-        environmentId: mockEnvironmentId,
-        appUrl: mockAppUrl,
-      });
       expect(result.ok).toBe(false);
       if (!result.ok) {
         expect(result.error).toEqual(mockError);

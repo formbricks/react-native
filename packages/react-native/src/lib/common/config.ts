@@ -11,21 +11,22 @@ export class RNConfig {
 
   private config: TConfig | null = null;
 
-  private constructor() {
-    this.loadFromStorage()
-      .then((localConfig) => {
-        if (localConfig.ok) {
-          this.config = localConfig.data;
-        }
-      })
-      .catch((e: unknown) => {
-        console.error("Error loading config from storage", e);
-      });
+  private constructor() {}
+
+  public async init(): Promise<void> {
+    try {
+      const localConfig = await this.loadFromStorage();
+      if (localConfig.ok) {
+        this.config = localConfig.data;
+      }
+    } catch (e: unknown) {
+      console.error("Error loading config from storage", e);
+    }
   }
 
-  static getInstance(): RNConfig {
+  static async getInstance(): Promise<RNConfig> {
     RNConfig.instance ??= new RNConfig();
-
+    await RNConfig.instance.init();
     return RNConfig.instance;
   }
 

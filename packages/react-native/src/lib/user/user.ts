@@ -1,12 +1,14 @@
 import { RNConfig } from "@/lib/common/config";
 import { Logger } from "@/lib/common/logger";
-import { setup, tearDown } from "@/lib/common/setup";
+import { tearDown } from "@/lib/common/setup";
 import { UpdateQueue } from "@/lib/user/update-queue";
-import { type ApiErrorResponse, type NetworkError, type Result, err, okVoid } from "@/types/error";
+import { type ApiErrorResponse, type Result, err, okVoid } from "@/types/error";
 
 // eslint-disable-next-line @typescript-eslint/require-await -- we want to use promises here
-export const setUserId = async (userId: string): Promise<Result<void, ApiErrorResponse>> => {
-  const appConfig = RNConfig.getInstance();
+export const setUserId = async (
+  userId: string
+): Promise<Result<void, ApiErrorResponse>> => {
+  const appConfig = await RNConfig.getInstance();
   const logger = Logger.getInstance();
   const updateQueue = UpdateQueue.getInstance();
 
@@ -31,30 +33,25 @@ export const setUserId = async (userId: string): Promise<Result<void, ApiErrorRe
   return okVoid();
 };
 
-export const logout = async (): Promise<Result<void, NetworkError>> => {
-  const logger = Logger.getInstance();
-  const appConfig = RNConfig.getInstance();
-
-  const { userId } = appConfig.get().user.data;
-
-  if (!userId) {
-    logger.debug("No userId is set, please use the setUserId function to set a userId first");
-    return okVoid();
-  }
-
-  logger.debug("Resetting state & getting new state from backend");
-  const initParams = {
-    environmentId: appConfig.get().environmentId,
-    appUrl: appConfig.get().appUrl,
-  };
-
-  // logout the user, remove user state and setup formbricks again
-  await tearDown();
-
+export const logout = async (): Promise<Result<void>> => {
   try {
-    await setup(initParams);
+    const logger = Logger.getInstance();
+    const appConfig = await RNConfig.getInstance();
+
+    const { userId } = appConfig.get().user.data;
+
+    if (!userId) {
+      logger.debug(
+        "No userId is set, please use the setUserId function to set a userId first"
+      );
+      return okVoid();
+    }
+
+    logger.debug("Resetting state & getting new state from backend");
+
+    await tearDown();
     return okVoid();
-  } catch (e) {
-    return err(e as NetworkError);
+  } catch {
+    return { ok: false, error: new Error("Failed to logout") };
   }
 };

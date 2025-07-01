@@ -1,5 +1,14 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { type Mock, type MockInstance, afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import {
+  type Mock,
+  type MockInstance,
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  test,
+  vi,
+} from "vitest";
 import { RNConfig, RN_ASYNC_STORAGE_KEY } from "@/lib/common/config";
 import {
   addCleanupEventListeners,
@@ -7,7 +16,13 @@ import {
   removeAllEventListeners,
 } from "@/lib/common/event-listeners";
 import { Logger } from "@/lib/common/logger";
-import { checkSetup, handleErrorOnFirstSetup, setIsSetup, setup, tearDown } from "@/lib/common/setup";
+import {
+  checkSetup,
+  handleErrorOnFirstSetup,
+  setIsSetup,
+  setup,
+  tearDown,
+} from "@/lib/common/setup";
 import { filterSurveys, isNowExpired } from "@/lib/common/utils";
 import { fetchEnvironmentState } from "@/lib/environment/state";
 import { DEFAULT_USER_STATE_NO_USER_ID } from "@/lib/user/state";
@@ -71,7 +86,7 @@ vi.mock("@/lib/user/update", () => ({
 }));
 
 describe("setup.ts", () => {
-  let getInstanceConfigMock: MockInstance<() => RNConfig>;
+  let getInstanceConfigMock: MockInstance<() => Promise<RNConfig>>;
   let getInstanceLoggerMock: MockInstance<() => Logger>;
 
   const mockLogger = {
@@ -85,7 +100,9 @@ describe("setup.ts", () => {
     setIsSetup(false);
 
     getInstanceConfigMock = vi.spyOn(RNConfig, "getInstance");
-    getInstanceLoggerMock = vi.spyOn(Logger, "getInstance").mockReturnValue(mockLogger as unknown as Logger);
+    getInstanceLoggerMock = vi
+      .spyOn(Logger, "getInstance")
+      .mockReturnValue(mockLogger as unknown as Logger);
   });
 
   afterEach(() => {
@@ -96,13 +113,21 @@ describe("setup.ts", () => {
     test("returns ok if already setup", async () => {
       getInstanceLoggerMock.mockReturnValue(mockLogger as unknown as Logger);
       setIsSetup(true);
-      const result = await setup({ environmentId: "env_id", appUrl: "https://my.url" });
+      const result = await setup({
+        environmentId: "env_id",
+        appUrl: "https://my.url",
+      });
       expect(result.ok).toBe(true);
-      expect(mockLogger.debug).toHaveBeenCalledWith("Already set up, skipping setup.");
+      expect(mockLogger.debug).toHaveBeenCalledWith(
+        "Already set up, skipping setup."
+      );
     });
 
     test("fails if no environmentId is provided", async () => {
-      const result = await setup({ environmentId: "", appUrl: "https://my.url" });
+      const result = await setup({
+        environmentId: "",
+        appUrl: "https://my.url",
+      });
       expect(result.ok).toBe(false);
       if (!result.ok) {
         expect(result.error.code).toBe("missing_field");
@@ -128,14 +153,23 @@ describe("setup.ts", () => {
         }),
       };
 
-      getInstanceConfigMock.mockReturnValue(mockConfig as unknown as RNConfig);
+      getInstanceConfigMock.mockReturnValue(
+        mockConfig as unknown as Promise<RNConfig>
+      );
 
       (isNowExpired as unknown as Mock).mockReturnValue(true);
 
-      const result = await setup({ environmentId: "env_123", appUrl: "https://my.url" });
+      const result = await setup({
+        environmentId: "env_123",
+        appUrl: "https://my.url",
+      });
       expect(result.ok).toBe(true);
-      expect(mockLogger.debug).toHaveBeenCalledWith("Formbricks was set to an error state.");
-      expect(mockLogger.debug).toHaveBeenCalledWith("Error state is not expired, skipping setup");
+      expect(mockLogger.debug).toHaveBeenCalledWith(
+        "Formbricks was set to an error state."
+      );
+      expect(mockLogger.debug).toHaveBeenCalledWith(
+        "Error state is not expired, skipping setup"
+      );
     });
 
     test("proceeds if error state is expired", async () => {
@@ -149,12 +183,21 @@ describe("setup.ts", () => {
         }),
       };
 
-      getInstanceConfigMock.mockReturnValue(mockConfig as unknown as RNConfig);
+      getInstanceConfigMock.mockReturnValue(
+        mockConfig as unknown as Promise<RNConfig>
+      );
 
-      const result = await setup({ environmentId: "env_123", appUrl: "https://my.url" });
+      const result = await setup({
+        environmentId: "env_123",
+        appUrl: "https://my.url",
+      });
       expect(result.ok).toBe(true);
-      expect(mockLogger.debug).toHaveBeenCalledWith("Formbricks was set to an error state.");
-      expect(mockLogger.debug).toHaveBeenCalledWith("Error state is expired. Continue with setup.");
+      expect(mockLogger.debug).toHaveBeenCalledWith(
+        "Formbricks was set to an error state."
+      );
+      expect(mockLogger.debug).toHaveBeenCalledWith(
+        "Error state is expired. Continue with setup."
+      );
     });
 
     test("uses existing config if environmentId/appUrl match, checks for expiration sync", async () => {
@@ -172,14 +215,19 @@ describe("setup.ts", () => {
         update: vi.fn(),
       };
 
-      getInstanceConfigMock.mockReturnValue(mockConfig as unknown as RNConfig);
+      getInstanceConfigMock.mockReturnValue(
+        mockConfig as unknown as Promise<RNConfig>
+      );
 
       (isNowExpired as unknown as Mock).mockReturnValue(true);
 
       // Mock environment fetch success
       (fetchEnvironmentState as unknown as Mock).mockResolvedValueOnce({
         ok: true,
-        data: { data: { surveys: [] }, expiresAt: new Date(Date.now() + 60_000) },
+        data: {
+          data: { surveys: [] },
+          expiresAt: new Date(Date.now() + 60_000),
+        },
       });
 
       // Mock sendUpdatesToBackend success
@@ -193,9 +241,15 @@ describe("setup.ts", () => {
         },
       });
 
-      (filterSurveys as unknown as Mock).mockReturnValueOnce([{ name: "S1" }, { name: "S2" }]);
+      (filterSurveys as unknown as Mock).mockReturnValueOnce([
+        { name: "S1" },
+        { name: "S2" },
+      ]);
 
-      const result = await setup({ environmentId: "env_123", appUrl: "https://my.url" });
+      const result = await setup({
+        environmentId: "env_123",
+        appUrl: "https://my.url",
+      });
       expect(result.ok).toBe(true);
 
       // environmentState was fetched
@@ -225,7 +279,9 @@ describe("setup.ts", () => {
         update: vi.fn(),
       };
 
-      getInstanceConfigMock.mockReturnValue(mockConfig as unknown as RNConfig);
+      getInstanceConfigMock.mockReturnValue(
+        mockConfig as unknown as Promise<RNConfig>
+      );
 
       (fetchEnvironmentState as unknown as Mock).mockResolvedValueOnce({
         ok: true,
@@ -237,11 +293,18 @@ describe("setup.ts", () => {
         },
       });
 
-      (filterSurveys as unknown as Mock).mockReturnValueOnce([{ name: "SurveyA" }]);
+      (filterSurveys as unknown as Mock).mockReturnValueOnce([
+        { name: "SurveyA" },
+      ]);
 
-      const result = await setup({ environmentId: "envX", appUrl: "https://urlX" });
+      const result = await setup({
+        environmentId: "envX",
+        appUrl: "https://urlX",
+      });
       expect(result.ok).toBe(true);
-      expect(mockLogger.debug).toHaveBeenCalledWith("No existing configuration found.");
+      expect(mockLogger.debug).toHaveBeenCalledWith(
+        "No existing configuration found."
+      );
       expect(mockLogger.debug).toHaveBeenCalledWith(
         "No valid configuration found. Resetting config and creating new one."
       );
@@ -269,16 +332,18 @@ describe("setup.ts", () => {
         resetConfig: vi.fn(),
       };
 
-      getInstanceConfigMock.mockReturnValueOnce(mockConfig as unknown as RNConfig);
+      getInstanceConfigMock.mockReturnValueOnce(
+        mockConfig as unknown as Promise<RNConfig>
+      );
 
       (fetchEnvironmentState as unknown as Mock).mockResolvedValueOnce({
         ok: false,
         error: { code: "forbidden", responseMessage: "No access" },
       });
 
-      await expect(setup({ environmentId: "envX", appUrl: "https://urlX" })).rejects.toThrow(
-        "Could not set up formbricks"
-      );
+      await expect(
+        setup({ environmentId: "envX", appUrl: "https://urlX" })
+      ).rejects.toThrow("Could not set up formbricks");
     });
 
     test("adds event listeners and sets isSetup", async () => {
@@ -293,9 +358,14 @@ describe("setup.ts", () => {
         update: vi.fn(),
       };
 
-      getInstanceConfigMock.mockReturnValueOnce(mockConfig as unknown as RNConfig);
+      getInstanceConfigMock.mockReturnValueOnce(
+        mockConfig as unknown as Promise<RNConfig>
+      );
 
-      const result = await setup({ environmentId: "env_abc", appUrl: "https://test.app" });
+      const result = await setup({
+        environmentId: "env_abc",
+        appUrl: "https://test.app",
+      });
       expect(result.ok).toBe(true);
       expect(addEventListeners).toHaveBeenCalled();
       expect(addCleanupEventListeners).toHaveBeenCalled();
@@ -327,7 +397,9 @@ describe("setup.ts", () => {
         update: vi.fn(),
       };
 
-      getInstanceConfigMock.mockReturnValueOnce(mockConfig as unknown as RNConfig);
+      getInstanceConfigMock.mockReturnValueOnce(
+        mockConfig as unknown as Promise<RNConfig>
+      );
 
       await tearDown();
 

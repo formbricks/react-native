@@ -74,7 +74,9 @@ describe("survey/action.ts", () => {
     const getInstanceLogger = vi.spyOn(Logger, "getInstance");
 
     // Mock instances
-    getInstanceRn.mockReturnValue(mockAppConfig as unknown as RNConfig);
+    getInstanceRn.mockReturnValue(
+      mockAppConfig as unknown as Promise<RNConfig>
+    );
     getInstanceSurveyStore.mockReturnValue(
       mockSurveyStore as unknown as SurveyStore
     );

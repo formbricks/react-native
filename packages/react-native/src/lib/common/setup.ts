@@ -6,11 +6,20 @@ import {
 } from "@/lib/common/event-listeners";
 import { Logger } from "@/lib/common/logger";
 import { AsyncStorage } from "@/lib/common/storage";
-import { filterSurveys, isNowExpired, wrapThrowsAsync } from "@/lib/common/utils";
+import {
+  filterSurveys,
+  isNowExpired,
+  wrapThrowsAsync,
+} from "@/lib/common/utils";
 import { fetchEnvironmentState } from "@/lib/environment/state";
 import { DEFAULT_USER_STATE_NO_USER_ID } from "@/lib/user/state";
 import { sendUpdatesToBackend } from "@/lib/user/update";
-import { type TConfig, type TConfigInput, type TEnvironmentState, type TUserState } from "@/types/config";
+import {
+  type TConfig,
+  type TConfigInput,
+  type TEnvironmentState,
+  type TUserState,
+} from "@/types/config";
 import {
   type MissingFieldError,
   type MissingPersonError,
@@ -27,7 +36,9 @@ export const setIsSetup = (state: boolean): void => {
   isSetup = state;
 };
 
-export const migrateUserStateAddContactId = async (): Promise<{ changed: boolean }> => {
+export const migrateUserStateAddContactId = async (): Promise<{
+  changed: boolean;
+}> => {
   const existingConfigString = await AsyncStorage.getItem(RN_ASYNC_STORAGE_KEY);
 
   if (existingConfigString) {
@@ -39,7 +50,10 @@ export const migrateUserStateAddContactId = async (): Promise<{ changed: boolean
     }
 
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- data could be undefined
-    if (!existingConfig.user?.data?.contactId && existingConfig.user?.data?.userId) {
+    if (
+      !existingConfig.user?.data?.contactId &&
+      existingConfig.user?.data?.userId
+    ) {
       return { changed: true };
     }
   }
@@ -49,15 +63,17 @@ export const migrateUserStateAddContactId = async (): Promise<{ changed: boolean
 
 export const setup = async (
   configInput: TConfigInput
-): Promise<Result<void, MissingFieldError | NetworkError | MissingPersonError>> => {
-  let appConfig = RNConfig.getInstance();
+): Promise<
+  Result<void, MissingFieldError | NetworkError | MissingPersonError>
+> => {
+  let appConfig = await RNConfig.getInstance();
   const logger = Logger.getInstance();
 
   const { changed } = await migrateUserStateAddContactId();
 
   if (changed) {
     await appConfig.resetConfig();
-    appConfig = RNConfig.getInstance();
+    appConfig = await RNConfig.getInstance();
   }
 
   if (isSetup) {
@@ -119,7 +135,10 @@ export const setup = async (
       isEnvironmentStateExpired = true;
     }
 
-    if (existingConfig.user.expiresAt && isNowExpired(existingConfig.user.expiresAt)) {
+    if (
+      existingConfig.user.expiresAt &&
+      isNowExpired(existingConfig.user.expiresAt)
+    ) {
       logger.debug("Person state expired. Syncing.");
       isUserStateExpired = true;
     }
@@ -145,7 +164,9 @@ export const setup = async (
             code: "network_error",
             message: "Error fetching environment state",
             status: 500,
-            url: new URL(`${configInput.appUrl}/api/v1/client/${configInput.environmentId}/environment`),
+            url: new URL(
+              `${configInput.appUrl}/api/v1/client/${configInput.environmentId}/environment`
+            ),
             responseMessage: environmentStateResponse.error.message,
           });
         }
@@ -197,12 +218,16 @@ export const setup = async (
       });
 
       const surveyNames = filteredSurveys.map((s) => s.name);
-      logger.debug(`Fetched ${surveyNames.length.toString()} surveys during sync: ${surveyNames.join(", ")}`);
+      logger.debug(
+        `Fetched ${surveyNames.length.toString()} surveys during sync: ${surveyNames.join(", ")}`
+      );
     } catch {
       logger.debug("Error during sync. Please try again.");
     }
   } else {
-    logger.debug("No valid configuration found. Resetting config and creating new one.");
+    logger.debug(
+      "No valid configuration found. Resetting config and creating new one."
+    );
     void appConfig.resetConfig();
     logger.debug("Syncing.");
 
@@ -234,7 +259,9 @@ export const setup = async (
         filteredSurveys,
       });
     } catch (e) {
-      await handleErrorOnFirstSetup(e as { code: string; responseMessage: string });
+      await handleErrorOnFirstSetup(
+        e as { code: string; responseMessage: string }
+      );
     }
   }
 
@@ -266,13 +293,22 @@ export const checkSetup = (): Result<void, NotSetupError> => {
 // eslint-disable-next-line @typescript-eslint/require-await -- disabled for now
 export const tearDown = async (): Promise<void> => {
   const logger = Logger.getInstance();
-  const appConfig = RNConfig.getInstance();
+  const appConfig = await RNConfig.getInstance();
 
   logger.debug("Setting user state to default");
+
+  const { environment } = appConfig.get();
+
+  const filteredSurveys = filterSurveys(
+    environment,
+    DEFAULT_USER_STATE_NO_USER_ID
+  );
+
   // clear the user state and set it to the default value
   appConfig.update({
     ...appConfig.get(),
     user: DEFAULT_USER_STATE_NO_USER_ID,
+    filteredSurveys,
   });
 
   setIsSetup(false);
@@ -288,7 +324,9 @@ export const handleErrorOnFirstSetup = async (e: {
   if (e.code === "forbidden") {
     logger.error(`Authorization error: ${e.responseMessage}`);
   } else {
-    logger.error(`Error during first setup: ${e.code} - ${e.responseMessage}. Please try again later.`);
+    logger.error(
+      `Error during first setup: ${e.code} - ${e.responseMessage}. Please try again later.`
+    );
   }
 
   // put formbricks in error state (by creating a new config) and throw error
@@ -300,7 +338,10 @@ export const handleErrorOnFirstSetup = async (e: {
   };
 
   await wrapThrowsAsync(async () => {
-    await AsyncStorage.setItem(RN_ASYNC_STORAGE_KEY, JSON.stringify(initialErrorConfig));
+    await AsyncStorage.setItem(
+      RN_ASYNC_STORAGE_KEY,
+      JSON.stringify(initialErrorConfig)
+    );
   })();
 
   throw new Error("Could not set up formbricks");

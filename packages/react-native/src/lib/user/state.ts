@@ -18,8 +18,8 @@ export const DEFAULT_USER_STATE_NO_USER_ID: TUserState = {
 /**
  * Add a listener to check if the user state has expired with a certain interval
  */
-export const addUserStateExpiryCheckListener = (): void => {
-  const config = RNConfig.getInstance();
+export const addUserStateExpiryCheckListener = async (): Promise<void> => {
+  const config = await RNConfig.getInstance();
   const updateInterval = 1000 * 60; // every 60 seconds
 
   if (userStateSyncIntervalId === null) {
@@ -40,7 +40,10 @@ export const addUserStateExpiryCheckListener = (): void => {
       });
     };
 
-    userStateSyncIntervalId = setInterval(intervalHandler, updateInterval) as unknown as number;
+    userStateSyncIntervalId = setInterval(
+      intervalHandler,
+      updateInterval
+    ) as unknown as number;
   }
 };
 

@@ -51,64 +51,65 @@ export const fetchEnvironmentState = async ({
 /**
  * Add a listener to check if the environment state has expired with a certain interval
  */
-export const addEnvironmentStateExpiryCheckListener = (): void => {
-  const appConfig = RNConfig.getInstance();
-  const logger = Logger.getInstance();
+export const addEnvironmentStateExpiryCheckListener =
+  async (): Promise<void> => {
+    const appConfig = await RNConfig.getInstance();
+    const logger = Logger.getInstance();
 
-  const updateInterval = 1000 * 60; // every minute
+    const updateInterval = 1000 * 60; // every minute
 
-  if (environmentStateSyncIntervalId === null) {
-    const intervalHandler = async (): Promise<void> => {
-      const expiresAt = appConfig.get().environment.expiresAt;
+    if (environmentStateSyncIntervalId === null) {
+      const intervalHandler = async (): Promise<void> => {
+        const expiresAt = appConfig.get().environment.expiresAt;
 
-      try {
-        // check if the environmentState has not expired yet
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- expiresAt is checked for null
-        if (expiresAt && new Date(expiresAt) >= new Date()) {
-          return;
-        }
+        try {
+          // check if the environmentState has not expired yet
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- expiresAt is checked for null
+          if (expiresAt && new Date(expiresAt) >= new Date()) {
+            return;
+          }
 
-        logger.debug("Environment State has expired. Starting sync.");
+          logger.debug("Environment State has expired. Starting sync.");
 
-        const personState = appConfig.get().user;
-        const environmentState = await fetchEnvironmentState({
-          appUrl: appConfig.get().appUrl,
-          environmentId: appConfig.get().environmentId,
-        });
-
-        if (environmentState.ok) {
-          const { data: state } = environmentState;
-          const filteredSurveys = filterSurveys(state, personState);
-
-          appConfig.update({
-            ...appConfig.get(),
-            environment: state,
-            filteredSurveys,
+          const personState = appConfig.get().user;
+          const environmentState = await fetchEnvironmentState({
+            appUrl: appConfig.get().appUrl,
+            environmentId: appConfig.get().environmentId,
           });
-        } else {
-          // eslint-disable-next-line @typescript-eslint/only-throw-error -- error is an ApiErrorResponse
-          throw environmentState.error;
-        }
-      } catch (e) {
-        console.error(`Error during expiry check: `, e);
-        logger.debug("Extending config and try again later.");
-        const existingConfig = appConfig.get();
-        appConfig.update({
-          ...existingConfig,
-          environment: {
-            ...existingConfig.environment,
-            expiresAt: new Date(new Date().getTime() + 1000 * 60 * 30), // 30 minutes
-          },
-        });
-      }
-    };
 
-    environmentStateSyncIntervalId = setInterval(
-      () => void intervalHandler(),
-      updateInterval
-    ) as unknown as number;
-  }
-};
+          if (environmentState.ok) {
+            const { data: state } = environmentState;
+            const filteredSurveys = filterSurveys(state, personState);
+
+            appConfig.update({
+              ...appConfig.get(),
+              environment: state,
+              filteredSurveys,
+            });
+          } else {
+            // eslint-disable-next-line @typescript-eslint/only-throw-error -- error is an ApiErrorResponse
+            throw environmentState.error;
+          }
+        } catch (e) {
+          console.error(`Error during expiry check: `, e);
+          logger.debug("Extending config and try again later.");
+          const existingConfig = appConfig.get();
+          appConfig.update({
+            ...existingConfig,
+            environment: {
+              ...existingConfig.environment,
+              expiresAt: new Date(new Date().getTime() + 1000 * 60 * 30), // 30 minutes
+            },
+          });
+        }
+      };
+
+      environmentStateSyncIntervalId = setInterval(
+        () => void intervalHandler(),
+        updateInterval
+      ) as unknown as number;
+    }
+  };
 
 export const clearEnvironmentStateExpiryCheckListener = (): void => {
   if (environmentStateSyncIntervalId) {

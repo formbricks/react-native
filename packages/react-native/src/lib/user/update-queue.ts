@@ -34,8 +34,8 @@ export class UpdateQueue {
     }
   }
 
-  public updateAttributes(attributes: TAttributes): void {
-    const config = RNConfig.getInstance();
+  public async updateAttributes(attributes: TAttributes): Promise<void> {
+    const config = await RNConfig.getInstance();
     // Get userId from updates first, then fallback to config
     const userId = this.updates?.userId ?? config.get().user.data.userId ?? "";
 
@@ -78,7 +78,7 @@ export class UpdateQueue {
       const handler = async (): Promise<void> => {
         try {
           let currentUpdates = { ...this.updates };
-          const config = RNConfig.getInstance();
+          const config = await RNConfig.getInstance();
 
           if (Object.keys(currentUpdates).length > 0) {
             // Get userId from either updates or config
