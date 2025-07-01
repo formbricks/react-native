@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { setAttributes } from "@/lib/user/attribute";
 import { UpdateQueue } from "@/lib/user/update-queue";
+import { delayedResult } from "@/lib/common/utils";
 
 export const mockAttributes = {
   name: "John Doe",
@@ -16,10 +17,6 @@ vi.mock("@/lib/user/update-queue", () => ({
     })),
   },
 }));
-
-function delay(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 describe("User Attributes", () => {
   const mockUpdateQueue = {
@@ -73,7 +70,9 @@ describe("User Attributes", () => {
       const attributes = { name: mockAttributes.name };
 
       // Mock processUpdates to be async
-      mockUpdateQueue.processUpdates.mockImplementation(() => delay(100));
+      mockUpdateQueue.processUpdates.mockImplementation(() =>
+        delayedResult(undefined, 100)
+      );
 
       const result = await setAttributes(attributes);
 

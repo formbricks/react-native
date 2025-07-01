@@ -29,8 +29,8 @@ describe("RNConfig", () => {
     vi.restoreAllMocks();
   });
 
-  test("getInstance() returns a singleton", () => {
-    const secondInstance = RNConfig.getInstance();
+  test("getInstance() returns a singleton", async () => {
+    const secondInstance = await RNConfig.getInstance();
     expect(configInstance).toBe(secondInstance);
   });
 

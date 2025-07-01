@@ -148,32 +148,15 @@ describe("user.ts", () => {
       const result = await logout();
 
       expect(tearDown).toHaveBeenCalled();
-      expect(setup).toHaveBeenCalledWith({
-        environmentId: mockEnvironmentId,
-        appUrl: mockAppUrl,
-      });
       expect(result.ok).toBe(true);
     });
 
     test("returns error if setup fails", async () => {
-      const mockConfig = {
-        get: vi.fn().mockReturnValue({
-          environmentId: mockEnvironmentId,
-          appUrl: mockAppUrl,
-          user: { data: { userId: mockUserId } },
-        }),
-      };
-
-      getInstanceConfigMock.mockReturnValue(
-        mockConfig as unknown as Promise<RNConfig>
-      );
-
-      const mockError = { code: "network_error", message: "Failed to connect" };
-      (setup as Mock).mockRejectedValue(mockError);
+      const mockError = new Error("Failed to logout");
+      getInstanceConfigMock.mockRejectedValue(mockError);
 
       const result = await logout();
 
-      expect(tearDown).toHaveBeenCalled();
       expect(result.ok).toBe(false);
       if (!result.ok) {
         expect(result.error).toEqual(mockError);

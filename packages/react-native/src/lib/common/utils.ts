@@ -188,3 +188,7 @@ export const shouldDisplayBasedOnPercentage = (
 export const isNowExpired = (expirationDate: Date): boolean => {
   return new Date() >= expirationDate;
 };
+
+export const delayedResult = async <T>(value: T, ms: number): Promise<T> => {
+  return new Promise((resolve) => setTimeout(() => resolve(value), ms));
+};

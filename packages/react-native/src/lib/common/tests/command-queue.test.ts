@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import { CommandQueue } from "@/lib/common/command-queue";
 import { checkSetup } from "@/lib/common/setup";
 import { type Result } from "@/types/error";
+import { delayedResult } from "../utils";
 
 // Mock the setup module so we can control checkSetup()
 vi.mock("@/lib/common/setup", () => ({
@@ -21,24 +22,18 @@ describe("CommandQueue", () => {
   test("executes commands in FIFO order", async () => {
     const executionOrder: string[] = [];
 
-    function delayedResult<T>(value: T, delayMs = 10): Promise<T> {
-      return new Promise((resolve) =>
-        setTimeout(() => resolve(value), delayMs)
-      );
-    }
-
     // Mock commands with proper Result returns
     const cmdA = vi.fn(async (): Promise<Result<void, unknown>> => {
       executionOrder.push("A");
-      return delayedResult({ ok: true, data: undefined });
+      return delayedResult({ ok: true, data: undefined }, 10);
     });
     const cmdB = vi.fn(async (): Promise<Result<void, unknown>> => {
       executionOrder.push("B");
-      return delayedResult({ ok: true, data: undefined });
+      return delayedResult({ ok: true, data: undefined }, 10);
     });
     const cmdC = vi.fn(async (): Promise<Result<void, unknown>> => {
       executionOrder.push("C");
-      return delayedResult({ ok: true, data: undefined });
+      return delayedResult({ ok: true, data: undefined }, 10);
     });
 
     // We'll assume checkSetup always ok for this test
@@ -57,11 +52,7 @@ describe("CommandQueue", () => {
 
   test("skips execution if checkSetup() fails", async () => {
     const cmd = vi.fn(async (): Promise<void> => {
-      return new Promise((resolve) => {
-        setTimeout(() => {
-          resolve();
-        }, 10);
-      });
+      return delayedResult(undefined, 10);
     });
 
     // Force checkSetup to fail
@@ -82,11 +73,7 @@ describe("CommandQueue", () => {
 
   test("executes command if checkSetup is false (no check)", async () => {
     const cmd = vi.fn(async (): Promise<Result<void, unknown>> => {
-      return new Promise((resolve) => {
-        setTimeout(() => {
-          resolve({ ok: true, data: undefined });
-        }, 10);
-      });
+      return delayedResult({ ok: true, data: undefined }, 10);
     });
 
     // checkSetup is irrelevant in this scenario, but let's mock it anyway
@@ -115,11 +102,7 @@ describe("CommandQueue", () => {
 
     // Mock command that fails
     const failingCmd = vi.fn(async () => {
-      await new Promise((resolve) => {
-        setTimeout(() => {
-          resolve("some error");
-        }, 10);
-      });
+      await delayedResult("some error", 10);
 
       throw new Error("some error");
     });
@@ -136,18 +119,10 @@ describe("CommandQueue", () => {
 
   test("resolves wait() after all commands complete", async () => {
     const cmd1 = vi.fn(async (): Promise<Result<void, unknown>> => {
-      return new Promise((resolve) => {
-        setTimeout(() => {
-          resolve({ ok: true, data: undefined });
-        }, 10);
-      });
+      return delayedResult({ ok: true, data: undefined }, 10);
     });
     const cmd2 = vi.fn(async (): Promise<Result<void, unknown>> => {
-      return new Promise((resolve) => {
-        setTimeout(() => {
-          resolve({ ok: true, data: undefined });
-        }, 10);
-      });
+      return delayedResult({ ok: true, data: undefined }, 10);
     });
 
     vi.mocked(checkSetup).mockReturnValue({ ok: true, data: undefined });

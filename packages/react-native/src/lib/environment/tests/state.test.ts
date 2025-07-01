@@ -286,10 +286,10 @@ describe("environment/state.ts", () => {
       expect(mockConfig.update).not.toHaveBeenCalled();
     });
 
-    test("clears interval when clearEnvironmentStateExpiryCheckListener is called", () => {
+    test("clears interval when clearEnvironmentStateExpiryCheckListener is called", async () => {
       const clearIntervalSpy = vi.spyOn(global, "clearInterval");
 
-      addEnvironmentStateExpiryCheckListener();
+      await addEnvironmentStateExpiryCheckListener();
       clearEnvironmentStateExpiryCheckListener();
 
       expect(clearIntervalSpy).toHaveBeenCalled();

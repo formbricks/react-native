@@ -311,7 +311,6 @@ export const tearDown = async (): Promise<void> => {
     filteredSurveys,
   });
 
-  setIsSetup(false);
   removeAllEventListeners();
 };
 

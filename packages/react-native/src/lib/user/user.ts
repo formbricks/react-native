@@ -47,7 +47,7 @@ export const logout = async (): Promise<Result<void>> => {
       return okVoid();
     }
 
-    logger.debug("Resetting state & getting new state from backend");
+    logger.debug("Resetting user state");
 
     await tearDown();
     return okVoid();

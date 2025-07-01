@@ -5,6 +5,7 @@ import {
   mockSurveyId,
 } from "@/lib/common/tests/__mocks__/config.mock";
 import {
+  delayedResult,
   diffInDays,
   filterSurveys,
   getDefaultLanguageCode,
@@ -24,10 +25,6 @@ const mockSurveyId1 = "e3kxlpnzmdp84op9qzxl9olj";
 const mockSurveyId2 = "qo9rwjmms42hoy3k85fp8vgu";
 const mockSegmentId1 = "p6yrnz3s2tvoe5r0l28unq7k";
 const mockSegmentId2 = "wz43zrxeddhb1uo9cicustar";
-
-function delay(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 describe("utils.ts", () => {
   // ---------------------------------------------------------------------------------
@@ -58,7 +55,7 @@ describe("utils.ts", () => {
   describe("wrapThrowsAsync()", () => {
     test("returns ok on success", async () => {
       const fn = vi.fn(async (x: number) => {
-        await delay(10);
+        await delayedResult(null, 10);
         return x * 2;
       });
 
@@ -73,7 +70,7 @@ describe("utils.ts", () => {
 
     test("returns err on error", async () => {
       const fn = vi.fn(async () => {
-        await delay(10);
+        await delayedResult(null, 10);
         throw new Error("Something broke");
       });
       const wrapped = wrapThrowsAsync(fn);
@@ -420,6 +417,19 @@ describe("utils.ts", () => {
 
       // restore
       mockedRandom.mockRestore();
+    });
+  });
+
+  // ---------------------------------------------------------------------------------
+  // delayedResult
+  // ---------------------------------------------------------------------------------
+  describe("delayedResult()", () => {
+    test("returns the value after the delay", async () => {
+      const result = await delayedResult(10, 10);
+      expect(result).toBe(10);
+
+      const result2 = await delayedResult(20, 20);
+      expect(result2).toBe(20);
     });
   });
 });

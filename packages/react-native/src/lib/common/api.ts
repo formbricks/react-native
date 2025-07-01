@@ -101,7 +101,7 @@ export class ApiClient {
   > {
     return makeRequest(
       this.appUrl,
-      `/api/v1/client/${this.environmentId}/environment?rand-${Date.now()}=true`,
+      `/api/v1/client/${this.environmentId}/environment`,
       "GET",
       undefined,
       this.isDebug
