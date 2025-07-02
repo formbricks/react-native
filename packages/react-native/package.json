@@ -38,7 +38,7 @@
     "dev": "vite build --watch --mode dev",
     "clean": "rimraf .turbo node_modules dist .turbo",
     "test": "vitest",
-    "coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@react-native-community/netinfo": "11.4.1",
