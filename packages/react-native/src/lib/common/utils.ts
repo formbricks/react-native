@@ -90,6 +90,7 @@ export const filterSurveys = (
 
     // if survey has recontactDays, check if the last display was more than recontactDays ago
     // The previous approach checked the last display for each survey which is why we still have a surveyId in the displays array.
+    // NOSONAR
     // TODO: Remove the surveyId from the displays array
     if (survey.recontactDays !== null) {
       return (
@@ -186,4 +187,8 @@ export const shouldDisplayBasedOnPercentage = (
 
 export const isNowExpired = (expirationDate: Date): boolean => {
   return new Date() >= expirationDate;
+};
+
+export const delayedResult = async <T>(value: T, ms: number): Promise<T> => {
+  return new Promise((resolve) => setTimeout(() => resolve(value), ms));
 };

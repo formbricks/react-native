@@ -5,12 +5,10 @@ type Listener = (state: TSurvey | null, prevSurvey: TSurvey | null) => void;
 export class SurveyStore {
   private static instance: SurveyStore | undefined;
   private survey: TSurvey | null = null;
-  private listeners = new Set<Listener>();
+  private readonly listeners = new Set<Listener>();
 
   static getInstance(): SurveyStore {
-    if (!SurveyStore.instance) {
-      SurveyStore.instance = new SurveyStore();
-    }
+    SurveyStore.instance ??= new SurveyStore();
     return SurveyStore.instance;
   }
 

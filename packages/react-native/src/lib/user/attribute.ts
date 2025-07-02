@@ -6,7 +6,7 @@ export const setAttributes = async (
   // eslint-disable-next-line @typescript-eslint/require-await -- we want to use promises here
 ): Promise<Result<void, NetworkError>> => {
   const updateQueue = UpdateQueue.getInstance();
-  updateQueue.updateAttributes(attributes);
+  await updateQueue.updateAttributes(attributes);
   void updateQueue.processUpdates();
   return okVoid();
 };

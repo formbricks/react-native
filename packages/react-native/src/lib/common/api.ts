@@ -1,5 +1,9 @@
 import { wrapThrowsAsync } from "@/lib/common/utils";
-import { ApiResponse, ApiSuccessResponse, CreateOrUpdateUserResponse } from "@/types/api";
+import {
+  ApiResponse,
+  ApiSuccessResponse,
+  CreateOrUpdateUserResponse,
+} from "@/types/api";
 import { TEnvironmentState } from "@/types/config";
 import { ApiErrorResponse, Result, err, ok } from "@/types/error";
 
@@ -40,7 +44,9 @@ export const makeRequest = async <T>(
       status: response.status,
       message: errorResponse.message || "Something went wrong",
       url,
-      ...(Object.keys(errorResponse.details ?? {}).length > 0 && { details: errorResponse.details }),
+      ...(Object.keys(errorResponse.details ?? {}).length > 0 && {
+        details: errorResponse.details,
+      }),
     });
   }
 
@@ -50,9 +56,9 @@ export const makeRequest = async <T>(
 
 // Simple API client using fetch
 export class ApiClient {
-  private appUrl: string;
-  private environmentId: string;
-  private isDebug: boolean;
+  private readonly appUrl: string;
+  private readonly environmentId: string;
+  private readonly isDebug: boolean;
 
   constructor({
     appUrl,
@@ -90,7 +96,9 @@ export class ApiClient {
     );
   }
 
-  async getEnvironmentState(): Promise<Result<TEnvironmentState, ApiErrorResponse>> {
+  async getEnvironmentState(): Promise<
+    Result<TEnvironmentState, ApiErrorResponse>
+  > {
     return makeRequest(
       this.appUrl,
       `/api/v1/client/${this.environmentId}/environment`,

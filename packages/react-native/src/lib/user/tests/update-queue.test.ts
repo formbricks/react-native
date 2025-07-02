@@ -1,5 +1,9 @@
 import { type Mock, beforeEach, describe, expect, test, vi } from "vitest";
-import { mockAttributes, mockUserId1, mockUserId2 } from "@/lib/user/tests/__mocks__/update-queue.mock";
+import {
+  mockAttributes,
+  mockUserId1,
+  mockUserId2,
+} from "@/lib/user/tests/__mocks__/update-queue.mock";
 import { RNConfig } from "@/lib/common/config";
 import { sendUpdates } from "@/lib/user/update";
 import { UpdateQueue } from "@/lib/user/update-queue";
@@ -72,9 +76,9 @@ describe("UpdateQueue", () => {
     });
   });
 
-  test("updateAttributes sets attributes correctly when updates is null", () => {
+  test("updateAttributes sets attributes correctly when updates is null", async () => {
     const attributes = mockAttributes;
-    updateQueue.updateAttributes(attributes);
+    await updateQueue.updateAttributes(attributes);
 
     expect(updateQueue.getUpdates()).toEqual({
       userId: "mock-user-id", // from mocked config
@@ -82,9 +86,9 @@ describe("UpdateQueue", () => {
     });
   });
 
-  test("updateAttributes merges with existing attributes", () => {
-    updateQueue.updateAttributes({ name: mockAttributes.name });
-    updateQueue.updateAttributes({ email: mockAttributes.email });
+  test("updateAttributes merges with existing attributes", async () => {
+    await updateQueue.updateAttributes({ name: mockAttributes.name });
+    await updateQueue.updateAttributes({ email: mockAttributes.email });
 
     expect(updateQueue.getUpdates()).toEqual({
       userId: "mock-user-id",
@@ -95,8 +99,8 @@ describe("UpdateQueue", () => {
     });
   });
 
-  test("clearUpdates resets updates to null", () => {
-    updateQueue.updateAttributes({ name: mockAttributes.name });
+  test("clearUpdates resets updates to null", async () => {
+    await updateQueue.updateAttributes({ name: mockAttributes.name });
     updateQueue.clearUpdates();
     expect(updateQueue.getUpdates()).toBeNull();
   });
@@ -105,8 +109,8 @@ describe("UpdateQueue", () => {
     expect(updateQueue.isEmpty()).toBe(true);
   });
 
-  test("isEmpty returns false when updates exist", () => {
-    updateQueue.updateAttributes({ name: mockAttributes.name });
+  test("isEmpty returns false when updates exist", async () => {
+    await updateQueue.updateAttributes({ name: mockAttributes.name });
     expect(updateQueue.isEmpty()).toBe(false);
   });
 
@@ -117,8 +121,8 @@ describe("UpdateQueue", () => {
       ok: true,
     });
 
-    updateQueue.updateAttributes({ name: mockAttributes.name });
-    updateQueue.updateAttributes({ email: mockAttributes.email });
+    await updateQueue.updateAttributes({ name: mockAttributes.name });
+    await updateQueue.updateAttributes({ email: mockAttributes.email });
 
     // Wait for debounce timeout
     await new Promise((resolve) => {
@@ -140,7 +144,7 @@ describe("UpdateQueue", () => {
       update: configUpdateMock,
     }));
 
-    updateQueue.updateAttributes({ language: "en" });
+    await updateQueue.updateAttributes({ language: "en" });
     await updateQueue.processUpdates();
 
     expect(configUpdateMock).toHaveBeenCalled();
@@ -153,7 +157,7 @@ describe("UpdateQueue", () => {
       })),
     }));
 
-    updateQueue.updateAttributes({ name: mockAttributes.name });
+    await updateQueue.updateAttributes({ name: mockAttributes.name });
     await expect(updateQueue.processUpdates()).rejects.toThrow(
       "Formbricks can't set attributes without a userId!"
     );

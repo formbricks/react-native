@@ -6,11 +6,20 @@ import {
 } from "@/lib/common/event-listeners";
 import { Logger } from "@/lib/common/logger";
 import { AsyncStorage } from "@/lib/common/storage";
-import { filterSurveys, isNowExpired, wrapThrowsAsync } from "@/lib/common/utils";
+import {
+  filterSurveys,
+  isNowExpired,
+  wrapThrowsAsync,
+} from "@/lib/common/utils";
 import { fetchEnvironmentState } from "@/lib/environment/state";
 import { DEFAULT_USER_STATE_NO_USER_ID } from "@/lib/user/state";
 import { sendUpdatesToBackend } from "@/lib/user/update";
-import { type TConfig, type TConfigInput, type TEnvironmentState, type TUserState } from "@/types/config";
+import {
+  type TConfig,
+  type TConfigInput,
+  type TEnvironmentState,
+  type TUserState,
+} from "@/types/config";
 import {
   type MissingFieldError,
   type MissingPersonError,
@@ -18,6 +27,7 @@ import {
   type NotSetupError,
   type Result,
   err,
+  ok,
   okVoid,
 } from "@/types/error";
 
@@ -27,7 +37,9 @@ export const setIsSetup = (state: boolean): void => {
   isSetup = state;
 };
 
-export const migrateUserStateAddContactId = async (): Promise<{ changed: boolean }> => {
+export const migrateUserStateAddContactId = async (): Promise<{
+  changed: boolean;
+}> => {
   const existingConfigString = await AsyncStorage.getItem(RN_ASYNC_STORAGE_KEY);
 
   if (existingConfigString) {
@@ -39,7 +51,10 @@ export const migrateUserStateAddContactId = async (): Promise<{ changed: boolean
     }
 
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- data could be undefined
-    if (!existingConfig.user?.data?.contactId && existingConfig.user?.data?.userId) {
+    if (
+      !existingConfig.user?.data?.contactId &&
+      existingConfig.user?.data?.userId
+    ) {
       return { changed: true };
     }
   }
@@ -47,24 +62,208 @@ export const migrateUserStateAddContactId = async (): Promise<{ changed: boolean
   return { changed: false };
 };
 
-export const setup = async (
-  configInput: TConfigInput
-): Promise<Result<void, MissingFieldError | NetworkError | MissingPersonError>> => {
-  let appConfig = RNConfig.getInstance();
+// Helper: Handle missing field error
+function handleMissingField(field: string) {
   const logger = Logger.getInstance();
+  logger.debug(`No ${field} provided`);
+  return err({
+    code: "missing_field",
+    field,
+  } as const);
+}
 
-  const { changed } = await migrateUserStateAddContactId();
-
-  if (changed) {
-    await appConfig.resetConfig();
-    appConfig = RNConfig.getInstance();
+// Helper: Sync environment state if expired
+async function syncEnvironmentStateIfExpired(
+  configInput: TConfigInput,
+  logger: ReturnType<typeof Logger.getInstance>,
+  existingConfig?: TConfig
+): Promise<Result<TEnvironmentState, NetworkError>> {
+  if (existingConfig && !isNowExpired(existingConfig.environment.expiresAt)) {
+    return ok(existingConfig.environment);
   }
 
-  if (isSetup) {
-    logger.debug("Already set up, skipping setup.");
-    return okVoid();
+  logger.debug("Environment state expired. Syncing.");
+
+  const environmentStateResponse = await fetchEnvironmentState({
+    appUrl: configInput.appUrl,
+    environmentId: configInput.environmentId,
+  });
+
+  if (environmentStateResponse.ok) {
+    return ok(environmentStateResponse.data);
+  } else {
+    logger.error(
+      `Error fetching environment state: ${environmentStateResponse.error.code} - ${environmentStateResponse.error.responseMessage ?? ""}`
+    );
+
+    return err({
+      code: "network_error",
+      message: "Error fetching environment state",
+      status: 500,
+      url: new URL(
+        `${configInput.appUrl}/api/v1/client/${configInput.environmentId}/environment`
+      ),
+      responseMessage: environmentStateResponse.error.message,
+    });
+  }
+}
+
+// Helper: Sync user state if expired
+async function syncUserStateIfExpired(
+  configInput: TConfigInput,
+  logger: ReturnType<typeof Logger.getInstance>,
+  existingConfig?: TConfig
+): Promise<Result<TUserState, NetworkError>> {
+  const userState = existingConfig?.user;
+  if (userState && !userState.expiresAt) {
+    return ok(userState);
   }
 
+  if (userState?.expiresAt && !isNowExpired(userState.expiresAt)) {
+    return ok(userState);
+  }
+
+  logger.debug("Person state expired. Syncing.");
+
+  if (userState?.data?.userId) {
+    const updatesResponse = await sendUpdatesToBackend({
+      appUrl: configInput.appUrl,
+      environmentId: configInput.environmentId,
+      updates: {
+        userId: userState.data.userId,
+      },
+    });
+    if (updatesResponse.ok) {
+      return ok(updatesResponse.data.state);
+    } else {
+      logger.error(
+        `Error updating user state: ${updatesResponse.error.code} - ${updatesResponse.error.responseMessage ?? ""}`
+      );
+      return err({
+        code: "network_error",
+        message: "Error updating user state",
+        status: 500,
+        url: new URL(
+          `${configInput.appUrl}/api/v1/client/${configInput.environmentId}/update/contacts/${userState.data.userId}`
+        ),
+        responseMessage: "Unknown error",
+      } as const);
+    }
+  } else {
+    return ok(DEFAULT_USER_STATE_NO_USER_ID);
+  }
+}
+
+// Helper: Update app config with synced states
+const updateAppConfigWithSyncedStates = (
+  appConfig: RNConfig,
+  environmentState: TEnvironmentState,
+  userState: TUserState,
+  logger: ReturnType<typeof Logger.getInstance>,
+  existingConfig?: TConfig
+): void => {
+  if (!existingConfig) {
+    return;
+  }
+
+  const filteredSurveys = filterSurveys(environmentState, userState);
+
+  appConfig.update({
+    ...existingConfig,
+    environment: environmentState,
+    user: userState,
+    filteredSurveys,
+  });
+
+  const surveyNames = filteredSurveys.map((s) => s.name);
+  logger.debug(
+    `Fetched ${surveyNames.length.toString()} surveys during sync: ${surveyNames.join(", ")}`
+  );
+};
+
+// Helper: Create new config and sync
+const createNewConfigAndSync = async (
+  appConfig: RNConfig,
+  configInput: TConfigInput,
+  logger: ReturnType<typeof Logger.getInstance>
+): Promise<void> => {
+  logger.debug(
+    "No valid configuration found. Resetting config and creating new one."
+  );
+
+  await appConfig.resetConfig();
+  logger.debug("Syncing.");
+
+  try {
+    const environmentStateResponse = await fetchEnvironmentState({
+      appUrl: configInput.appUrl,
+      environmentId: configInput.environmentId,
+    });
+    if (!environmentStateResponse.ok) {
+      throw environmentStateResponse.error;
+    }
+    const personState = DEFAULT_USER_STATE_NO_USER_ID;
+    const environmentState = environmentStateResponse.data;
+    const filteredSurveys = filterSurveys(environmentState, personState);
+    appConfig.update({
+      appUrl: configInput.appUrl,
+      environmentId: configInput.environmentId,
+      user: personState,
+      environment: environmentState,
+      filteredSurveys,
+    });
+  } catch (e) {
+    await handleErrorOnFirstSetup(
+      e as { code: string; responseMessage: string }
+    );
+  }
+};
+
+// Helper: Should sync config
+const shouldSyncConfig = (
+  existingConfig: TConfig | undefined,
+  configInput: TConfigInput
+): boolean => {
+  return Boolean(
+    existingConfig?.environment &&
+      existingConfig.environmentId === configInput.environmentId &&
+      existingConfig.appUrl === configInput.appUrl
+  );
+};
+
+// Helper: Should return early for error state
+const shouldReturnEarlyForErrorState = (
+  existingConfig: TConfig | undefined,
+  logger: ReturnType<typeof Logger.getInstance>
+): boolean => {
+  if (existingConfig?.status.value === "error") {
+    logger.debug("Formbricks was set to an error state.");
+    const expiresAt = existingConfig.status.expiresAt;
+    if (expiresAt && isNowExpired(expiresAt)) {
+      logger.debug("Error state is not expired, skipping setup");
+      return true;
+    }
+    logger.debug("Error state is expired. Continue with setup.");
+  }
+
+  return false;
+};
+
+// Helper: Add event listeners and finalize setup
+const finalizeSetup = (): void => {
+  const logger = Logger.getInstance();
+  logger.debug("Adding event listeners");
+  addEventListeners();
+  addCleanupEventListeners();
+  setIsSetup(true);
+  logger.debug("Set up complete");
+};
+
+// Helper: Load existing config
+const loadExistingConfig = async (
+  appConfig: RNConfig,
+  logger: ReturnType<typeof Logger.getInstance>
+): Promise<TConfig | undefined> => {
   let existingConfig: TConfig | undefined;
   try {
     existingConfig = appConfig.get();
@@ -72,180 +271,88 @@ export const setup = async (
   } catch {
     logger.debug("No existing configuration found.");
   }
+  return existingConfig;
+};
 
-  // formbricks is in error state, skip setup
-  if (existingConfig?.status.value === "error") {
-    logger.debug("Formbricks was set to an error state.");
+export const setup = async (
+  configInput: TConfigInput
+): Promise<
+  Result<void, MissingFieldError | NetworkError | MissingPersonError>
+> => {
+  let appConfig = await RNConfig.getInstance();
 
-    const expiresAt = existingConfig.status.expiresAt;
+  const logger = Logger.getInstance();
+  const { changed } = await migrateUserStateAddContactId();
 
-    if (expiresAt && isNowExpired(expiresAt)) {
-      logger.debug("Error state is not expired, skipping setup");
-      return okVoid();
-    }
-    logger.debug("Error state is expired. Continue with setup.");
+  if (changed) {
+    await appConfig.resetConfig();
+    appConfig = await RNConfig.getInstance();
+  }
+
+  if (isSetup) {
+    logger.debug("Already set up, skipping setup.");
+    return okVoid();
+  }
+
+  const existingConfig = await loadExistingConfig(appConfig, logger);
+  if (shouldReturnEarlyForErrorState(existingConfig, logger)) {
+    return okVoid();
   }
 
   logger.debug("Start setup");
 
   if (!configInput.environmentId) {
-    logger.debug("No environmentId provided");
-    return err({
-      code: "missing_field",
-      field: "environmentId",
-    });
+    return handleMissingField("environmentId");
   }
 
   if (!configInput.appUrl) {
-    logger.debug("No appUrl provided");
-
-    return err({
-      code: "missing_field",
-      field: "appUrl",
-    });
+    return handleMissingField("appUrl");
   }
 
-  if (
-    existingConfig?.environment &&
-    existingConfig.environmentId === configInput.environmentId &&
-    existingConfig.appUrl === configInput.appUrl
-  ) {
+  if (shouldSyncConfig(existingConfig, configInput)) {
     logger.debug("Configuration fits setup parameters.");
-    let isEnvironmentStateExpired = false;
-    let isUserStateExpired = false;
-
-    if (isNowExpired(existingConfig.environment.expiresAt)) {
-      logger.debug("Environment state expired. Syncing.");
-      isEnvironmentStateExpired = true;
-    }
-
-    if (existingConfig.user.expiresAt && isNowExpired(existingConfig.user.expiresAt)) {
-      logger.debug("Person state expired. Syncing.");
-      isUserStateExpired = true;
-    }
+    let environmentState: TEnvironmentState | undefined;
+    let userState: TUserState | undefined;
 
     try {
-      // fetch the environment state (if expired)
-      let environmentState: TEnvironmentState = existingConfig.environment;
-      let userState: TUserState = existingConfig.user;
+      const environmentStateResult = await syncEnvironmentStateIfExpired(
+        configInput,
+        logger,
+        existingConfig
+      );
 
-      if (isEnvironmentStateExpired) {
-        const environmentStateResponse = await fetchEnvironmentState({
-          appUrl: configInput.appUrl,
-          environmentId: configInput.environmentId,
-        });
-
-        if (environmentStateResponse.ok) {
-          environmentState = environmentStateResponse.data;
-        } else {
-          logger.error(
-            `Error fetching environment state: ${environmentStateResponse.error.code} - ${environmentStateResponse.error.responseMessage ?? ""}`
-          );
-          return err({
-            code: "network_error",
-            message: "Error fetching environment state",
-            status: 500,
-            url: new URL(`${configInput.appUrl}/api/v1/client/${configInput.environmentId}/environment`),
-            responseMessage: environmentStateResponse.error.message,
-          });
-        }
+      if (environmentStateResult.ok) {
+        environmentState = environmentStateResult.data;
+      } else {
+        return err(environmentStateResult.error);
       }
 
-      if (isUserStateExpired) {
-        // If the existing person state (expired) has a userId, we need to fetch the person state
-        // If the existing person state (expired) has no userId, we need to set the person state to the default
+      const userStateResult = await syncUserStateIfExpired(
+        configInput,
+        logger,
+        existingConfig
+      );
 
-        if (userState.data.userId) {
-          const updatesResponse = await sendUpdatesToBackend({
-            appUrl: configInput.appUrl,
-            environmentId: configInput.environmentId,
-            updates: {
-              userId: userState.data.userId,
-            },
-          });
-
-          if (updatesResponse.ok) {
-            userState = updatesResponse.data.state;
-          } else {
-            logger.error(
-              `Error updating user state: ${updatesResponse.error.code} - ${updatesResponse.error.responseMessage ?? ""}`
-            );
-            return err({
-              code: "network_error",
-              message: "Error updating user state",
-              status: 500,
-              url: new URL(
-                `${configInput.appUrl}/api/v1/client/${configInput.environmentId}/update/contacts/${userState.data.userId}`
-              ),
-              responseMessage: "Unknown error",
-            });
-          }
-        } else {
-          userState = DEFAULT_USER_STATE_NO_USER_ID;
-        }
+      if (userStateResult.ok) {
+        userState = userStateResult.data;
+      } else {
+        return err(userStateResult.error);
       }
 
-      // filter the environment state wrt the person state
-      const filteredSurveys = filterSurveys(environmentState, userState);
-
-      // update the appConfig with the new filtered surveys and person state
-      appConfig.update({
-        ...existingConfig,
-        environment: environmentState,
-        user: userState,
-        filteredSurveys,
-      });
-
-      const surveyNames = filteredSurveys.map((s) => s.name);
-      logger.debug(`Fetched ${surveyNames.length.toString()} surveys during sync: ${surveyNames.join(", ")}`);
+      updateAppConfigWithSyncedStates(
+        appConfig,
+        environmentState,
+        userState,
+        logger,
+        existingConfig
+      );
     } catch {
       logger.debug("Error during sync. Please try again.");
     }
   } else {
-    logger.debug("No valid configuration found. Resetting config and creating new one.");
-    void appConfig.resetConfig();
-    logger.debug("Syncing.");
-
-    // During setup, if we don't have a valid config, we need to fetch the environment state
-    // but not the person state, we can set it to the default value.
-    // The person state will be fetched when the `setUserId` method is called.
-
-    try {
-      const environmentStateResponse = await fetchEnvironmentState({
-        appUrl: configInput.appUrl,
-        environmentId: configInput.environmentId,
-      });
-
-      if (!environmentStateResponse.ok) {
-        // eslint-disable-next-line @typescript-eslint/only-throw-error -- error is ApiErrorResponse
-        throw environmentStateResponse.error;
-      }
-
-      const personState = DEFAULT_USER_STATE_NO_USER_ID;
-      const environmentState = environmentStateResponse.data;
-
-      const filteredSurveys = filterSurveys(environmentState, personState);
-
-      appConfig.update({
-        appUrl: configInput.appUrl,
-        environmentId: configInput.environmentId,
-        user: personState,
-        environment: environmentState,
-        filteredSurveys,
-      });
-    } catch (e) {
-      await handleErrorOnFirstSetup(e as { code: string; responseMessage: string });
-    }
+    await createNewConfigAndSync(appConfig, configInput, logger);
   }
-
-  logger.debug("Adding event listeners");
-  addEventListeners();
-  addCleanupEventListeners();
-
-  setIsSetup(true);
-  logger.debug("Set up complete");
-
-  // check page url if set up after page load
+  finalizeSetup();
   return okVoid();
 };
 
@@ -266,16 +373,24 @@ export const checkSetup = (): Result<void, NotSetupError> => {
 // eslint-disable-next-line @typescript-eslint/require-await -- disabled for now
 export const tearDown = async (): Promise<void> => {
   const logger = Logger.getInstance();
-  const appConfig = RNConfig.getInstance();
+  const appConfig = await RNConfig.getInstance();
 
   logger.debug("Setting user state to default");
+
+  const { environment } = appConfig.get();
+
+  const filteredSurveys = filterSurveys(
+    environment,
+    DEFAULT_USER_STATE_NO_USER_ID
+  );
+
   // clear the user state and set it to the default value
   appConfig.update({
     ...appConfig.get(),
     user: DEFAULT_USER_STATE_NO_USER_ID,
+    filteredSurveys,
   });
 
-  setIsSetup(false);
   removeAllEventListeners();
 };
 
@@ -288,7 +403,9 @@ export const handleErrorOnFirstSetup = async (e: {
   if (e.code === "forbidden") {
     logger.error(`Authorization error: ${e.responseMessage}`);
   } else {
-    logger.error(`Error during first setup: ${e.code} - ${e.responseMessage}. Please try again later.`);
+    logger.error(
+      `Error during first setup: ${e.code} - ${e.responseMessage}. Please try again later.`
+    );
   }
 
   // put formbricks in error state (by creating a new config) and throw error
@@ -300,7 +417,10 @@ export const handleErrorOnFirstSetup = async (e: {
   };
 
   await wrapThrowsAsync(async () => {
-    await AsyncStorage.setItem(RN_ASYNC_STORAGE_KEY, JSON.stringify(initialErrorConfig));
+    await AsyncStorage.setItem(
+      RN_ASYNC_STORAGE_KEY,
+      JSON.stringify(initialErrorConfig)
+    );
   })();
 
   throw new Error("Could not set up formbricks");

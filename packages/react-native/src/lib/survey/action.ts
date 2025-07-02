@@ -42,12 +42,12 @@ export const triggerSurvey = (survey: TSurvey): void => {
  * @param alias - Optional alias for the action name
  * @returns Result indicating success or network error
  */
-export const trackAction = (
+export const trackAction = async (
   name: string,
   alias?: string
-): Result<void, NetworkError> => {
+): Promise<Result<void, NetworkError>> => {
   const logger = Logger.getInstance();
-  const appConfig = RNConfig.getInstance();
+  const appConfig = await RNConfig.getInstance();
 
   const aliasName = alias ?? name;
 
@@ -84,7 +84,7 @@ export const track = async (
   | Result<void, { code: "error"; message: string }>
 > => {
   try {
-    const appConfig = RNConfig.getInstance();
+    const appConfig = await RNConfig.getInstance();
 
     const netInfo = await fetch();
 

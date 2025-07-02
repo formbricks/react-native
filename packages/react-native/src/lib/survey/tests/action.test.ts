@@ -74,7 +74,9 @@ describe("survey/action.ts", () => {
     const getInstanceLogger = vi.spyOn(Logger, "getInstance");
 
     // Mock instances
-    getInstanceRn.mockReturnValue(mockAppConfig as unknown as RNConfig);
+    getInstanceRn.mockReturnValue(
+      mockAppConfig as unknown as Promise<RNConfig>
+    );
     getInstanceSurveyStore.mockReturnValue(
       mockSurveyStore as unknown as SurveyStore
     );
@@ -120,21 +122,21 @@ describe("survey/action.ts", () => {
       });
     });
 
-    test("triggers survey associated with action name", () => {
+    test("triggers survey associated with action name", async () => {
       (shouldDisplayBasedOnPercentage as unknown as Mock).mockReturnValue(true);
 
-      trackAction("testAction");
+      await trackAction("testAction");
 
       // Ensure triggerSurvey is called for the matching survey
       expect(mockSurveyStore.setSurvey).toHaveBeenCalledWith(mockSurvey);
     });
 
-    test("does not trigger survey if no active surveys are found", () => {
+    test("does not trigger survey if no active surveys are found", async () => {
       mockAppConfig.get.mockReturnValue({
         filteredSurveys: [],
       });
 
-      trackAction("testAction");
+      await trackAction("testAction");
 
       // Ensure no surveys are triggered
       expect(mockSurveyStore.setSurvey).not.toHaveBeenCalled();
@@ -143,8 +145,8 @@ describe("survey/action.ts", () => {
       );
     });
 
-    test("logs tracked action name", () => {
-      trackAction("testAction");
+    test("logs tracked action name", async () => {
+      await trackAction("testAction");
 
       expect(mockLogger.debug).toHaveBeenCalledWith(
         'Formbricks: Action "testAction" tracked'

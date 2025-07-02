@@ -4,7 +4,13 @@ import { RNConfig } from "@/lib/common/config";
 import { Logger } from "@/lib/common/logger";
 import { filterSurveys } from "@/lib/common/utils";
 import { type TUpdates, type TUserState } from "@/types/config";
-import { type ApiErrorResponse, type Result, err, ok, okVoid } from "@/types/error";
+import {
+  type ApiErrorResponse,
+  type Result,
+  err,
+  ok,
+  okVoid,
+} from "@/types/error";
 
 export const sendUpdatesToBackend = async ({
   appUrl,
@@ -64,7 +70,7 @@ export const sendUpdates = async ({
 }: {
   updates: TUpdates;
 }): Promise<Result<void, ApiErrorResponse>> => {
-  const config = RNConfig.getInstance();
+  const config = await RNConfig.getInstance();
   const logger = Logger.getInstance();
 
   const { appUrl, environmentId } = config.get();
@@ -72,11 +78,18 @@ export const sendUpdates = async ({
   const url = `${appUrl}/api/v1/client/${environmentId}/user`;
 
   try {
-    const updatesResponse = await sendUpdatesToBackend({ appUrl, environmentId, updates });
+    const updatesResponse = await sendUpdatesToBackend({
+      appUrl,
+      environmentId,
+      updates,
+    });
 
     if (updatesResponse.ok) {
       const userState = updatesResponse.data.state;
-      const filteredSurveys = filterSurveys(config.get().environment, userState);
+      const filteredSurveys = filterSurveys(
+        config.get().environment,
+        userState
+      );
 
       // messages => string[] - contains the details of the attributes update
       // for example, if the attribute "email" was being used for some user or not
