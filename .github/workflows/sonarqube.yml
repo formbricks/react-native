@@ -1,4 +1,4 @@
-name: Build React Native Package and Playground
+name: SonarQube
 on:
   workflow_dispatch:
   push:
@@ -11,9 +11,9 @@ permissions:
   contents: read
 
 jobs:
-  build:
+  sonarqube:
+    name: SonarQube
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -29,5 +29,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
-      - name: Build
-        run: pnpm build
+      - name: Run tests with coverage
+        run: |
+          pnpm test:coverage
+      - name: SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@2500896589ef8f7247069a56136f8dc177c27ccf
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Needed to get PR information, if any
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
