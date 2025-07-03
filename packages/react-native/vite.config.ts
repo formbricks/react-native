@@ -31,13 +31,16 @@ const config = (): UserConfig => {
         fileName: "index",
       },
     },
-    plugins: [dts({ rollupTypes: true, bundledPackages: ["@formbricks/types"] })],
+    plugins: [
+      dts({ rollupTypes: true, bundledPackages: ["@formbricks/types"] }),
+    ],
     test: {
       setupFiles: ["./vitest.setup.ts"],
       coverage: {
         provider: "v8",
-        reporter: ["text", "json", "html"],
-        include: ["src/lib/**/*.ts"],
+        reporter: ["text", "json", "html", "lcov"],
+        include: ["src/**/*.ts"],
+        exclude: ["src/types/**/*.ts"],
       },
     },
   });

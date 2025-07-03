@@ -16,6 +16,21 @@
     "dev": {
       "cache": false,
       "persistent": true
+    },
+    "@formbricks/react-native:build": {
+      "dependsOn": ["^build"],
+      "cache": false
+    },
+    "playground:build": {
+      "dependsOn": ["@formbricks/react-native:build"],
+      "outputs": ["apps/playground/out/**"],
+      "cache": false
+    },
+    "test": {
+      "outputs": []
+    },
+    "test:coverage": {
+      "outputs": []
     }
   }
 }
