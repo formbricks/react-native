@@ -32,6 +32,12 @@ jobs:
       - name: Run tests with coverage
         run: |
           pnpm test:coverage
+
+      - name: List coverage files (debug)
+        run: |
+          find . -name "*.info" -o -name "coverage" -type d
+          ls -la packages/react-native/coverage/ || echo "No coverage directory found"
+
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@2500896589ef8f7247069a56136f8dc177c27ccf
         env:
