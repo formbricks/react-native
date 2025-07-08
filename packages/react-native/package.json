@@ -6,7 +6,7 @@
   "homepage": "https://formbricks.com",
   "repository": {
     "type": "git",
-    "url": "https://github.com/formbricks/formbricks"
+    "url": "https://github.com/formbricks/react-native"
   },
   "keywords": [
     "Formbricks",
