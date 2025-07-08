@@ -158,6 +158,40 @@ describe("utils.ts", () => {
       expect(result[0].id).toBe(mockSurveyId1);
     });
 
+    test("filters out surveys that have a segment with filters if userId is not set", () => {
+      environment.data.surveys = [
+        {
+          ...baseSurvey,
+          id: mockSurveyId1,
+          segment: {
+            id: mockSegmentId1,
+            filters: [{ type: "string", key: "name", value: "John" }],
+          },
+        } as TSurvey,
+      ];
+
+      const result = filterSurveys(environment, user);
+      expect(result).toHaveLength(0);
+    });
+
+    test("includes surveys without segment filters for anonymous users", () => {
+      environment.data.surveys = [
+        {
+          ...baseSurvey,
+          id: mockSurveyId1,
+          segment: undefined, // No segment at all
+        } as TSurvey,
+        {
+          ...baseSurvey,
+          id: mockSurveyId2,
+          segment: { id: mockSegmentId1 }, // Segment but no filters
+        } as TSurvey,
+      ];
+
+      const result = filterSurveys(environment, user);
+      expect(result).toHaveLength(2);
+    });
+
     test("skips surveys that already displayed if displayOnce is used", () => {
       environment.data.surveys = [
         {
