@@ -186,7 +186,6 @@ export const shouldDisplayBasedOnPercentage = (
   displayPercentage: number
 ): boolean => {
   const randomNum = Math.floor(Math.random() * 10000) / 100;
-
   return randomNum <= displayPercentage;
 };
 
