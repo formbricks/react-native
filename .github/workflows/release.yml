@@ -1,7 +1,9 @@
 name: Release React Native SDK
 
 permissions:
+  id-token: write
   contents: read
+
 on:
   release:
     types: [published]
