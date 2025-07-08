@@ -4,7 +4,7 @@ permissions:
   contents: read
 on:
   release:
-    types: [released]
+    types: [published]
 
 jobs:
   release:
