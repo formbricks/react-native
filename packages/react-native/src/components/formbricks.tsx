@@ -5,39 +5,46 @@ import { SurveyStore } from "@/lib/survey/store";
 import React, { useCallback, useEffect, useSyncExternalStore } from "react";
 
 interface FormbricksProps {
-  appUrl: string;
-  environmentId: string;
+	appUrl: string;
+	environmentId: string;
+	onSetup?: () => void;
 }
 
 const surveyStore = SurveyStore.getInstance();
 const logger = Logger.getInstance();
 
-export function Formbricks({ appUrl, environmentId }: FormbricksProps): React.JSX.Element | null {
-  // initializes sdk
-  useEffect(() => {
-    const setupFormbricks = async (): Promise<void> => {
-      try {
-        await setup({
-          environmentId,
-          appUrl,
-        });
-      } catch {
-        logger.debug("Initialization failed");
-      }
-    };
+export function Formbricks({
+	appUrl,
+	environmentId,
+	onSetup,
+}: FormbricksProps): React.JSX.Element | null {
+	// initializes sdk
+	useEffect(() => {
+		const setupFormbricks = async (): Promise<void> => {
+			try {
+				await setup({
+					environmentId,
+					appUrl,
+				});
 
-    setupFormbricks().catch(() => {
-      logger.debug("Initialization error");
-    });
-  }, [environmentId, appUrl]);
+				onSetup?.();
+			} catch {
+				logger.debug("Initialization failed");
+			}
+		};
 
-  const subscribe = useCallback((callback: () => void) => {
-    const unsubscribe = surveyStore.subscribe(callback);
-    return unsubscribe;
-  }, []);
+		setupFormbricks().catch(() => {
+			logger.debug("Initialization error");
+		});
+	}, [environmentId, appUrl]);
 
-  const getSnapshot = useCallback(() => surveyStore.getSurvey(), []);
-  const survey = useSyncExternalStore(subscribe, getSnapshot);
+	const subscribe = useCallback((callback: () => void) => {
+		const unsubscribe = surveyStore.subscribe(callback);
+		return unsubscribe;
+	}, []);
 
-  return survey ? <SurveyWebView survey={survey} /> : null;
+	const getSnapshot = useCallback(() => surveyStore.getSurvey(), []);
+	const survey = useSyncExternalStore(subscribe, getSnapshot);
+
+	return survey ? <SurveyWebView survey={survey} /> : null;
 }
