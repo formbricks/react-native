@@ -22,14 +22,22 @@ export function Formbricks({
 	useEffect(() => {
 		const setupFormbricks = async (): Promise<void> => {
 			try {
-				await setup({
+				const result = await setup({
 					environmentId,
 					appUrl,
 				});
 
-				onSetup?.();
-			} catch {
-				logger.debug("Initialization failed");
+				if (result.ok) {
+					onSetup?.();
+				} else {
+					logger.error(`Initialization failed: ${String(result.error)}`);
+				}
+			} catch (err) {
+				logger.error(
+					`Initialization threw: ${
+						err instanceof Error ? err?.message : String(err)
+					}`
+				);
 			}
 		};
 
