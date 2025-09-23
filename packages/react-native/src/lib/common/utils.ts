@@ -1,10 +1,10 @@
 import type {
   TEnvironmentState,
   TEnvironmentStateProject,
-  TProjectStyling,
   TUserState,
 } from "@/types/config";
 import type { Result } from "@/types/error";
+import type { TProjectStyling } from "@/types/project";
 import type { TSurvey } from "@/types/survey";
 
 // Helper function to calculate difference in days between two dates
@@ -15,19 +15,19 @@ export const diffInDays = (date1: Date, date2: Date): number => {
 
 export const wrapThrowsAsync =
   <T, A extends unknown[]>(fn: (...args: A) => Promise<T>) =>
-  async (...args: A): Promise<Result<T>> => {
-    try {
-      return {
-        ok: true,
-        data: await fn(...args),
-      };
-    } catch (error) {
-      return {
-        ok: false,
-        error: error as Error,
-      };
-    }
-  };
+    async (...args: A): Promise<Result<T>> => {
+      try {
+        return {
+          ok: true,
+          data: await fn(...args),
+        };
+      } catch (error) {
+        return {
+          ok: false,
+          error: error as Error,
+        };
+      }
+    };
 
 /**
  * Filters surveys based on the displayOption, recontactDays, and segments

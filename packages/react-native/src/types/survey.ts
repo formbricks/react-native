@@ -1,6 +1,6 @@
-import type { TProjectStyling } from "@/types/config";
 import type { TResponseData, TResponseUpdate } from "@/types/response";
 import type { TFileUploadParams, TUploadFileConfig } from "@/types/storage";
+import type { TProjectStyling } from "./project";
 
 export type TJsFileUploadParams = {
   file: {
@@ -219,10 +219,10 @@ export type TSurvey = {
   recontactDays: number | null;
   displayLimit: number | null;
   displayOption:
-    | "displayOnce"
-    | "displayMultiple"
-    | "respondMultiple"
-    | "displaySome";
+  | "displayOnce"
+  | "displayMultiple"
+  | "respondMultiple"
+  | "displaySome";
   hiddenFields: {
     enabled: boolean;
     fieldIds?: string[];
@@ -232,12 +232,12 @@ export type TSurvey = {
     brandColor?: string | null;
     highlightBorderColor?: string | null;
     placement?:
-      | "topLeft"
-      | "topRight"
-      | "bottomLeft"
-      | "bottomRight"
-      | "center"
-      | null;
+    | "topLeft"
+    | "topRight"
+    | "bottomLeft"
+    | "bottomRight"
+    | "center"
+    | null;
     clickOutsideClose?: boolean | null;
     darkOverlay?: boolean | null;
   } | null;
@@ -267,12 +267,12 @@ export type TSurvey = {
         urlFilters: {
           value: string;
           rule:
-            | "exactMatch"
-            | "contains"
-            | "startsWith"
-            | "endsWith"
-            | "notMatch"
-            | "notContains";
+          | "exactMatch"
+          | "contains"
+          | "startsWith"
+          | "endsWith"
+          | "notMatch"
+          | "notContains";
         }[];
         elementSelector?: {
           cssSelector?: string;
@@ -318,3 +318,32 @@ export type TSurvey = {
     overwriteThemeStyling?: boolean | null;
   };
 };
+
+export interface TStylingColor {
+  light: string;
+  dark?: string | null;
+}
+
+export interface TBaseStyling {
+  brandColor?: TStylingColor | null;
+  questionColor?: TStylingColor | null;
+  inputColor?: TStylingColor | null;
+  inputBorderColor?: TStylingColor | null;
+  cardBackgroundColor?: TStylingColor | null;
+  cardBorderColor?: TStylingColor | null;
+  cardShadowColor?: TStylingColor | null;
+  highlightBorderColor?: TStylingColor | null;
+  isDarkModeEnabled?: boolean | null;
+  roundness?: number | null;
+  cardArrangement?: {
+    linkSurveys: "casual" | "straight" | "simple";
+    appSurveys: "casual" | "straight" | "simple";
+  } | null;
+  background?: {
+    bg?: string | null;
+    bgType?: "animation" | "color" | "image" | "upload" | null;
+    brightness?: number | null;
+  } | null;
+  hideProgressBar?: boolean | null;
+  isLogoHidden?: boolean | null;
+}

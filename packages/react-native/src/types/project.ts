@@ -1,3 +1,5 @@
+import type { TBaseStyling } from "./survey";
+
 export type TProject = {
   id: string;
   createdAt: Date;
@@ -24,3 +26,8 @@ export type TProject = {
     bgColor?: string;
   } | null;
 };
+
+
+export interface TProjectStyling extends TBaseStyling {
+  allowStyleOverwrite: boolean;
+}
