@@ -21,15 +21,15 @@ export class UpdateQueue {
   }
 
   public updateUserId(userId: string): void {
-    if (!this.updates) {
-      this.updates = {
-        userId,
-        attributes: {},
-      };
-    } else {
+    if (this.updates) {
       this.updates = {
         ...this.updates,
         userId,
+      };
+    } else {
+      this.updates = {
+        userId,
+        attributes: {},
       };
     }
   }
@@ -39,16 +39,16 @@ export class UpdateQueue {
     // Get userId from updates first, then fallback to config
     const userId = this.updates?.userId ?? config.get().user.data.userId ?? "";
 
-    if (!this.updates) {
-      this.updates = {
-        userId,
-        attributes,
-      };
-    } else {
+    if (this.updates) {
       this.updates = {
         ...this.updates,
         userId,
         attributes: { ...this.updates.attributes, ...attributes },
+      };
+    } else {
+      this.updates = {
+        userId,
+        attributes,
       };
     }
   }
@@ -63,6 +63,81 @@ export class UpdateQueue {
 
   public isEmpty(): boolean {
     return !this.updates;
+  }
+
+  private handleLanguageWithoutUserId(
+    currentUpdates: Partial<TUpdates> & { attributes?: TAttributes },
+    config: RNConfig
+  ): Partial<TUpdates> & { attributes?: TAttributes } {
+    if (!currentUpdates.attributes?.language) {
+      return currentUpdates;
+    }
+
+    // Update language in local config
+    config.update({
+      ...config.get(),
+      user: {
+        ...config.get().user,
+        data: {
+          ...config.get().user.data,
+          language: currentUpdates.attributes.language,
+        },
+      },
+    });
+
+    logger.debug("Updated language successfully");
+
+    // Remove language from attributes
+    const { language: _, ...remainingAttributes } = currentUpdates.attributes;
+    return {
+      ...currentUpdates,
+      attributes: remainingAttributes,
+    };
+  }
+
+  private validateAttributesWithUserId(
+    currentUpdates: Partial<TUpdates> & { attributes?: TAttributes },
+    effectiveUserId: string | null | undefined
+  ): void {
+    const hasAttributes =
+      Object.keys(currentUpdates.attributes ?? {}).length > 0;
+
+    if (hasAttributes && !effectiveUserId) {
+      const errorMessage =
+        "Formbricks can't set attributes without a userId! Please set a userId first with the setUserId function";
+      logger.error(errorMessage);
+      this.clearUpdates();
+      throw new Error(errorMessage);
+    }
+  }
+
+  private async sendUpdatesIfNeeded(
+    effectiveUserId: string | null | undefined,
+    currentUpdates: Partial<TUpdates> & { attributes?: TAttributes }
+  ): Promise<void> {
+    if (!effectiveUserId) {
+      return;
+    }
+
+    const result = await sendUpdates({
+      updates: {
+        userId: effectiveUserId,
+        attributes: currentUpdates.attributes ?? {},
+      },
+    });
+
+    if (result.ok) {
+      logger.debug("Updates sent successfully");
+    } else {
+      const err = result.error as {
+        status?: number;
+        code?: string;
+        message?: string;
+      };
+      logger.error(
+        `Failed to send updates: ${err?.message ?? "unknown error"}`
+      );
+    }
   }
 
   public async processUpdates(): Promise<void> {
@@ -80,65 +155,28 @@ export class UpdateQueue {
           let currentUpdates = { ...this.updates };
           const config = await RNConfig.getInstance();
 
-          if (Object.keys(currentUpdates).length > 0) {
-            // Get userId from either updates or config
-            const effectiveUserId =
-              currentUpdates.userId ?? config.get().user.data.userId;
-            const isLanguageInUpdates = currentUpdates.attributes?.language;
-
-            if (!effectiveUserId && isLanguageInUpdates) {
-              // no user id set but the updates contain a language
-              // we need to set this language in the local config:
-              config.update({
-                ...config.get(),
-                user: {
-                  ...config.get().user,
-                  data: {
-                    ...config.get().user.data,
-                    language: currentUpdates.attributes?.language,
-                  },
-                },
-              });
-
-              logger.debug("Updated language successfully");
-
-              const { language: _, ...remainingAttributes } =
-                currentUpdates.attributes ?? {};
-
-              // remove language from attributes
-              currentUpdates = {
-                ...currentUpdates,
-                attributes: remainingAttributes,
-              };
-            }
-
-            if (
-              Object.keys(currentUpdates.attributes ?? {}).length > 0 &&
-              !effectiveUserId
-            ) {
-              const errorMessage =
-                "Formbricks can't set attributes without a userId! Please set a userId first with the setUserId function";
-              logger.error(errorMessage);
-              this.clearUpdates();
-              throw new Error(errorMessage);
-            }
-
-            // Only send updates if we have a userId (either from updates or local storage)
-            if (effectiveUserId) {
-              const result = await sendUpdates({
-                updates: {
-                  userId: effectiveUserId,
-                  attributes: currentUpdates.attributes ?? {},
-                },
-              });
-
-              if (result.ok) {
-                logger.debug("Updates sent successfully");
-              } else {
-                logger.error("Failed to send updates");
-              }
-            }
+          if (Object.keys(currentUpdates).length === 0) {
+            this.clearUpdates();
+            resolve();
+            return;
           }
+
+          const effectiveUserId =
+            currentUpdates.userId ?? config.get().user.data.userId;
+
+          // Handle language updates without userId
+          if (!effectiveUserId) {
+            currentUpdates = this.handleLanguageWithoutUserId(
+              currentUpdates,
+              config
+            );
+          }
+
+          // Validate attributes require userId
+          this.validateAttributesWithUserId(currentUpdates, effectiveUserId);
+
+          // Send updates if we have a userId
+          await this.sendUpdatesIfNeeded(effectiveUserId, currentUpdates);
 
           this.clearUpdates();
           resolve();

@@ -1,10 +1,10 @@
 import type {
   TEnvironmentState,
   TEnvironmentStateProject,
-  TProjectStyling,
   TUserState,
 } from "@/types/config";
 import type { Result } from "@/types/error";
+import type { TProjectStyling } from "@/types/project";
 import type { TSurvey } from "@/types/survey";
 
 // Helper function to calculate difference in days between two dates
@@ -77,7 +77,7 @@ export const filterSurveys = (
         );
 
       default:
-        throw Error("Invalid displayOption");
+        throw new Error("Invalid displayOption");
     }
   });
 

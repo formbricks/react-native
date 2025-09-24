@@ -1,6 +1,6 @@
-import type { TProjectStyling } from "@/types/config";
 import type { TResponseData, TResponseUpdate } from "@/types/response";
 import type { TFileUploadParams, TUploadFileConfig } from "@/types/storage";
+import type { TProjectStyling } from "./project";
 
 export type TJsFileUploadParams = {
   file: {
