@@ -35,7 +35,7 @@ export const addUserStateExpiryCheckListener = async (): Promise<void> => {
         ...config.get(),
         user: {
           ...config.get().user,
-          expiresAt: new Date(new Date().getTime() + 1000 * 60 * 30), // 30 minutes
+          expiresAt: new Date(Date.now() + 1000 * 60 * 30), // 30 minutes
         },
       });
     };

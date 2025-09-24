@@ -1,4 +1,3 @@
-import { Formbricks } from "@/components/formbricks";
 import { CommandQueue } from "@/lib/common/command-queue";
 import { Logger } from "@/lib/common/logger";
 import * as Actions from "@/lib/survey/action";
@@ -39,4 +38,4 @@ export const logout = async (): Promise<void> => {
   await queue.wait();
 };
 
-export default Formbricks;
+export { Formbricks as default } from "@/components/formbricks";

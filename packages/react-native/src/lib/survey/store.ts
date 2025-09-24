@@ -20,9 +20,9 @@ export class SurveyStore {
     const prevSurvey = this.survey;
     if (prevSurvey?.id !== survey.id) {
       this.survey = survey;
-      this.listeners.forEach((listener) => {
+      for (const listener of this.listeners) {
         listener(this.survey, prevSurvey);
-      });
+      }
     }
   }
 
@@ -30,9 +30,9 @@ export class SurveyStore {
     const prevSurvey = this.survey;
     if (prevSurvey !== null) {
       this.survey = null;
-      this.listeners.forEach((listener) => {
+      for (const listener of this.listeners) {
         listener(this.survey, prevSurvey);
-      });
+      }
     }
   }
 

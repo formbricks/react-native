@@ -15,19 +15,19 @@ export const diffInDays = (date1: Date, date2: Date): number => {
 
 export const wrapThrowsAsync =
   <T, A extends unknown[]>(fn: (...args: A) => Promise<T>) =>
-  async (...args: A): Promise<Result<T>> => {
-    try {
-      return {
-        ok: true,
-        data: await fn(...args),
-      };
-    } catch (error) {
-      return {
-        ok: false,
-        error: error as Error,
-      };
-    }
-  };
+    async (...args: A): Promise<Result<T>> => {
+      try {
+        return {
+          ok: true,
+          data: await fn(...args),
+        };
+      } catch (error) {
+        return {
+          ok: false,
+          error: error as Error,
+        };
+      }
+    };
 
 /**
  * Filters surveys based on the displayOption, recontactDays, and segments
@@ -90,8 +90,6 @@ export const filterSurveys = (
 
     // if survey has recontactDays, check if the last display was more than recontactDays ago
     // The previous approach checked the last display for each survey which is why we still have a surveyId in the displays array.
-    // NOSONAR
-    // TODO: Remove the surveyId from the displays array
     if (survey.recontactDays !== null) {
       return (
         diffInDays(new Date(), new Date(lastDisplayAt)) >= survey.recontactDays
@@ -185,8 +183,7 @@ export const getLanguageCode = (
 export const shouldDisplayBasedOnPercentage = (
   displayPercentage: number
 ): boolean => {
-  const randomNum = Math.floor(Math.random() * 10000) / 100;
-  return randomNum <= displayPercentage;
+  return Math.random() * 100 < displayPercentage; // NOSONAR: Math.random() is sufficient for non-security survey display logic
 };
 
 export const isNowExpired = (expirationDate: Date): boolean => {

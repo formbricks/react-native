@@ -98,7 +98,7 @@ export const addEnvironmentStateExpiryCheckListener =
             ...existingConfig,
             environment: {
               ...existingConfig.environment,
-              expiresAt: new Date(new Date().getTime() + 1000 * 60 * 30), // 30 minutes
+              expiresAt: new Date(Date.now() + 1000 * 60 * 30), // 30 minutes
             },
           });
         }
