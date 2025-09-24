@@ -15,19 +15,19 @@ export const diffInDays = (date1: Date, date2: Date): number => {
 
 export const wrapThrowsAsync =
   <T, A extends unknown[]>(fn: (...args: A) => Promise<T>) =>
-    async (...args: A): Promise<Result<T>> => {
-      try {
-        return {
-          ok: true,
-          data: await fn(...args),
-        };
-      } catch (error) {
-        return {
-          ok: false,
-          error: error as Error,
-        };
-      }
-    };
+  async (...args: A): Promise<Result<T>> => {
+    try {
+      return {
+        ok: true,
+        data: await fn(...args),
+      };
+    } catch (error) {
+      return {
+        ok: false,
+        error: error as Error,
+      };
+    }
+  };
 
 /**
  * Filters surveys based on the displayOption, recontactDays, and segments
@@ -77,7 +77,7 @@ export const filterSurveys = (
         );
 
       default:
-        throw Error("Invalid displayOption");
+        throw new Error("Invalid displayOption");
     }
   });
 

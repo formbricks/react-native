@@ -21,15 +21,15 @@ export class UpdateQueue {
   }
 
   public updateUserId(userId: string): void {
-    if (!this.updates) {
-      this.updates = {
-        userId,
-        attributes: {},
-      };
-    } else {
+    if (this.updates) {
       this.updates = {
         ...this.updates,
         userId,
+      };
+    } else {
+      this.updates = {
+        userId,
+        attributes: {},
       };
     }
   }
@@ -39,16 +39,16 @@ export class UpdateQueue {
     // Get userId from updates first, then fallback to config
     const userId = this.updates?.userId ?? config.get().user.data.userId ?? "";
 
-    if (!this.updates) {
-      this.updates = {
-        userId,
-        attributes,
-      };
-    } else {
+    if (this.updates) {
       this.updates = {
         ...this.updates,
         userId,
         attributes: { ...this.updates.attributes, ...attributes },
+      };
+    } else {
+      this.updates = {
+        userId,
+        attributes,
       };
     }
   }
