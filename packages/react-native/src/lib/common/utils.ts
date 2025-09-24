@@ -183,8 +183,7 @@ export const getLanguageCode = (
 export const shouldDisplayBasedOnPercentage = (
   displayPercentage: number
 ): boolean => {
-  // NOSONAR: Math.random() is sufficient for non-security survey display logic
-  return Math.random() * 100 < displayPercentage;
+  return Math.random() * 100 < displayPercentage; // NOSONAR: Math.random() is sufficient for non-security survey display logic
 };
 
 export const isNowExpired = (expirationDate: Date): boolean => {
