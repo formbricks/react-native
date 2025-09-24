@@ -226,8 +226,8 @@ const shouldSyncConfig = (
 ): boolean => {
   return Boolean(
     existingConfig?.environment &&
-      existingConfig.environmentId === configInput.environmentId &&
-      existingConfig.appUrl === configInput.appUrl
+    existingConfig.environmentId === configInput.environmentId &&
+    existingConfig.appUrl === configInput.appUrl
   );
 };
 
@@ -412,7 +412,7 @@ export const handleErrorOnFirstSetup = async (e: {
   const initialErrorConfig: Partial<TConfig> = {
     status: {
       value: "error",
-      expiresAt: new Date(new Date().getTime() + 10 * 60000), // 10 minutes in the future
+      expiresAt: new Date(Date.now() + 10 * 60000), // 10 minutes in the future
     },
   };
 
