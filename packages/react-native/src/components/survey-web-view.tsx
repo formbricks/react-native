@@ -147,6 +147,7 @@ export function SurveyWebView(
                 appUrl: appConfig.get().appUrl,
                 clickOutside:
                   surveyPlacement === "center" ? clickOutside : true,
+                ignorePlacementForClickOutside: true,
                 darkOverlay,
                 getSetIsResponseSendingFinished: (
                   _f: (value: boolean) => void
