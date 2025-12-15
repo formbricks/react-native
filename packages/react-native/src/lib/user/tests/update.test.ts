@@ -207,7 +207,7 @@ describe("sendUpdates", () => {
   test("handles unexpected errors", async () => {
     (ApiClient as Mock).mockImplementation(function () {
       return {
-        createOrUpdate: vi
+        createOrUpdateUser: vi
           .fn()
           .mockRejectedValue(new Error("Unexpected error")),
       };

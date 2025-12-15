@@ -47,7 +47,7 @@
   "devDependencies": {
     "@types/react": "19.1.17",
     "@vercel/style-guide": "6.0.0",
-    "@vitest/coverage-v8": "3.2.4",
+    "@vitest/coverage-v8": "4.0.15",
     "react": "19.1.0",
     "react-native": "0.81.5",
     "terser": "5.44.1",
