@@ -1,8 +1,9 @@
 import { resolve } from "node:path";
-import { type UserConfig, defineConfig } from "vite";
+import { defineConfig } from "vite";
+import { ViteUserConfig } from "vitest/config";
 import dts from "vite-plugin-dts";
 
-const config = (): UserConfig => {
+const config = (): ViteUserConfig => {
   return defineConfig({
     resolve: {
       alias: {
