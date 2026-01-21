@@ -3,6 +3,7 @@ import { Logger } from "@/lib/common/logger";
 import { setup } from "@/lib/common/setup";
 import { SurveyStore } from "@/lib/survey/store";
 import React, { useCallback, useEffect, useSyncExternalStore } from "react";
+import { View } from "react-native";
 
 interface FormbricksProps {
   appUrl: string;
@@ -39,5 +40,12 @@ export function Formbricks({ appUrl, environmentId }: FormbricksProps): React.JS
   const getSnapshot = useCallback(() => surveyStore.getSurvey(), []);
   const survey = useSyncExternalStore(subscribe, getSnapshot);
 
-  return survey ? <SurveyWebView survey={survey} /> : null;
+  // Wrap in View with pointerEvents="box-none" to allow touches to pass through
+  // on Android when the survey is not visible or in transparent areas.
+  // Issue reference: https://github.com/formbricks/react-native/issues/23
+  return (
+    <View pointerEvents="box-none">
+      {survey ? <SurveyWebView survey={survey} /> : null}
+    </View>
+  );
 }
