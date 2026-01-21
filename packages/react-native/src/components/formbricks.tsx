@@ -40,11 +40,10 @@ export function Formbricks({ appUrl, environmentId }: FormbricksProps): React.JS
   const getSnapshot = useCallback(() => surveyStore.getSurvey(), []);
   const survey = useSyncExternalStore(subscribe, getSnapshot);
 
-  // Wrap in View with pointerEvents="box-none" to allow touches to pass through
-  // on Android when the survey is not visible or in transparent areas.
-  return (
+  // Wrap in View with pointerEvents="box-none" to fix Android touch event handling.
+  return survey ? (
     <View pointerEvents="box-none">
-      {survey ? <SurveyWebView survey={survey} /> : null}
+      <SurveyWebView survey={survey} />
     </View>
-  );
+  ) : null;
 }
