@@ -42,7 +42,6 @@ export function Formbricks({ appUrl, environmentId }: FormbricksProps): React.JS
 
   // Wrap in View with pointerEvents="box-none" to allow touches to pass through
   // on Android when the survey is not visible or in transparent areas.
-  // Issue reference: https://github.com/formbricks/react-native/issues/23
   return (
     <View pointerEvents="box-none">
       {survey ? <SurveyWebView survey={survey} /> : null}
