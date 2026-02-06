@@ -3,14 +3,26 @@ import { RNConfig } from "@/lib/common/config";
 import { Logger } from "@/lib/common/logger";
 import { filterSurveys, getLanguageCode, getStyling } from "@/lib/common/utils";
 import { SurveyStore } from "@/lib/survey/store";
+import type { TOverlay } from "@/types/common";
 import { type TUserState, ZJsRNWebViewOnMessageData } from "@/types/config";
 import type { TSurvey, SurveyContainerProps } from "@/types/survey";
-import React, { type JSX, useEffect, useRef, useState } from "react";
+import React, { type JSX, useEffect, useMemo, useRef, useState } from "react";
 import { KeyboardAvoidingView, Modal, View, StyleSheet } from "react-native";
 import { WebView, type WebViewMessageEvent } from "react-native-webview";
 
 const logger = Logger.getInstance();
 logger.configure({ logLevel: "debug" });
+
+const getOverlayBackgroundColor = (overlay: TOverlay): string => {
+  switch (overlay) {
+    case "dark":
+      return "rgba(51, 65, 85, 0.8)";
+    case "light":
+      return "rgba(148, 163, 184, 0.5)";
+    case "none":
+      return "rgba(0, 0, 0, 0.5)";
+  }
+};
 
 const surveyStore = SurveyStore.getInstance();
 
@@ -85,6 +97,15 @@ export function SurveyWebView(
     setShowSurvey(true);
   }, [props.survey.delay, isSurveyRunning, props.survey.name]);
 
+  const overlay = appConfig
+    ? (props.survey.projectOverwrites?.overlay ?? appConfig.get().environment.data.project.overlay)
+    : "none";
+
+  const modalContainerStyle = useMemo(
+    () => [styles.modalContainer, { backgroundColor: getOverlayBackgroundColor(overlay) }],
+    [overlay]
+  );
+
   if (!appConfig) {
     return;
   }
@@ -114,8 +135,6 @@ export function SurveyWebView(
   const clickOutside =
     props.survey.projectOverwrites?.clickOutsideClose ??
     project.clickOutsideClose;
-  const darkOverlay =
-    props.survey.projectOverwrites?.darkOverlay ?? project.darkOverlay;
 
   return (
     <Modal
@@ -127,7 +146,7 @@ export function SurveyWebView(
         setIsSurveyRunning(false);
       }}
     >
-      <View style={styles.modalContainer}>
+      <View style={modalContainerStyle}>
         <KeyboardAvoidingView
           behavior="padding"
           style={styles.keyboardAvoidingView}
@@ -145,9 +164,8 @@ export function SurveyWebView(
                 languageCode,
                 placement: surveyPlacement,
                 appUrl: appConfig.get().appUrl,
-                clickOutside:
-                  surveyPlacement === "center" ? clickOutside : true,
-                darkOverlay,
+                clickOutside,
+                overlay,
                 getSetIsResponseSendingFinished: (
                   _f: (value: boolean) => void
                 ) => undefined,
@@ -269,7 +287,6 @@ export function SurveyWebView(
 const styles = StyleSheet.create({
   modalContainer: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
   },
   keyboardAvoidingView: {
     flex: 1,

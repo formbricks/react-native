@@ -1,5 +1,6 @@
 import type { TResponseData, TResponseUpdate } from "@/types/response";
 import type { TFileUploadParams, TUploadFileConfig } from "@/types/storage";
+import type { TOverlay } from "./common";
 import type { TProjectStyling } from "./project";
 
 export type TJsFileUploadParams = {
@@ -45,7 +46,7 @@ export interface SurveyBaseProps {
   isCardBorderVisible?: boolean;
   startAtQuestionId?: string;
   clickOutside?: boolean;
-  darkOverlay?: boolean;
+  overlay?: TOverlay;
   hiddenFieldsRecord?: TResponseData;
   shouldResetQuestionId?: boolean;
   fullSizeCards?: boolean;
@@ -72,7 +73,7 @@ export interface SurveyContainerProps
   mode?: "modal" | "inline";
   containerId?: string;
   clickOutside?: boolean;
-  darkOverlay?: boolean;
+  overlay?: TOverlay;
   placement?: "bottomLeft" | "bottomRight" | "topLeft" | "topRight" | "center";
   action?: string;
   singleUseId?: string;
@@ -239,7 +240,7 @@ export type TSurvey = {
       | "center"
       | null;
     clickOutsideClose?: boolean | null;
-    darkOverlay?: boolean | null;
+    overlay?: TOverlay | null;
   } | null;
   languages: {
     default: boolean;
