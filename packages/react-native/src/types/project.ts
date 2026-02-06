@@ -1,3 +1,4 @@
+import type { TOverlay } from "./common";
 import type { TBaseStyling } from "./styling";
 
 export type TProject = {
@@ -20,7 +21,7 @@ export type TProject = {
   };
   placement: "topLeft" | "topRight" | "bottomLeft" | "bottomRight"; // assumed from WidgetPlacement
   clickOutsideClose: boolean;
-  darkOverlay: boolean;
+  overlay: TOverlay;
   logo?: {
     url?: string;
     bgColor?: string;

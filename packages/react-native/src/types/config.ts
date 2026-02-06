@@ -11,7 +11,7 @@ export type TEnvironmentStateProject = Pick<
   | "id"
   | "recontactDays"
   | "clickOutsideClose"
-  | "darkOverlay"
+  | "overlay"
   | "placement"
   | "inAppSurveyBranding"
 > & {
