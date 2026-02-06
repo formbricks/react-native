@@ -20,7 +20,7 @@ const getOverlayBackgroundColor = (overlay: TOverlay): string => {
     case "light":
       return "rgba(148, 163, 184, 0.5)";
     case "none":
-      return "rgba(0, 0, 0, 0.5)";
+      return "transparent";
   }
 };
 
