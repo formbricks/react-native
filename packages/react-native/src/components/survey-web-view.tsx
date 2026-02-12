@@ -3,26 +3,15 @@ import { RNConfig } from "@/lib/common/config";
 import { Logger } from "@/lib/common/logger";
 import { filterSurveys, getLanguageCode, getStyling } from "@/lib/common/utils";
 import { SurveyStore } from "@/lib/survey/store";
-import type { TOverlay } from "@/types/common";
 import { type TUserState, ZJsRNWebViewOnMessageData } from "@/types/config";
 import type { TSurvey, SurveyContainerProps } from "@/types/survey";
-import React, { type JSX, useEffect, useMemo, useRef, useState } from "react";
+import React, { type JSX, useEffect, useRef, useState } from "react";
 import { KeyboardAvoidingView, Modal, View, StyleSheet } from "react-native";
 import { WebView, type WebViewMessageEvent } from "react-native-webview";
 
 const logger = Logger.getInstance();
 logger.configure({ logLevel: "debug" });
 
-const getOverlayBackgroundColor = (overlay: TOverlay): string => {
-  switch (overlay) {
-    case "dark":
-      return "rgba(51, 65, 85, 0.8)";
-    case "light":
-      return "rgba(148, 163, 184, 0.5)";
-    case "none":
-      return "transparent";
-  }
-};
 
 const surveyStore = SurveyStore.getInstance();
 
@@ -97,15 +86,6 @@ export function SurveyWebView(
     setShowSurvey(true);
   }, [props.survey.delay, isSurveyRunning, props.survey.name]);
 
-  const overlay = appConfig
-    ? (props.survey.projectOverwrites?.overlay ?? appConfig.get().environment.data.project.overlay)
-    : "none";
-
-  const modalContainerStyle = useMemo(
-    () => [styles.modalContainer, { backgroundColor: getOverlayBackgroundColor(overlay) }],
-    [overlay]
-  );
-
   if (!appConfig) {
     return;
   }
@@ -135,6 +115,8 @@ export function SurveyWebView(
   const clickOutside =
     props.survey.projectOverwrites?.clickOutsideClose ??
     project.clickOutsideClose;
+  const overlay =
+    props.survey.projectOverwrites?.overlay ?? project.overlay;
 
   return (
     <Modal
@@ -146,7 +128,7 @@ export function SurveyWebView(
         setIsSurveyRunning(false);
       }}
     >
-      <View style={modalContainerStyle}>
+      <View style={styles.modalContainer}>
         <KeyboardAvoidingView
           behavior="padding"
           style={styles.keyboardAvoidingView}
