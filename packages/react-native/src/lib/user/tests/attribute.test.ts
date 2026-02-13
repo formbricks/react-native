@@ -80,5 +80,55 @@ describe("User Attributes", () => {
       expect(mockUpdateQueue.processUpdates).toHaveBeenCalled();
       // The function returns before processUpdates completes due to void operator
     });
+
+    test("converts Date values to ISO strings", async () => {
+      const testDate = new Date("2026-01-15T10:30:00.000Z");
+      const attributes = { createdAt: testDate };
+
+      await setAttributes(attributes);
+
+      expect(mockUpdateQueue.updateAttributes).toHaveBeenCalledWith({
+        createdAt: "2026-01-15T10:30:00.000Z",
+      });
+    });
+
+    test("preserves number values as numbers", async () => {
+      const attributes = { age: 25, score: 99.5 };
+
+      await setAttributes(attributes);
+
+      expect(mockUpdateQueue.updateAttributes).toHaveBeenCalledWith({
+        age: 25,
+        score: 99.5,
+      });
+    });
+
+    test("preserves string values as strings", async () => {
+      const attributes = { name: "Alice", role: "admin" };
+
+      await setAttributes(attributes);
+
+      expect(mockUpdateQueue.updateAttributes).toHaveBeenCalledWith({
+        name: "Alice",
+        role: "admin",
+      });
+    });
+
+    test("normalizes mixed attribute types correctly", async () => {
+      const testDate = new Date("2026-06-01T00:00:00.000Z");
+      const attributes = {
+        name: "Bob",
+        age: 30,
+        joinedAt: testDate,
+      };
+
+      await setAttributes(attributes);
+
+      expect(mockUpdateQueue.updateAttributes).toHaveBeenCalledWith({
+        name: "Bob",
+        age: 30,
+        joinedAt: "2026-06-01T00:00:00.000Z",
+      });
+    });
   });
 });

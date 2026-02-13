@@ -18,12 +18,12 @@ export const setUserId = async (userId: string): Promise<void> => {
   await queue.wait();
 };
 
-export const setAttribute = async (key: string, value: string): Promise<void> => {
+export const setAttribute = async (key: string, value: string | number | Date): Promise<void> => {
   queue.add(Attributes.setAttributes, true, { [key]: value });
   await queue.wait();
 };
 
-export const setAttributes = async (attributes: Record<string, string>): Promise<void> => {
+export const setAttributes = async (attributes: Record<string, string | number | Date>): Promise<void> => {
   queue.add(Attributes.setAttributes, true, attributes);
   await queue.wait();
 };

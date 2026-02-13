@@ -24,6 +24,7 @@ vi.mock("@/lib/common/logger", () => ({
   Logger: {
     getInstance: vi.fn(() => ({
       debug: vi.fn(),
+      error: vi.fn(),
     })),
   },
 }));
@@ -104,7 +105,7 @@ describe("sendUpdatesToBackend", () => {
     if (!result.ok) {
       expect(result.error.code).toBe("network_error");
       expect(result.error.message).toBe(
-        "Error updating user with userId user_123"
+        "Error updating user with userId user_123",
       );
     }
   });
@@ -128,7 +129,7 @@ describe("sendUpdatesToBackend", () => {
         appUrl: mockAppUrl,
         environmentId: mockEnvironmentId,
         updates: mockUpdates,
-      })
+      }),
     ).rejects.toThrow("Network error");
   });
 });
@@ -150,6 +151,7 @@ describe("sendUpdates", () => {
 
     (Logger.getInstance as Mock).mockImplementation(() => ({
       debug: vi.fn(),
+      error: vi.fn(),
     }));
   });
 
@@ -176,6 +178,9 @@ describe("sendUpdates", () => {
     });
 
     expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.data.hasWarnings).toBe(false);
+    }
   });
 
   test("handles backend errors", async () => {
@@ -202,6 +207,74 @@ describe("sendUpdates", () => {
     if (!result.ok) {
       expect(result.error.code).toBe("invalid_request");
     }
+  });
+
+  test("returns hasWarnings true when backend returns errors", async () => {
+    const mockResponse = {
+      ok: true,
+      data: {
+        state: {
+          data: {
+            userId: mockUserId,
+            attributes: mockAttributes,
+          },
+          expiresAt: new Date(Date.now() + 1000 * 60 * 30),
+        },
+        errors: ["Attribute 'invalidKey' has an invalid key format"],
+      },
+    };
+
+    (ApiClient as Mock).mockImplementation(function () {
+      return { createOrUpdateUser: vi.fn().mockResolvedValue(mockResponse) };
+    });
+
+    const result = await sendUpdates({
+      updates: { userId: mockUserId, attributes: mockAttributes },
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.data.hasWarnings).toBe(true);
+    }
+  });
+
+  test("logs backend errors at error level and messages at debug level", async () => {
+    const mockError = vi.fn();
+    const mockDebug = vi.fn();
+    (Logger.getInstance as Mock).mockImplementation(() => ({
+      debug: mockDebug,
+      error: mockError,
+    }));
+
+    const mockResponse = {
+      ok: true,
+      data: {
+        state: {
+          data: {
+            userId: mockUserId,
+            attributes: mockAttributes,
+          },
+          expiresAt: new Date(Date.now() + 1000 * 60 * 30),
+        },
+        messages: ["Email attribute already exists"],
+        errors: ["Attribute 'badKey' has an invalid format"],
+      },
+    };
+
+    (ApiClient as Mock).mockImplementation(function () {
+      return { createOrUpdateUser: vi.fn().mockResolvedValue(mockResponse) };
+    });
+
+    await sendUpdates({
+      updates: { userId: mockUserId, attributes: mockAttributes },
+    });
+
+    expect(mockError).toHaveBeenCalledWith(
+      "Attribute 'badKey' has an invalid format",
+    );
+    expect(mockDebug).toHaveBeenCalledWith(
+      "User update message: Email attribute already exists",
+    );
   });
 
   test("handles unexpected errors", async () => {
