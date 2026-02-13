@@ -9,7 +9,6 @@ import {
   type Result,
   err,
   ok,
-  okVoid,
 } from "@/types/error";
 
 export const sendUpdatesToBackend = async ({
@@ -25,6 +24,7 @@ export const sendUpdatesToBackend = async ({
     {
       state: TUserState;
       messages?: string[];
+      errors?: string[];
     },
     ApiErrorResponse
   >
@@ -69,7 +69,7 @@ export const sendUpdates = async ({
   updates,
 }: {
   updates: TUpdates;
-}): Promise<Result<void, ApiErrorResponse>> => {
+}): Promise<Result<{ hasWarnings: boolean }, ApiErrorResponse>> => {
   const config = await RNConfig.getInstance();
   const logger = Logger.getInstance();
 
@@ -84,35 +84,39 @@ export const sendUpdates = async ({
       updates,
     });
 
-    if (updatesResponse.ok) {
-      const userState = updatesResponse.data.state;
-      const filteredSurveys = filterSurveys(
-        config.get().environment,
-        userState
-      );
-
-      // messages => string[] - contains the details of the attributes update
-      // for example, if the attribute "email" was being used for some user or not
-      const messages = updatesResponse.data.messages;
-
-      if (messages && messages.length > 0) {
-        for (const message of messages) {
-          logger.debug(`User update message: ${message}`);
-        }
-      }
-
-      config.update({
-        ...config.get(),
-        user: {
-          ...userState,
-        },
-        filteredSurveys,
-      });
-
-      return okVoid();
+    if (!updatesResponse.ok) {
+      return err(updatesResponse.error);
     }
 
-    return err(updatesResponse.error);
+    const userState = updatesResponse.data.state;
+    const filteredSurveys = filterSurveys(
+      config.get().environment,
+      userState
+    );
+
+    // messages => informational debug messages (e.g., "email already exists")
+    // errors => error messages that should always be visible (e.g., invalid attribute keys)
+    const { messages, errors } = updatesResponse.data;
+
+    // Log errors (always visible)
+    errors?.forEach((error) => {
+      logger.error(error);
+    });
+
+    // Log informational messages (debug only)
+    messages?.forEach((message) => {
+      logger.debug(`User update message: ${message}`);
+    });
+
+    config.update({
+      ...config.get(),
+      user: {
+        ...userState,
+      },
+      filteredSurveys,
+    });
+
+    return ok({ hasWarnings: Boolean(errors?.length) });
   } catch (e) {
     console.error("error in sending updates: ", e);
 

@@ -119,6 +119,7 @@ describe("UpdateQueue", () => {
 
     (sendUpdates as Mock).mockReturnValue({
       ok: true,
+      data: { hasWarnings: false },
     });
 
     await updateQueue.updateAttributes({ name: mockAttributes.name });

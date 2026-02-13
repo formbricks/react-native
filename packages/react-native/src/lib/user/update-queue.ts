@@ -67,7 +67,7 @@ export class UpdateQueue {
 
   private handleLanguageWithoutUserId(
     currentUpdates: Partial<TUpdates> & { attributes?: TAttributes },
-    config: RNConfig
+    config: RNConfig,
   ): Partial<TUpdates> & { attributes?: TAttributes } {
     if (!currentUpdates.attributes?.language) {
       return currentUpdates;
@@ -80,7 +80,7 @@ export class UpdateQueue {
         ...config.get().user,
         data: {
           ...config.get().user.data,
-          language: currentUpdates.attributes.language,
+          language: currentUpdates.attributes.language as string,
         },
       },
     });
@@ -97,7 +97,7 @@ export class UpdateQueue {
 
   private validateAttributesWithUserId(
     currentUpdates: Partial<TUpdates> & { attributes?: TAttributes },
-    effectiveUserId: string | null | undefined
+    effectiveUserId: string | null | undefined,
   ): void {
     const hasAttributes =
       Object.keys(currentUpdates.attributes ?? {}).length > 0;
@@ -113,7 +113,7 @@ export class UpdateQueue {
 
   private async sendUpdatesIfNeeded(
     effectiveUserId: string | null | undefined,
-    currentUpdates: Partial<TUpdates> & { attributes?: TAttributes }
+    currentUpdates: Partial<TUpdates> & { attributes?: TAttributes },
   ): Promise<void> {
     if (!effectiveUserId) {
       return;
@@ -126,17 +126,18 @@ export class UpdateQueue {
       },
     });
 
-    if (result.ok) {
-      logger.debug("Updates sent successfully");
-    } else {
-      const err = result.error as {
-        status?: number;
-        code?: string;
-        message?: string;
-      };
+    if (!result.ok) {
+      const err = result.error;
       logger.error(
-        `Failed to send updates: ${err?.message ?? "unknown error"}`
+        `Failed to send updates: ${err?.message ?? "unknown error"}`,
       );
+
+      return;
+    }
+
+    // Only log success message if there were no warnings (e.g., skipped attributes)
+    if (!result.data.hasWarnings) {
+      logger.debug("Updates sent successfully");
     }
   }
 
@@ -168,7 +169,7 @@ export class UpdateQueue {
           if (!effectiveUserId) {
             currentUpdates = this.handleLanguageWithoutUserId(
               currentUpdates,
-              config
+              config,
             );
           }
 
@@ -182,7 +183,7 @@ export class UpdateQueue {
           resolve();
         } catch (error: unknown) {
           logger.error(
-            `Failed to process updates: ${error instanceof Error ? error.message : "Unknown error"}`
+            `Failed to process updates: ${error instanceof Error ? error.message : "Unknown error"}`,
           );
           reject(error as Error);
         }
@@ -190,7 +191,7 @@ export class UpdateQueue {
 
       this.debounceTimeout = setTimeout(
         () => void handler(),
-        this.DEBOUNCE_DELAY
+        this.DEBOUNCE_DELAY,
       );
     });
   }

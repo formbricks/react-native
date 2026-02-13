@@ -185,7 +185,7 @@ describe("survey/action.ts", () => {
       if (!result.ok) {
         expect(result.error.code).toBe("invalid_code");
         expect(result.error.message).toBe(
-          "invalidCode action unknown. Please add this action in Formbricks first in order to use it in your code."
+          "Action with identifier 'invalidCode' is unknown. Please add this action in Formbricks in order to use it via the SDK action tracking."
         );
       }
     });
