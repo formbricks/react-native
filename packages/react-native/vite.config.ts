@@ -23,6 +23,7 @@ const config = (): ViteUserConfig => {
           "react-dom",
           "react-native-webview",
           "@react-native-async-storage/async-storage",
+          "@react-native-community/netinfo",
         ],
       },
       lib: {

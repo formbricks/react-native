@@ -20,10 +20,10 @@ export interface TResponseUpdate {
   endingId?: string | null;
 }
 
-export const ZResponseData = z.record(z.union([z.string(), z.number(), z.array(z.string())]));
-export const ZResponseVariables = z.record(z.union([z.string(), z.number()]));
-export const ZResponseTtc = z.record(z.number());
-export const ZResponseHiddenFieldValue = z.record(z.union([z.string(), z.number(), z.array(z.string())]));
+export const ZResponseData = z.record(z.string(), z.union([z.string(), z.number(), z.array(z.string())]));
+export const ZResponseVariables = z.record(z.string(), z.union([z.string(), z.number()]));
+export const ZResponseTtc = z.record(z.string(), z.number());
+export const ZResponseHiddenFieldValue = z.record(z.string(), z.union([z.string(), z.number(), z.array(z.string())]));
 
 export const ZResponseUpdate = z.object({
   finished: z.boolean(),
