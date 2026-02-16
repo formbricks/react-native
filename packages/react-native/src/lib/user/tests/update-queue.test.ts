@@ -24,12 +24,16 @@ vi.mock("@/lib/common/config", () => ({
   },
 }));
 
+const { mockLogger } = vi.hoisted(() => ({
+  mockLogger: {
+    debug: vi.fn(),
+    error: vi.fn(),
+  },
+}));
+
 vi.mock("@/lib/common/logger", () => ({
   Logger: {
-    getInstance: vi.fn(() => ({
-      debug: vi.fn(),
-      error: vi.fn(),
-    })),
+    getInstance: vi.fn(() => mockLogger),
   },
 }));
 
@@ -161,6 +165,44 @@ describe("UpdateQueue", () => {
     await updateQueue.updateAttributes({ name: mockAttributes.name });
     await expect(updateQueue.processUpdates()).rejects.toThrow(
       "Formbricks can't set attributes without a userId!"
+    );
+  });
+
+  test("processUpdates logs error when sendUpdates fails", async () => {
+    (sendUpdates as Mock).mockResolvedValue({
+      ok: false,
+      error: { message: "Server error" },
+    });
+
+    await updateQueue.updateAttributes({ name: mockAttributes.name });
+
+    await new Promise((resolve) => {
+      setTimeout(resolve, 600);
+    });
+
+    await updateQueue.processUpdates();
+
+    expect(mockLogger.error).toHaveBeenCalledWith(
+      "Failed to send updates: Server error"
+    );
+  });
+
+  test("processUpdates suppresses success log when hasWarnings is true", async () => {
+    (sendUpdates as Mock).mockResolvedValue({
+      ok: true,
+      data: { hasWarnings: true },
+    });
+
+    await updateQueue.updateAttributes({ name: mockAttributes.name });
+
+    await new Promise((resolve) => {
+      setTimeout(resolve, 600);
+    });
+
+    await updateQueue.processUpdates();
+
+    expect(mockLogger.debug).not.toHaveBeenCalledWith(
+      "Updates sent successfully"
     );
   });
 });

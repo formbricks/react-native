@@ -1,5 +1,4 @@
 import {
-  type Mock,
   type MockInstance,
   beforeEach,
   describe,
@@ -9,7 +8,7 @@ import {
 } from "vitest";
 import { RNConfig } from "@/lib/common/config";
 import { Logger } from "@/lib/common/logger";
-import { setup, tearDown } from "@/lib/common/setup";
+import { tearDown } from "@/lib/common/setup";
 import { UpdateQueue } from "@/lib/user/update-queue";
 import { logout, setUserId } from "@/lib/user/user";
 
@@ -42,13 +41,10 @@ vi.mock("@/lib/user/update-queue", () => ({
 
 vi.mock("@/lib/common/setup", () => ({
   tearDown: vi.fn(),
-  setup: vi.fn(),
 }));
 
 describe("user.ts", () => {
   const mockUserId = "test-user-123";
-  const mockEnvironmentId = "env-123";
-  const mockAppUrl = "https://test.com";
 
   let getInstanceConfigMock: MockInstance<() => Promise<RNConfig>>;
   let getInstanceLoggerMock: MockInstance<() => Logger>;
@@ -62,7 +58,46 @@ describe("user.ts", () => {
   });
 
   describe("setUserId", () => {
-    test("returns error if userId is already set", async () => {
+    test("returns ok without updating when same userId is already set", async () => {
+      const mockConfig = {
+        get: vi.fn().mockReturnValue({
+          user: {
+            data: {
+              userId: mockUserId,
+            },
+          },
+        }),
+      };
+
+      const mockLogger = {
+        debug: vi.fn(),
+        error: vi.fn(),
+      };
+
+      const mockUpdateQueue = {
+        updateUserId: vi.fn(),
+        processUpdates: vi.fn(),
+      };
+
+      getInstanceConfigMock.mockReturnValue(
+        mockConfig as unknown as Promise<RNConfig>
+      );
+      getInstanceLoggerMock.mockReturnValue(mockLogger as unknown as Logger);
+      getInstanceUpdateQueueMock.mockReturnValue(
+        mockUpdateQueue as unknown as UpdateQueue
+      );
+
+      const result = await setUserId(mockUserId);
+
+      expect(result.ok).toBe(true);
+      expect(mockLogger.debug).toHaveBeenCalledWith(
+        "UserId is already set to the same value, skipping"
+      );
+      expect(mockUpdateQueue.updateUserId).not.toHaveBeenCalled();
+      expect(mockUpdateQueue.processUpdates).not.toHaveBeenCalled();
+    });
+
+    test("tears down previous state and sets new userId when different userId is set", async () => {
       const mockConfig = {
         get: vi.fn().mockReturnValue({
           user: {
@@ -78,19 +113,28 @@ describe("user.ts", () => {
         error: vi.fn(),
       };
 
+      const mockUpdateQueue = {
+        updateUserId: vi.fn(),
+        processUpdates: vi.fn(),
+      };
+
       getInstanceConfigMock.mockReturnValue(
         mockConfig as unknown as Promise<RNConfig>
       );
       getInstanceLoggerMock.mockReturnValue(mockLogger as unknown as Logger);
+      getInstanceUpdateQueueMock.mockReturnValue(
+        mockUpdateQueue as unknown as UpdateQueue
+      );
 
       const result = await setUserId(mockUserId);
 
-      expect(result.ok).toBe(false);
-      if (!result.ok) {
-        expect(result.error.code).toBe("forbidden");
-        expect(result.error.status).toBe(403);
-      }
-      expect(mockLogger.error).toHaveBeenCalled();
+      expect(result.ok).toBe(true);
+      expect(mockLogger.debug).toHaveBeenCalledWith(
+        "Different userId is being set, cleaning up previous user state"
+      );
+      expect(tearDown).toHaveBeenCalled();
+      expect(mockUpdateQueue.updateUserId).toHaveBeenCalledWith(mockUserId);
+      expect(mockUpdateQueue.processUpdates).toHaveBeenCalled();
     });
 
     test("successfully sets userId when none exists", async () => {
@@ -124,43 +168,45 @@ describe("user.ts", () => {
       const result = await setUserId(mockUserId);
 
       expect(result.ok).toBe(true);
+      expect(tearDown).not.toHaveBeenCalled();
       expect(mockUpdateQueue.updateUserId).toHaveBeenCalledWith(mockUserId);
       expect(mockUpdateQueue.processUpdates).toHaveBeenCalled();
     });
   });
 
   describe("logout", () => {
-    test("successfully sets up formbricks after logout", async () => {
-      const mockConfig = {
-        get: vi.fn().mockReturnValue({
-          environmentId: mockEnvironmentId,
-          appUrl: mockAppUrl,
-          user: { data: { userId: mockUserId } },
-        }),
+    test("successfully logs out and cleans state when userId is set", async () => {
+      const mockLogger = {
+        debug: vi.fn(),
+        error: vi.fn(),
       };
 
-      getInstanceConfigMock.mockReturnValue(
-        mockConfig as unknown as Promise<RNConfig>
-      );
-
-      (setup as Mock).mockResolvedValue(undefined);
+      getInstanceLoggerMock.mockReturnValue(mockLogger as unknown as Logger);
 
       const result = await logout();
 
+      expect(mockLogger.debug).toHaveBeenCalledWith(
+        "Logging out and cleaning user state"
+      );
       expect(tearDown).toHaveBeenCalled();
       expect(result.ok).toBe(true);
     });
 
-    test("returns error if setup fails", async () => {
-      const mockError = new Error("Failed to logout");
-      getInstanceConfigMock.mockRejectedValue(mockError);
+    test("successfully logs out and cleans state even when no userId is set", async () => {
+      const mockLogger = {
+        debug: vi.fn(),
+        error: vi.fn(),
+      };
+
+      getInstanceLoggerMock.mockReturnValue(mockLogger as unknown as Logger);
 
       const result = await logout();
 
-      expect(result.ok).toBe(false);
-      if (!result.ok) {
-        expect(result.error).toEqual(mockError);
-      }
+      expect(mockLogger.debug).toHaveBeenCalledWith(
+        "Logging out and cleaning user state"
+      );
+      expect(tearDown).toHaveBeenCalled();
+      expect(result.ok).toBe(true);
     });
   });
 });
