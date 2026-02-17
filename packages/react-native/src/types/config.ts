@@ -64,15 +64,12 @@ export type TConfigUpdateInput = Omit<TConfig, "status"> & {
   };
 };
 
-export type TAttributes = Record<string, string>;
+export type TAttributes = Record<string, string | number>;
 
 export interface TConfigInput {
   environmentId: string;
   appUrl: string;
 }
-
-
-
 
 export interface TWebViewOnMessageData {
   onFinished?: boolean | null;

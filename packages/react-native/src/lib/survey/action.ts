@@ -114,7 +114,7 @@ export const track = async (
     if (!actionClass) {
       return err({
         code: "invalid_code",
-        message: `${code} action unknown. Please add this action in Formbricks first in order to use it in your code.`,
+        message: `Action with identifier '${code}' is unknown. Please add this action in Formbricks in order to use it via the SDK action tracking.`,
       });
     }
 
