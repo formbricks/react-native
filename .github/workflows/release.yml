@@ -1,7 +1,7 @@
 name: Release React Native SDK
 
 permissions:
-  id-token: write # Required for npm provenance
+  id-token: write # Required for OIDC
   contents: read
 
 on:
@@ -47,5 +47,3 @@ jobs:
         run: |
           cd packages/react-native
           npm publish --access public --provenance
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
