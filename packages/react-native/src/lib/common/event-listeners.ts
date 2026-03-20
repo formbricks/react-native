@@ -7,8 +7,8 @@ import { addUserStateExpiryCheckListener, clearUserStateExpiryCheckListener } fr
 let areRemoveEventListenersAdded = false;
 
 export const addEventListeners = (): void => {
-  addEnvironmentStateExpiryCheckListener();
-  addUserStateExpiryCheckListener();
+  void addEnvironmentStateExpiryCheckListener();
+  void addUserStateExpiryCheckListener();
 };
 
 export const addCleanupEventListeners = (): void => {

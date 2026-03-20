@@ -1,11 +1,11 @@
 import { wrapThrowsAsync } from "@/lib/common/utils";
 import {
-  ApiResponse,
-  ApiSuccessResponse,
-  CreateOrUpdateUserResponse,
+  type ApiResponse,
+  type ApiSuccessResponse,
+  type CreateOrUpdateUserResponse,
 } from "@/types/api";
-import { TEnvironmentState } from "@/types/config";
-import { ApiErrorResponse, Result, err, ok } from "@/types/error";
+import { type TEnvironmentState } from "@/types/config";
+import { type ApiErrorResponse, type Result, err, ok } from "@/types/error";
 
 export const makeRequest = async <T>(
   appUrl: string,

@@ -1,7 +1,7 @@
-/* eslint-disable import/no-extraneous-dependencies -- required for Prisma types */
+ 
+import { z } from "zod";
 import { type TResponseUpdate } from "@/types/response";
 import { type TFileUploadParams } from "@/types/storage";
-import { z } from "zod";
 import { type TActionClass } from "./action-class";
 import type { TProject, TProjectStyling } from "./project";
 import type { TSurvey } from "./survey";

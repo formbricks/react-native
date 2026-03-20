@@ -19,7 +19,7 @@ import type {
   TEnvironmentStateProject,
   TUserState,
 } from "@/types/config";
-import { TSurvey } from "@/types/survey";
+import { type TSurvey } from "@/types/survey";
 
 const mockSurveyId1 = "e3kxlpnzmdp84op9qzxl9olj";
 const mockSurveyId2 = "qo9rwjmms42hoy3k85fp8vgu";

@@ -3,7 +3,7 @@ import type { TFileUploadParams, TUploadFileConfig } from "@/types/storage";
 import type { TOverlay } from "./common";
 import type { TProjectStyling } from "./project";
 
-export type TJsFileUploadParams = {
+export interface TJsFileUploadParams {
   file: {
     type: string;
     name: string;
@@ -14,7 +14,7 @@ export type TJsFileUploadParams = {
     folder?: string;
     allowedExtensions?: string[];
   };
-};
+}
 
 export interface SurveyBaseProps {
   survey: TSurvey;
@@ -81,7 +81,7 @@ export interface SurveyContainerProps
   isWebEnvironment?: boolean;
 }
 
-export type TSurvey = {
+export interface TSurvey {
   id: string;
   name: string;
   welcomeCard: {
@@ -318,4 +318,4 @@ export type TSurvey = {
     } | null;
     overwriteThemeStyling?: boolean | null;
   };
-};
+}

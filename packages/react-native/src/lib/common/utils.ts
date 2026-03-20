@@ -111,7 +111,10 @@ export const filterSurveys = (
   if (!userId) {
     // exclude surveys that have a segment with filters
     return filteredSurveys.filter((survey) => {
-      const segmentFiltersLength = survey.segment?.filters?.length ?? 0;
+      const segmentFilters = survey.segment?.filters as unknown;
+      const segmentFiltersLength = Array.isArray(segmentFilters)
+        ? segmentFilters.length
+        : 0;
       return segmentFiltersLength === 0;
     });
   }
@@ -191,5 +194,9 @@ export const isNowExpired = (expirationDate: Date): boolean => {
 };
 
 export const delayedResult = async <T>(value: T, ms: number): Promise<T> => {
-  return new Promise((resolve) => setTimeout(() => resolve(value), ms));
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve(value);
+    }, ms);
+  });
 };

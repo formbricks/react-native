@@ -62,7 +62,7 @@ describe("User State Expiry Check Listener", () => {
     });
   });
 
-  test("should not update user state expiry if userId does not exist", () => {
+  test("should not update user state expiry if userId does not exist", async () => {
     const mockConfig = {
       get: vi.fn().mockReturnValue({
         user: { data: { userId: null } },
@@ -72,7 +72,7 @@ describe("User State Expiry Check Listener", () => {
 
     mockRNConfig.mockReturnValue(mockConfig as unknown as Promise<RNConfig>);
 
-    addUserStateExpiryCheckListener();
+    await addUserStateExpiryCheckListener();
     vi.advanceTimersByTime(60_000); // Fast-forward 1 minute
 
     expect(mockConfig.update).not.toHaveBeenCalled(); // Ensures no update when no userId
@@ -96,7 +96,7 @@ describe("User State Expiry Check Listener", () => {
     expect(mockConfig.update).toHaveBeenCalledTimes(1);
   });
 
-  test("should clear interval when clearUserStateExpiryCheckListener is called", () => {
+  test("should clear interval when clearUserStateExpiryCheckListener is called", async () => {
     const mockConfig = {
       get: vi.fn(),
       update: vi.fn(),
@@ -104,7 +104,7 @@ describe("User State Expiry Check Listener", () => {
 
     mockRNConfig.mockReturnValue(mockConfig as unknown as Promise<RNConfig>);
 
-    addUserStateExpiryCheckListener();
+    await addUserStateExpiryCheckListener();
     clearUserStateExpiryCheckListener();
 
     vi.advanceTimersByTime(60_000); // Fast-forward 1 minute

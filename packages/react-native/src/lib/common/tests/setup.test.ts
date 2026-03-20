@@ -9,6 +9,7 @@ import {
   test,
   vi,
 } from "vitest";
+import type * as CommonUtilsModule from "@/lib/common/utils";
 import { RNConfig, RN_ASYNC_STORAGE_KEY } from "@/lib/common/config";
 import {
   addCleanupEventListeners,
@@ -72,9 +73,12 @@ vi.mock("@/lib/environment/state", () => ({
 }));
 
 // 6) Mock filterSurveys
-vi.mock("@/lib/common/utils", async (importOriginal) => {
+vi.mock("@/lib/common/utils", async () => {
+  const actual = await vi.importActual<typeof CommonUtilsModule>(
+    "@/lib/common/utils"
+  );
   return {
-    ...(await importOriginal<typeof import("@/lib/common/utils")>()),
+    ...actual,
     filterSurveys: vi.fn(),
     isNowExpired: vi.fn(),
   };

@@ -38,4 +38,4 @@ export const logout = async (): Promise<void> => {
   await queue.wait();
 };
 
-export { Formbricks as default } from "@/components/formbricks";
+export { Formbricks } from "@/components/formbricks";

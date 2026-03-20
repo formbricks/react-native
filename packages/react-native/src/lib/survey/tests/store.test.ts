@@ -1,10 +1,10 @@
+import { beforeEach, describe, expect, test, vi } from "vitest";
 import {
   mockSurveyId,
   mockSurveyName,
 } from "@/lib/survey/tests/__mocks__/store.mock";
 import { SurveyStore } from "@/lib/survey/store";
 import type { TSurvey } from "@/types/survey";
-import { beforeEach, describe, expect, test, vi } from "vitest";
 
 describe("SurveyStore", () => {
   let store: SurveyStore;

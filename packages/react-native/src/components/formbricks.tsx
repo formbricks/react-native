@@ -1,9 +1,9 @@
+import React, { useCallback, useEffect, useSyncExternalStore } from "react";
+import { View } from "react-native";
 import { SurveyWebView } from "@/components/survey-web-view";
 import { Logger } from "@/lib/common/logger";
 import { setup } from "@/lib/common/setup";
 import { SurveyStore } from "@/lib/survey/store";
-import React, { useCallback, useEffect, useSyncExternalStore } from "react";
-import { View } from "react-native";
 
 interface FormbricksProps {
   appUrl: string;
