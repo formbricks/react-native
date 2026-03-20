@@ -1,3 +1,5 @@
+const project = "tsconfig.json";
+
 module.exports = {
   extends: [
     "@vercel/style-guide/eslint/browser",
@@ -5,7 +7,7 @@ module.exports = {
     "@vercel/style-guide/eslint/react",
   ].map(require.resolve),
   parserOptions: {
-    project: "tsconfig.json",
+    project,
     tsconfigRootDir: __dirname,
   },
   globals: {
