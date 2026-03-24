@@ -274,6 +274,164 @@ describe("setup.ts", () => {
       );
     });
 
+    test("reloads config after migrating legacy user state", async () => {
+      const initialConfig = {
+        resetConfig: vi.fn(),
+      };
+      const migratedConfig = {
+        get: vi.fn().mockReturnValue({
+          environmentId: "env_123",
+          appUrl: "https://my.url",
+          environment: {
+            data: { surveys: [] },
+            expiresAt: new Date(Date.now() + 60_000),
+          },
+          user: {
+            data: {
+              userId: "user_abc",
+              contactId: null,
+              segments: [],
+              displays: [],
+              responses: [],
+              lastDisplayAt: null,
+            },
+            expiresAt: null,
+          },
+          filteredSurveys: [],
+          status: { value: "success", expiresAt: null },
+        }),
+        update: vi.fn(),
+      };
+
+      (AsyncStorage.getItem as Mock).mockResolvedValueOnce(
+        JSON.stringify({
+          user: {
+            data: {
+              userId: "user_abc",
+              contactId: null,
+            },
+          },
+        })
+      );
+      getInstanceConfigMock
+        .mockReturnValueOnce(initialConfig as unknown as Promise<RNConfig>)
+        .mockReturnValueOnce(migratedConfig as unknown as Promise<RNConfig>);
+      (filterSurveys as unknown as Mock).mockReturnValueOnce([]);
+
+      const result = await setup({
+        environmentId: "env_123",
+        appUrl: "https://my.url",
+      });
+
+      expect(result.ok).toBe(true);
+      expect(initialConfig.resetConfig).toHaveBeenCalledTimes(1);
+      expect(getInstanceConfigMock).toHaveBeenCalledTimes(2);
+      expect(migratedConfig.update).toHaveBeenCalled();
+    });
+
+    test("returns an error when environment sync fails", async () => {
+      const mockConfig = {
+        get: vi.fn().mockReturnValue({
+          environmentId: "env_123",
+          appUrl: "https://my.url",
+          environment: {
+            data: { surveys: [] },
+            expiresAt: new Date(Date.now() - 5000),
+          },
+          user: {
+            data: {
+              userId: "user_abc",
+              contactId: null,
+              segments: [],
+              displays: [],
+              responses: [],
+              lastDisplayAt: null,
+            },
+            expiresAt: new Date(Date.now() - 5000),
+          },
+          filteredSurveys: [],
+          status: { value: "success", expiresAt: null },
+        }),
+        update: vi.fn(),
+      };
+
+      getInstanceConfigMock.mockReturnValue(
+        mockConfig as unknown as Promise<RNConfig>
+      );
+      (isNowExpired as unknown as Mock).mockReturnValue(true);
+      (fetchEnvironmentState as unknown as Mock).mockResolvedValueOnce({
+        ok: false,
+        error: {
+          code: "network_error",
+          message: "Backend unavailable",
+        },
+      });
+
+      const result = await setup({
+        environmentId: "env_123",
+        appUrl: "https://my.url",
+      });
+
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.error.code).toBe("network_error");
+        expect(result.error.message).toBe("Error fetching environment state");
+      }
+      expect(sendUpdatesToBackend).not.toHaveBeenCalled();
+    });
+
+    test("returns an error when user sync fails", async () => {
+      const mockConfig = {
+        get: vi.fn().mockReturnValue({
+          environmentId: "env_123",
+          appUrl: "https://my.url",
+          environment: {
+            data: { surveys: [] },
+            expiresAt: new Date(Date.now() + 60_000),
+          },
+          user: {
+            data: {
+              userId: "user_abc",
+              contactId: null,
+              segments: [],
+              displays: [],
+              responses: [],
+              lastDisplayAt: null,
+            },
+            expiresAt: new Date(Date.now() - 5000),
+          },
+          filteredSurveys: [],
+          status: { value: "success", expiresAt: null },
+        }),
+        update: vi.fn(),
+      };
+
+      getInstanceConfigMock.mockReturnValue(
+        mockConfig as unknown as Promise<RNConfig>
+      );
+      (isNowExpired as unknown as Mock)
+        .mockReturnValueOnce(false)
+        .mockReturnValueOnce(true);
+      (sendUpdatesToBackend as unknown as Mock).mockResolvedValueOnce({
+        ok: false,
+        error: {
+          code: "network_error",
+          message: "User sync failed",
+        },
+      });
+
+      const result = await setup({
+        environmentId: "env_123",
+        appUrl: "https://my.url",
+      });
+
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.error.code).toBe("network_error");
+        expect(result.error.message).toBe("Error updating user state");
+      }
+    });
+
     test("resets config if no valid config found, fetches environment, sets default user", async () => {
       const mockConfig = {
         get: () => {
@@ -348,6 +506,33 @@ describe("setup.ts", () => {
       await expect(
         setup({ environmentId: "envX", appUrl: "https://urlX" })
       ).rejects.toThrow("Could not set up formbricks");
+    });
+
+    test("falls back to an unknown network error when setup throws a non-object", async () => {
+      const mockConfig = {
+        get: () => {
+          throw new Error("no config found");
+        },
+        update: vi.fn(),
+        resetConfig: vi.fn(),
+      };
+
+      getInstanceConfigMock.mockReturnValueOnce(
+        mockConfig as unknown as Promise<RNConfig>
+      );
+      (fetchEnvironmentState as unknown as Mock).mockRejectedValueOnce("boom");
+
+      await expect(
+        setup({ environmentId: "envX", appUrl: "https://urlX" })
+      ).rejects.toThrow("Could not set up formbricks");
+
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        "Error during first setup: network_error - Unknown error. Please try again later."
+      );
+      expect(AsyncStorage.setItem).toHaveBeenCalledWith(
+        RN_ASYNC_STORAGE_KEY,
+        expect.stringContaining('"value":"error"')
+      );
     });
 
     test("adds event listeners and sets isSetup", async () => {
