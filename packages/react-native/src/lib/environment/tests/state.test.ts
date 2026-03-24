@@ -22,7 +22,7 @@ import type { TEnvironmentState } from "@/types/config";
 
 // Mock the FormbricksAPI so we can control environment.getState
 vi.mock("@/lib/common/api", () => ({
-  ApiClient: vi.fn().mockImplementation(() => {
+  ApiClient: vi.fn().mockImplementation(function MockApiClient() {
     return { getEnvironmentState: vi.fn() };
   }),
 }));
@@ -70,7 +70,7 @@ describe("environment/state.ts", () => {
   describe("fetchEnvironmentState()", () => {
     test("returns ok(...) with environment state", async () => {
       // Setup mock
-      (ApiClient as unknown as Mock).mockImplementationOnce(() => {
+      (ApiClient as unknown as Mock).mockImplementationOnce(function MockApiClient() {
         return {
           getEnvironmentState: vi.fn().mockResolvedValue({
             ok: true,
@@ -103,7 +103,7 @@ describe("environment/state.ts", () => {
         message: "Access denied",
       };
 
-      (ApiClient as unknown as Mock).mockImplementationOnce(() => {
+      (ApiClient as unknown as Mock).mockImplementationOnce(function MockApiClient() {
         return {
           getEnvironmentState: vi.fn().mockResolvedValue({
             ok: false,
@@ -131,7 +131,7 @@ describe("environment/state.ts", () => {
         responseMessage: "Network fail",
       };
 
-      (ApiClient as unknown as Mock).mockImplementationOnce(() => {
+      (ApiClient as unknown as Mock).mockImplementationOnce(function MockApiClient() {
         return {
           getEnvironmentState: vi.fn().mockRejectedValue(mockNetworkError),
         };
@@ -208,7 +208,7 @@ describe("environment/state.ts", () => {
 
       mockRNConfig.mockReturnValue(mockConfig as unknown as Promise<RNConfig>);
 
-      (ApiClient as Mock).mockImplementation(() => {
+      (ApiClient as Mock).mockImplementation(function MockApiClient() {
         return {
           getEnvironmentState: vi.fn().mockResolvedValue({
             ok: true,
@@ -244,7 +244,7 @@ describe("environment/state.ts", () => {
       mockRNConfig.mockReturnValue(mockConfig as unknown as Promise<RNConfig>);
 
       // Mock API to throw an error
-      (ApiClient as Mock).mockImplementation(() => {
+      (ApiClient as Mock).mockImplementation(function MockApiClient() {
         return {
           getEnvironmentState: vi
             .fn()
@@ -276,7 +276,7 @@ describe("environment/state.ts", () => {
 
       mockRNConfig.mockReturnValue(mockConfig as unknown as Promise<RNConfig>);
 
-      const apiMock = vi.fn().mockImplementation(() => {
+      const apiMock = vi.fn().mockImplementation(function MockApiClient() {
         return { getEnvironmentState: vi.fn() };
       });
 
