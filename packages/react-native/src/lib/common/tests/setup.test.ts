@@ -375,7 +375,9 @@ describe("setup.ts", () => {
       expect(result.ok).toBe(false);
       if (!result.ok) {
         expect(result.error.code).toBe("network_error");
-        expect(result.error.message).toBe("Error fetching environment state");
+        expect("message" in result.error && result.error.message).toBe(
+          "Error fetching environment state"
+        );
       }
       expect(sendUpdatesToBackend).not.toHaveBeenCalled();
     });
@@ -428,7 +430,9 @@ describe("setup.ts", () => {
       expect(result.ok).toBe(false);
       if (!result.ok) {
         expect(result.error.code).toBe("network_error");
-        expect(result.error.message).toBe("Error updating user state");
+        expect("message" in result.error && result.error.message).toBe(
+          "Error updating user state"
+        );
       }
     });
 
