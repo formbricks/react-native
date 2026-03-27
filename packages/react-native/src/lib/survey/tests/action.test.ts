@@ -1,9 +1,9 @@
+import { type Mock, beforeEach, describe, expect, test, vi } from "vitest";
 import { RNConfig } from "@/lib/common/config";
 import { Logger } from "@/lib/common/logger";
 import { shouldDisplayBasedOnPercentage } from "@/lib/common/utils";
 import { track, trackAction, triggerSurvey } from "@/lib/survey/action";
 import { SurveyStore } from "@/lib/survey/store";
-import { type Mock, beforeEach, describe, expect, test, vi } from "vitest";
 import type { TSurvey } from "@/types/survey";
 
 vi.mock("@/lib/common/config", () => ({

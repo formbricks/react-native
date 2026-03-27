@@ -11,6 +11,7 @@ export class RNConfig {
 
   private config: TConfig | null = null;
 
+  // eslint-disable-next-line @typescript-eslint/no-empty-function -- singleton constructor
   private constructor() {}
 
   public async init(): Promise<void> {
@@ -24,7 +25,7 @@ export class RNConfig {
     }
   }
 
-  static async getInstance(): Promise<RNConfig> {
+  public static async getInstance(): Promise<RNConfig> {
     RNConfig.instance ??= new RNConfig();
     await RNConfig.instance.init();
     return RNConfig.instance;

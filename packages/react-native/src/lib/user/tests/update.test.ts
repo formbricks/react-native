@@ -1,3 +1,4 @@
+import { type Mock, beforeEach, describe, expect, test, vi } from "vitest";
 import {
   mockAppUrl,
   mockAttributes,
@@ -9,7 +10,6 @@ import { RNConfig } from "@/lib/common/config";
 import { Logger } from "@/lib/common/logger";
 import { sendUpdates, sendUpdatesToBackend } from "@/lib/user/update";
 import { type TUpdates } from "@/types/config";
-import { type Mock, beforeEach, describe, expect, test, vi } from "vitest";
 
 vi.mock("@/lib/common/config", () => ({
   RNConfig: {
@@ -34,7 +34,7 @@ vi.mock("@/lib/common/utils", () => ({
 }));
 
 vi.mock("@/lib/common/api", () => ({
-  ApiClient: vi.fn().mockImplementation(function () {
+  ApiClient: vi.fn().mockImplementation(function MockApiClient() {
     return { createOrUpdateUser: vi.fn() };
   }),
 }));
@@ -57,7 +57,7 @@ describe("sendUpdatesToBackend", () => {
       },
     };
 
-    (ApiClient as Mock).mockImplementation(function () {
+    (ApiClient as Mock).mockImplementation(function MockApiClient() {
       return { createOrUpdateUser: vi.fn().mockResolvedValue(mockResponse) };
     });
 
@@ -82,7 +82,7 @@ describe("sendUpdatesToBackend", () => {
       attributes: mockAttributes,
     };
 
-    (ApiClient as Mock).mockImplementation(function () {
+    (ApiClient as Mock).mockImplementation(function MockApiClient() {
       return {
         createOrUpdateUser: vi.fn().mockResolvedValue({
           ok: false,
@@ -116,7 +116,7 @@ describe("sendUpdatesToBackend", () => {
       attributes: { plan: "premium" },
     };
 
-    (ApiClient as Mock).mockImplementation(function () {
+    (ApiClient as Mock).mockImplementation(function MockApiClient() {
       return {
         createOrUpdateUser: vi
           .fn()
@@ -169,7 +169,7 @@ describe("sendUpdates", () => {
       },
     };
 
-    (ApiClient as Mock).mockImplementation(function () {
+    (ApiClient as Mock).mockImplementation(function MockApiClient() {
       return { createOrUpdateUser: vi.fn().mockResolvedValue(mockResponse) };
     });
 
@@ -193,7 +193,7 @@ describe("sendUpdates", () => {
       },
     };
 
-    (ApiClient as Mock).mockImplementation(function () {
+    (ApiClient as Mock).mockImplementation(function MockApiClient() {
       return {
         createOrUpdateUser: vi.fn().mockResolvedValue(mockErrorResponse),
       };
@@ -224,7 +224,7 @@ describe("sendUpdates", () => {
       },
     };
 
-    (ApiClient as Mock).mockImplementation(function () {
+    (ApiClient as Mock).mockImplementation(function MockApiClient() {
       return { createOrUpdateUser: vi.fn().mockResolvedValue(mockResponse) };
     });
 
@@ -261,7 +261,7 @@ describe("sendUpdates", () => {
       },
     };
 
-    (ApiClient as Mock).mockImplementation(function () {
+    (ApiClient as Mock).mockImplementation(function MockApiClient() {
       return { createOrUpdateUser: vi.fn().mockResolvedValue(mockResponse) };
     });
 
@@ -278,7 +278,7 @@ describe("sendUpdates", () => {
   });
 
   test("handles unexpected errors", async () => {
-    (ApiClient as Mock).mockImplementation(function () {
+    (ApiClient as Mock).mockImplementation(function MockApiClient() {
       return {
         createOrUpdateUser: vi
           .fn()

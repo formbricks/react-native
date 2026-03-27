@@ -1,3 +1,4 @@
+import { fetch } from "@react-native-community/netinfo";
 import { RNConfig } from "@/lib/common/config";
 import { Logger } from "@/lib/common/logger";
 import { shouldDisplayBasedOnPercentage } from "@/lib/common/utils";
@@ -10,7 +11,6 @@ import {
   err,
   okVoid,
 } from "@/types/error";
-import { fetch } from "@react-native-community/netinfo";
 
 /**
  * Triggers the display of a survey if it meets the display percentage criteria

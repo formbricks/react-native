@@ -1,7 +1,7 @@
 import type { TOverlay } from "./common";
 import type { TBaseStyling } from "./styling";
 
-export type TProject = {
+export interface TProject {
   id: string;
   createdAt: Date;
   updatedAt: Date;
@@ -26,7 +26,7 @@ export type TProject = {
     url?: string;
     bgColor?: string;
   } | null;
-};
+}
 
 export interface TProjectStyling extends TBaseStyling {
   allowStyleOverwrite: boolean;

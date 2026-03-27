@@ -128,9 +128,7 @@ export class UpdateQueue {
 
     if (!result.ok) {
       const err = result.error;
-      logger.error(
-        `Failed to send updates: ${err?.message ?? "unknown error"}`,
-      );
+      logger.error(`Failed to send updates: ${err.message}`);
 
       return;
     }

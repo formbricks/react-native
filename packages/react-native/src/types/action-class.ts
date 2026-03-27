@@ -1,4 +1,4 @@
-export type TActionClass = {
+export interface TActionClass {
   id: string;
   createdAt: Date;
   updatedAt: Date;
@@ -39,4 +39,4 @@ export type TActionClass = {
       }
     | null;
   environmentId: string;
-};
+}

@@ -37,33 +37,10 @@ export const setIsSetup = (state: boolean): void => {
   isSetup = state;
 };
 
-export const migrateUserStateAddContactId = async (): Promise<{
-  changed: boolean;
-}> => {
-  const existingConfigString = await AsyncStorage.getItem(RN_ASYNC_STORAGE_KEY);
-
-  if (existingConfigString) {
-    const existingConfig = JSON.parse(existingConfigString) as Partial<TConfig>;
-
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- data could be undefined
-    if (existingConfig.user?.data?.contactId) {
-      return { changed: false };
-    }
-
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- data could be undefined
-    if (
-      !existingConfig.user?.data?.contactId &&
-      existingConfig.user?.data?.userId
-    ) {
-      return { changed: true };
-    }
-  }
-
-  return { changed: false };
-};
-
 // Helper: Handle missing field error
-function handleMissingField(field: string) {
+function handleMissingField(
+  field: string
+): Result<void, MissingFieldError> {
   const logger = Logger.getInstance();
   logger.debug(`No ${field} provided`);
   return err({
@@ -91,21 +68,21 @@ async function syncEnvironmentStateIfExpired(
 
   if (environmentStateResponse.ok) {
     return ok(environmentStateResponse.data);
-  } else {
-    logger.error(
-      `Error fetching environment state: ${environmentStateResponse.error.code} - ${environmentStateResponse.error.responseMessage ?? ""}`
-    );
-
-    return err({
-      code: "network_error",
-      message: "Error fetching environment state",
-      status: 500,
-      url: new URL(
-        `${configInput.appUrl}/api/v1/client/${configInput.environmentId}/environment`
-      ),
-      responseMessage: environmentStateResponse.error.message,
-    });
   }
+
+  logger.error(
+    `Error fetching environment state: ${environmentStateResponse.error.code} - ${environmentStateResponse.error.responseMessage ?? ""}`
+  );
+
+  return err({
+    code: "network_error",
+    message: "Error fetching environment state",
+    status: 500,
+    url: new URL(
+      `${configInput.appUrl}/api/v1/client/${configInput.environmentId}/environment`
+    ),
+    responseMessage: environmentStateResponse.error.message,
+  });
 }
 
 // Helper: Sync user state if expired
@@ -125,7 +102,7 @@ async function syncUserStateIfExpired(
 
   logger.debug("Person state expired. Syncing.");
 
-  if (userState?.data?.userId) {
+  if (userState?.data.userId) {
     const updatesResponse = await sendUpdatesToBackend({
       appUrl: configInput.appUrl,
       environmentId: configInput.environmentId,
@@ -135,23 +112,23 @@ async function syncUserStateIfExpired(
     });
     if (updatesResponse.ok) {
       return ok(updatesResponse.data.state);
-    } else {
-      logger.error(
-        `Error updating user state: ${updatesResponse.error.code} - ${updatesResponse.error.responseMessage ?? ""}`
-      );
-      return err({
-        code: "network_error",
-        message: "Error updating user state",
-        status: 500,
-        url: new URL(
-          `${configInput.appUrl}/api/v1/client/${configInput.environmentId}/update/contacts/${userState.data.userId}`
-        ),
-        responseMessage: "Unknown error",
-      } as const);
     }
-  } else {
-    return ok(DEFAULT_USER_STATE_NO_USER_ID);
+
+    logger.error(
+      `Error updating user state: ${updatesResponse.error.code} - ${updatesResponse.error.responseMessage ?? ""}`
+    );
+    return err({
+      code: "network_error",
+      message: "Error updating user state",
+      status: 500,
+      url: new URL(
+        `${configInput.appUrl}/api/v1/client/${configInput.environmentId}/update/contacts/${userState.data.userId}`
+      ),
+      responseMessage: "Unknown error",
+    } as const);
   }
+
+  return ok(DEFAULT_USER_STATE_NO_USER_ID);
 }
 
 // Helper: Update app config with synced states
@@ -199,22 +176,35 @@ const createNewConfigAndSync = async (
       appUrl: configInput.appUrl,
       environmentId: configInput.environmentId,
     });
-    if (!environmentStateResponse.ok) {
-      throw environmentStateResponse.error;
+
+    if (environmentStateResponse.ok) {
+      const personState = DEFAULT_USER_STATE_NO_USER_ID;
+      const environmentState = environmentStateResponse.data;
+      const filteredSurveys = filterSurveys(environmentState, personState);
+      appConfig.update({
+        appUrl: configInput.appUrl,
+        environmentId: configInput.environmentId,
+        user: personState,
+        environment: environmentState,
+        filteredSurveys,
+      });
+      return;
     }
-    const personState = DEFAULT_USER_STATE_NO_USER_ID;
-    const environmentState = environmentStateResponse.data;
-    const filteredSurveys = filterSurveys(environmentState, personState);
-    appConfig.update({
-      appUrl: configInput.appUrl,
-      environmentId: configInput.environmentId,
-      user: personState,
-      environment: environmentState,
-      filteredSurveys,
+
+    await handleErrorOnFirstSetup({
+      code: environmentStateResponse.error.code,
+      responseMessage:
+        environmentStateResponse.error.responseMessage ??
+        environmentStateResponse.error.message,
     });
-  } catch (e) {
+  } catch (e: unknown) {
+    const setupError = normalizeSetupError(e);
     await handleErrorOnFirstSetup(
-      e as { code: string; responseMessage: string }
+      {
+        code: setupError.code ?? "network_error",
+        responseMessage:
+          setupError.responseMessage ?? setupError.message ?? "Unknown error",
+      }
     );
   }
 };
@@ -260,10 +250,10 @@ const finalizeSetup = (): void => {
 };
 
 // Helper: Load existing config
-const loadExistingConfig = async (
+const loadExistingConfig = (
   appConfig: RNConfig,
   logger: ReturnType<typeof Logger.getInstance>
-): Promise<TConfig | undefined> => {
+): TConfig | undefined => {
   let existingConfig: TConfig | undefined;
   try {
     existingConfig = appConfig.get();
@@ -279,22 +269,16 @@ export const setup = async (
 ): Promise<
   Result<void, MissingFieldError | NetworkError | MissingPersonError>
 > => {
-  let appConfig = await RNConfig.getInstance();
+  const appConfig = await RNConfig.getInstance();
 
   const logger = Logger.getInstance();
-  const { changed } = await migrateUserStateAddContactId();
-
-  if (changed) {
-    await appConfig.resetConfig();
-    appConfig = await RNConfig.getInstance();
-  }
 
   if (isSetup) {
     logger.debug("Already set up, skipping setup.");
     return okVoid();
   }
 
-  const existingConfig = await loadExistingConfig(appConfig, logger);
+  const existingConfig = loadExistingConfig(appConfig, logger);
   if (shouldReturnEarlyForErrorState(existingConfig, logger)) {
     return okVoid();
   }
@@ -369,8 +353,6 @@ export const checkSetup = (): Result<void, NotSetupError> => {
 
   return okVoid();
 };
-
-// eslint-disable-next-line @typescript-eslint/require-await -- disabled for now
 export const tearDown = async (): Promise<void> => {
   const logger = Logger.getInstance();
   const appConfig = await RNConfig.getInstance();
@@ -424,4 +406,28 @@ export const handleErrorOnFirstSetup = async (e: {
   })();
 
   throw new Error("Could not set up formbricks");
+};
+
+const normalizeSetupError = (
+  error: unknown
+): Partial<{
+  code: string;
+  responseMessage: string;
+  message: string;
+}> => {
+  if (typeof error !== "object" || error === null) {
+    return {};
+  }
+
+  const candidate = error as Record<string, unknown>;
+
+  return {
+    code: typeof candidate.code === "string" ? candidate.code : undefined,
+    responseMessage:
+      typeof candidate.responseMessage === "string"
+        ? candidate.responseMessage
+        : undefined,
+    message:
+      typeof candidate.message === "string" ? candidate.message : undefined,
+  };
 };

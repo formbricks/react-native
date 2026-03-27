@@ -4,7 +4,7 @@ import { tearDown } from "@/lib/common/setup";
 import { UpdateQueue } from "@/lib/user/update-queue";
 import { type ApiErrorResponse, type Result, okVoid } from "@/types/error";
 
-// eslint-disable-next-line @typescript-eslint/require-await -- we want to use promises here
+ 
 export const setUserId = async (
   userId: string
 ): Promise<Result<void, ApiErrorResponse>> => {

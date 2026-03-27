@@ -1,14 +1,4 @@
 // state.test.ts
-import { ApiClient } from "@/lib/common/api";
-import { RNConfig } from "@/lib/common/config";
-import { Logger } from "@/lib/common/logger";
-import { filterSurveys } from "@/lib/common/utils";
-import {
-  addEnvironmentStateExpiryCheckListener,
-  clearEnvironmentStateExpiryCheckListener,
-  fetchEnvironmentState,
-} from "@/lib/environment/state";
-import type { TEnvironmentState } from "@/types/config";
 import {
   type Mock,
   type MockInstance,
@@ -19,10 +9,20 @@ import {
   test,
   vi,
 } from "vitest";
+import { ApiClient } from "@/lib/common/api";
+import { RNConfig } from "@/lib/common/config";
+import { Logger } from "@/lib/common/logger";
+import { filterSurveys } from "@/lib/common/utils";
+import {
+  addEnvironmentStateExpiryCheckListener,
+  clearEnvironmentStateExpiryCheckListener,
+  fetchEnvironmentState,
+} from "@/lib/environment/state";
+import type { TEnvironmentState } from "@/types/config";
 
 // Mock the FormbricksAPI so we can control environment.getState
 vi.mock("@/lib/common/api", () => ({
-  ApiClient: vi.fn().mockImplementation(function () {
+  ApiClient: vi.fn().mockImplementation(function MockApiClient() {
     return { getEnvironmentState: vi.fn() };
   }),
 }));
@@ -70,7 +70,7 @@ describe("environment/state.ts", () => {
   describe("fetchEnvironmentState()", () => {
     test("returns ok(...) with environment state", async () => {
       // Setup mock
-      (ApiClient as unknown as Mock).mockImplementationOnce(function () {
+      (ApiClient as unknown as Mock).mockImplementationOnce(function MockApiClient() {
         return {
           getEnvironmentState: vi.fn().mockResolvedValue({
             ok: true,
@@ -103,7 +103,7 @@ describe("environment/state.ts", () => {
         message: "Access denied",
       };
 
-      (ApiClient as unknown as Mock).mockImplementationOnce(function () {
+      (ApiClient as unknown as Mock).mockImplementationOnce(function MockApiClient() {
         return {
           getEnvironmentState: vi.fn().mockResolvedValue({
             ok: false,
@@ -131,7 +131,7 @@ describe("environment/state.ts", () => {
         responseMessage: "Network fail",
       };
 
-      (ApiClient as unknown as Mock).mockImplementationOnce(function () {
+      (ApiClient as unknown as Mock).mockImplementationOnce(function MockApiClient() {
         return {
           getEnvironmentState: vi.fn().mockRejectedValue(mockNetworkError),
         };
@@ -208,7 +208,7 @@ describe("environment/state.ts", () => {
 
       mockRNConfig.mockReturnValue(mockConfig as unknown as Promise<RNConfig>);
 
-      (ApiClient as Mock).mockImplementation(function () {
+      (ApiClient as Mock).mockImplementation(function MockApiClient() {
         return {
           getEnvironmentState: vi.fn().mockResolvedValue({
             ok: true,
@@ -220,7 +220,7 @@ describe("environment/state.ts", () => {
       (filterSurveys as Mock).mockReturnValue([]);
 
       // Add listener
-      addEnvironmentStateExpiryCheckListener();
+      await addEnvironmentStateExpiryCheckListener();
 
       // Fast-forward time
       await vi.advanceTimersByTimeAsync(1000 * 60);
@@ -244,7 +244,7 @@ describe("environment/state.ts", () => {
       mockRNConfig.mockReturnValue(mockConfig as unknown as Promise<RNConfig>);
 
       // Mock API to throw an error
-      (ApiClient as Mock).mockImplementation(function () {
+      (ApiClient as Mock).mockImplementation(function MockApiClient() {
         return {
           getEnvironmentState: vi
             .fn()
@@ -252,7 +252,7 @@ describe("environment/state.ts", () => {
         };
       });
 
-      addEnvironmentStateExpiryCheckListener();
+      await addEnvironmentStateExpiryCheckListener();
 
       // Fast-forward time
       await vi.advanceTimersByTimeAsync(1000 * 60);
@@ -276,13 +276,13 @@ describe("environment/state.ts", () => {
 
       mockRNConfig.mockReturnValue(mockConfig as unknown as Promise<RNConfig>);
 
-      const apiMock = vi.fn().mockImplementation(function () {
+      const apiMock = vi.fn().mockImplementation(function MockApiClient() {
         return { getEnvironmentState: vi.fn() };
       });
 
       (ApiClient as Mock).mockImplementation(apiMock);
 
-      addEnvironmentStateExpiryCheckListener();
+      await addEnvironmentStateExpiryCheckListener();
 
       // Fast-forward time by less than expiry
       await vi.advanceTimersByTimeAsync(1000 * 60);

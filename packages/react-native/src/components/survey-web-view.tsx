@@ -1,13 +1,13 @@
 /* eslint-disable no-console -- debugging*/
+import React, { type JSX, useEffect, useRef, useState } from "react";
+import { KeyboardAvoidingView, Modal, View, StyleSheet } from "react-native";
+import { WebView, type WebViewMessageEvent } from "react-native-webview";
 import { RNConfig } from "@/lib/common/config";
 import { Logger } from "@/lib/common/logger";
 import { filterSurveys, getLanguageCode, getStyling } from "@/lib/common/utils";
 import { SurveyStore } from "@/lib/survey/store";
 import { type TUserState, ZJsRNWebViewOnMessageData } from "@/types/config";
 import type { TSurvey, SurveyContainerProps } from "@/types/survey";
-import React, { type JSX, useEffect, useRef, useState } from "react";
-import { KeyboardAvoidingView, Modal, View, StyleSheet } from "react-native";
-import { WebView, type WebViewMessageEvent } from "react-native-webview";
 
 const logger = Logger.getInstance();
 logger.configure({ logLevel: "debug" });
@@ -21,7 +21,7 @@ interface SurveyWebViewProps {
 
 export function SurveyWebView(
   props: SurveyWebViewProps
-): JSX.Element | undefined {
+): JSX.Element | null {
   const webViewRef = useRef(null);
   const [isSurveyRunning, setIsSurveyRunning] = useState(false);
   const [showSurvey, setShowSurvey] = useState(false);
@@ -29,7 +29,7 @@ export function SurveyWebView(
   const [languageCode, setLanguageCode] = useState("default");
 
   useEffect(() => {
-    const fetchConfig = async () => {
+    const fetchConfig = async (): Promise<void> => {
       const config = await RNConfig.getInstance();
       setAppConfig(config);
     };
@@ -87,7 +87,7 @@ export function SurveyWebView(
   }, [props.survey.delay, isSurveyRunning, props.survey.name]);
 
   if (!appConfig) {
-    return;
+    return null;
   }
 
   const project = appConfig.get().environment.data.project;
