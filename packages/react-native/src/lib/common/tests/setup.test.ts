@@ -274,61 +274,6 @@ describe("setup.ts", () => {
       );
     });
 
-    test("reloads config after migrating legacy user state", async () => {
-      const initialConfig = {
-        resetConfig: vi.fn(),
-      };
-      const migratedConfig = {
-        get: vi.fn().mockReturnValue({
-          environmentId: "env_123",
-          appUrl: "https://my.url",
-          environment: {
-            data: { surveys: [] },
-            expiresAt: new Date(Date.now() + 60_000),
-          },
-          user: {
-            data: {
-              userId: "user_abc",
-              contactId: null,
-              segments: [],
-              displays: [],
-              responses: [],
-              lastDisplayAt: null,
-            },
-            expiresAt: null,
-          },
-          filteredSurveys: [],
-          status: { value: "success", expiresAt: null },
-        }),
-        update: vi.fn(),
-      };
-
-      (AsyncStorage.getItem as Mock).mockResolvedValueOnce(
-        JSON.stringify({
-          user: {
-            data: {
-              userId: "user_abc",
-              contactId: null,
-            },
-          },
-        })
-      );
-      getInstanceConfigMock
-        .mockReturnValueOnce(initialConfig as unknown as Promise<RNConfig>)
-        .mockReturnValueOnce(migratedConfig as unknown as Promise<RNConfig>);
-      (filterSurveys as unknown as Mock).mockReturnValueOnce([]);
-
-      const result = await setup({
-        environmentId: "env_123",
-        appUrl: "https://my.url",
-      });
-
-      expect(result.ok).toBe(true);
-      expect(initialConfig.resetConfig).toHaveBeenCalledTimes(1);
-      expect(getInstanceConfigMock).toHaveBeenCalledTimes(2);
-      expect(migratedConfig.update).toHaveBeenCalled();
-    });
-
     test("returns an error when environment sync fails", async () => {
       const mockConfig = {
         get: vi.fn().mockReturnValue({

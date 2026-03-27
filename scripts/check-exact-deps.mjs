@@ -23,7 +23,16 @@ collectPackageJsonPaths(rootDir, manifestPaths);
 
 const violations = [];
 for (const manifestPath of manifestPaths) {
-  const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+  let manifest;
+  try {
+    manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(
+      `Failed to parse ${relativePath(manifestPath)}: ${message}`,
+    );
+    process.exit(1);
+  }
 
   for (const field of dependencyFields) {
     const dependencies = manifest[field] ?? {};
@@ -54,7 +63,11 @@ if (violations.length > 0) {
 }
 
 function collectPackageJsonPaths(dirPath, results) {
-  for (const entry of fs.readdirSync(dirPath, { withFileTypes: true })) {
+  const entries = fs
+    .readdirSync(dirPath, { withFileTypes: true })
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  for (const entry of entries) {
     if (ignoredDirs.has(entry.name)) {
       continue;
     }

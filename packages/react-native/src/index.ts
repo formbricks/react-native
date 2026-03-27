@@ -39,3 +39,5 @@ export const logout = async (): Promise<void> => {
 };
 
 export { Formbricks } from "@/components/formbricks";
+// eslint-disable-next-line import/no-default-export -- preserve the public SDK default export
+export { Formbricks as default } from "@/components/formbricks";
