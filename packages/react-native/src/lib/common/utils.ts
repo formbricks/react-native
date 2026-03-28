@@ -111,7 +111,7 @@ export const filterSurveys = (
   if (!userId) {
     // exclude surveys that have a segment with filters
     return filteredSurveys.filter((survey) => {
-      const segmentFilters = survey.segment?.filters as unknown;
+      const segmentFilters = survey.segment?.filters;
       const segmentFiltersLength = Array.isArray(segmentFilters)
         ? segmentFilters.length
         : 0;
