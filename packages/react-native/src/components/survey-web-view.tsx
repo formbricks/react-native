@@ -326,6 +326,20 @@ const renderHtml = (
 ): string => {
   const surveyScriptUrl = getSurveyScriptUrl(options.appUrl);
 
+  if (!surveyScriptUrl) {
+    return `
+  <!doctype html>
+  <html>
+    <meta name="viewport" content="initial-scale=1.0, maximum-scale=1.0">
+    <head>
+      <title>Formbricks WebView Survey</title>
+    </head>
+    <body style="overflow: hidden; height: 100vh; margin: 0;">
+    </body>
+  </html>
+  `;
+  }
+
   return `
   <!doctype html>
   <html>

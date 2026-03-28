@@ -86,6 +86,24 @@ describe("CommandQueue", () => {
     expect(cmd).toHaveBeenCalledTimes(1);
   });
 
+  test("treats Promise<void> commands as successful", async () => {
+    const consoleErrorSpy = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    const cmd = vi.fn(async (): Promise<void> => {
+      await delayedResult(undefined, 10);
+    });
+
+    vi.mocked(checkSetup).mockReturnValue({ ok: true, data: undefined });
+
+    queue.add(cmd, true);
+    await queue.wait();
+
+    expect(cmd).toHaveBeenCalledTimes(1);
+    expect(consoleErrorSpy).not.toHaveBeenCalled();
+    consoleErrorSpy.mockRestore();
+  });
+
   test("logs errors if a command throws or returns error", async () => {
     // Spy on console.error to see if it's called
     const consoleErrorSpy = vi

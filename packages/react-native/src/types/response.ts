@@ -26,9 +26,10 @@ export interface TResponseUpdate {
   endingId?: string | null;
 }
 
+const ZNestedResponseData = z.record(z.string(), z.string());
 export const ZResponseData = z.record(
   z.string(),
-  z.union([z.string(), z.number(), z.array(z.string())]),
+  z.union([z.string(), z.number(), z.array(z.string()), ZNestedResponseData]),
 );
 export const ZResponseVariables = z.record(
   z.string(),

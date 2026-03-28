@@ -2,8 +2,8 @@ import { describe, expect, test } from "vitest";
 import { getSurveyScriptUrl } from "@/components/utils/survey-script-url";
 
 describe("getSurveyScriptUrl()", () => {
-  test("builds the default local development script URL", () => {
-    expect(getSurveyScriptUrl()).toBe("http://localhost:3000/js/surveys.umd.cjs");
+  test("returns null when appUrl is missing", () => {
+    expect(getSurveyScriptUrl()).toBeNull();
   });
 
   test("builds the script URL from a root-hosted appUrl", () => {
@@ -30,9 +30,11 @@ describe("getSurveyScriptUrl()", () => {
     );
   });
 
-  test("rejects non-http protocols", () => {
-    expect(() => getSurveyScriptUrl("file:///tmp/formbricks")).toThrow(
-      "Formbricks appUrl must use http or https",
-    );
+  test("returns null for non-http protocols", () => {
+    expect(getSurveyScriptUrl("file:///tmp/formbricks")).toBeNull();
+  });
+
+  test("returns null for invalid URLs", () => {
+    expect(getSurveyScriptUrl("not-a-url")).toBeNull();
   });
 });

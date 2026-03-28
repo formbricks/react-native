@@ -1,14 +1,24 @@
-export const getSurveyScriptUrl = (appUrl?: string): string => {
-  const url = new URL(appUrl ?? "http://localhost:3000");
-
-  if (url.protocol !== "http:" && url.protocol !== "https:") {
-    throw new Error("Formbricks appUrl must use http or https");
+export const getSurveyScriptUrl = (appUrl?: string): string | null => {
+  if (!appUrl) {
+    return null;
   }
 
-  const basePath = url.pathname.endsWith("/") ? url.pathname : `${url.pathname}/`;
-  url.pathname = `${basePath}js/surveys.umd.cjs`;
-  url.search = "";
-  url.hash = "";
+  try {
+    const url = new URL(appUrl);
 
-  return url.toString();
+    if (url.protocol !== "http:" && url.protocol !== "https:") {
+      return null;
+    }
+
+    const basePath = url.pathname.endsWith("/")
+      ? url.pathname
+      : `${url.pathname}/`;
+    url.pathname = `${basePath}js/surveys.umd.cjs`;
+    url.search = "";
+    url.hash = "";
+
+    return url.toString();
+  } catch {
+    return null;
+  }
 };
