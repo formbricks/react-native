@@ -2,7 +2,7 @@
 import { AsyncStorage } from "@/lib/common/storage";
 import { wrapThrowsAsync } from "@/lib/common/utils";
 import type { TConfig, TConfigUpdateInput } from "@/types/config";
-import { type Result, err, ok } from "@/types/error";
+import { err, ok, type Result } from "@/types/error";
 
 export const RN_ASYNC_STORAGE_KEY = "formbricks-react-native";
 
@@ -47,7 +47,7 @@ export class RNConfig {
   public get(): TConfig {
     if (!this.config) {
       throw new Error(
-        "config is null, maybe the init function was not called?"
+        "config is null, maybe the init function was not called?",
       );
     }
     return this.config;
@@ -81,7 +81,7 @@ export class RNConfig {
     return wrapThrowsAsync(async () => {
       await AsyncStorage.setItem(
         RN_ASYNC_STORAGE_KEY,
-        JSON.stringify(this.config)
+        JSON.stringify(this.config),
       );
     })();
   }

@@ -8,7 +8,9 @@ export interface ResultOk<T> {
   value: T;
 }
 
-export type Result<T, E = Error> = { ok: true; data: T } | { ok: false; error: E };
+export type Result<T, E = Error> =
+  | { ok: true; data: T }
+  | { ok: false; error: E };
 
 export const ok = <T, E>(data: T): Result<T, E> => ({ ok: true, data });
 
@@ -34,7 +36,10 @@ export interface ApiErrorResponse {
   message: string;
   status: number;
   url?: URL;
-  details?: Record<string, string | string[] | number | number[] | boolean | boolean[]>;
+  details?: Record<
+    string,
+    string | string[] | number | number[] | boolean | boolean[]
+  >;
   responseMessage?: string;
 }
 

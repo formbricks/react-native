@@ -47,9 +47,13 @@ describe("Logger", () => {
     logger.error("This is an error log");
 
     // debug should NOT be logged by default
-    expect(consoleLogSpy).not.toHaveBeenCalledWith(expect.stringContaining("This is a debug log"));
+    expect(consoleLogSpy).not.toHaveBeenCalledWith(
+      expect.stringContaining("This is a debug log"),
+    );
     // error should be logged
-    expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining("[ERROR] - This is an error log"));
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      expect.stringContaining("[ERROR] - This is an error log"),
+    );
   });
 
   test("configure to logLevel=debug => debug messages appear", () => {
@@ -60,11 +64,11 @@ describe("Logger", () => {
 
     // debug should now appear
     expect(consoleLogSpy).toHaveBeenCalledWith(
-      expect.stringMatching(/🧱 Formbricks.*\[DEBUG\].*Debug log after config/)
+      expect.stringMatching(/🧱 Formbricks.*\[DEBUG\].*Debug log after config/),
     );
     // error should appear as well
     expect(consoleErrorSpy).toHaveBeenCalledWith(
-      expect.stringMatching(/🧱 Formbricks.*\[ERROR\].*Error log after config/)
+      expect.stringMatching(/🧱 Formbricks.*\[ERROR\].*Error log after config/),
     );
   });
 
@@ -75,8 +79,8 @@ describe("Logger", () => {
     // Check that the log includes 🧱 Formbricks, timestamp, [DEBUG], and the message
     expect(consoleLogSpy).toHaveBeenCalledWith(
       expect.stringMatching(
-        /^🧱 Formbricks - \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z \[DEBUG\] - Some message$/
-      )
+        /^🧱 Formbricks - \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z \[DEBUG\] - Some message$/,
+      ),
     );
   });
 });

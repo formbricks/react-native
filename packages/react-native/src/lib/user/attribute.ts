@@ -1,5 +1,5 @@
 import { UpdateQueue } from "@/lib/user/update-queue";
-import { type NetworkError, type Result, okVoid } from "@/types/error";
+import { type NetworkError, okVoid, type Result } from "@/types/error";
 
 /**
  * Sets attributes on the current user/contact.
@@ -16,8 +16,7 @@ import { type NetworkError, type Result, okVoid } from "@/types/error";
  * @param attributes - Key-value pairs where values can be strings, numbers, or Date objects
  */
 export const setAttributes = async (
-  attributes: Record<string, string | number | Date>
-   
+  attributes: Record<string, string | number | Date>,
 ): Promise<Result<void, NetworkError>> => {
   // Normalize values: convert Date to ISO string, preserve numbers as numbers
   const normalizedAttributes: Record<string, string | number> = {};

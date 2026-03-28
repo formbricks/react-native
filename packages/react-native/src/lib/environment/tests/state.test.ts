@@ -1,11 +1,11 @@
 // state.test.ts
 import {
-  type Mock,
-  type MockInstance,
   afterEach,
   beforeEach,
   describe,
   expect,
+  type Mock,
+  type MockInstance,
   test,
   vi,
 } from "vitest";
@@ -70,17 +70,19 @@ describe("environment/state.ts", () => {
   describe("fetchEnvironmentState()", () => {
     test("returns ok(...) with environment state", async () => {
       // Setup mock
-      (ApiClient as unknown as Mock).mockImplementationOnce(function MockApiClient() {
-        return {
-          getEnvironmentState: vi.fn().mockResolvedValue({
-            ok: true,
-            data: {
-              data: { foo: "bar" },
-              expiresAt: new Date(Date.now() + 1000 * 60 * 30),
-            },
-          }),
-        };
-      });
+      (ApiClient as unknown as Mock).mockImplementationOnce(
+        function MockApiClient() {
+          return {
+            getEnvironmentState: vi.fn().mockResolvedValue({
+              ok: true,
+              data: {
+                data: { foo: "bar" },
+                expiresAt: new Date(Date.now() + 1000 * 60 * 30),
+              },
+            }),
+          };
+        },
+      );
 
       const result = await fetchEnvironmentState({
         appUrl: "https://fake.host",
@@ -103,14 +105,16 @@ describe("environment/state.ts", () => {
         message: "Access denied",
       };
 
-      (ApiClient as unknown as Mock).mockImplementationOnce(function MockApiClient() {
-        return {
-          getEnvironmentState: vi.fn().mockResolvedValue({
-            ok: false,
-            error: mockError,
-          }),
-        };
-      });
+      (ApiClient as unknown as Mock).mockImplementationOnce(
+        function MockApiClient() {
+          return {
+            getEnvironmentState: vi.fn().mockResolvedValue({
+              ok: false,
+              error: mockError,
+            }),
+          };
+        },
+      );
 
       const result = await fetchEnvironmentState({
         appUrl: "https://fake.host",
@@ -131,11 +135,13 @@ describe("environment/state.ts", () => {
         responseMessage: "Network fail",
       };
 
-      (ApiClient as unknown as Mock).mockImplementationOnce(function MockApiClient() {
-        return {
-          getEnvironmentState: vi.fn().mockRejectedValue(mockNetworkError),
-        };
-      });
+      (ApiClient as unknown as Mock).mockImplementationOnce(
+        function MockApiClient() {
+          return {
+            getEnvironmentState: vi.fn().mockRejectedValue(mockNetworkError),
+          };
+        },
+      );
 
       const result = await fetchEnvironmentState({
         appUrl: "https://fake.host",
@@ -146,7 +152,7 @@ describe("environment/state.ts", () => {
         expect(result.error.code).toBe(mockNetworkError.code);
         expect(result.error.message).toBe(mockNetworkError.message);
         expect(result.error.responseMessage).toBe(
-          mockNetworkError.responseMessage
+          mockNetworkError.responseMessage,
         );
       }
     });

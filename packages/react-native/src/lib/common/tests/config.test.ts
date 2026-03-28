@@ -1,7 +1,7 @@
 // config.test.ts
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { RNConfig, RN_ASYNC_STORAGE_KEY } from "@/lib/common/config";
+import { RN_ASYNC_STORAGE_KEY, RNConfig } from "@/lib/common/config";
 import type { TConfig, TConfigUpdateInput } from "@/types/config";
 import { mockConfig } from "./__mocks__/config.mock";
 
@@ -38,13 +38,13 @@ describe("RNConfig", () => {
     // constructor didn't load anything successfully
     // so config is still null
     expect(() => configInstance.get()).toThrow(
-      "config is null, maybe the init function was not called?"
+      "config is null, maybe the init function was not called?",
     );
   });
 
   test("loadFromStorage() returns ok if valid config is found", async () => {
     vi.spyOn(AsyncStorage, "getItem").mockResolvedValueOnce(
-      JSON.stringify(mockConfig)
+      JSON.stringify(mockConfig),
     );
 
     const result = await configInstance.loadFromStorage();
@@ -65,7 +65,7 @@ describe("RNConfig", () => {
     };
 
     vi.spyOn(AsyncStorage, "getItem").mockResolvedValueOnce(
-      JSON.stringify(expiredConfig)
+      JSON.stringify(expiredConfig),
     );
 
     const result = await configInstance.loadFromStorage();
@@ -83,14 +83,14 @@ describe("RNConfig", () => {
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.error.message).toBe(
-        "No or invalid config in local storage"
+        "No or invalid config in local storage",
       );
     }
   });
 
   test("update() merges new config, calls saveToStorage()", async () => {
     vi.spyOn(AsyncStorage, "getItem").mockResolvedValueOnce(
-      JSON.stringify(mockConfig)
+      JSON.stringify(mockConfig),
     );
 
     // Wait for the constructor's async load
@@ -117,7 +117,7 @@ describe("RNConfig", () => {
 
   test("saveToStorage() is invoked internally on update()", async () => {
     vi.spyOn(AsyncStorage, "getItem").mockResolvedValueOnce(
-      JSON.stringify(mockConfig)
+      JSON.stringify(mockConfig),
     );
 
     await new Promise(setImmediate);
@@ -127,13 +127,13 @@ describe("RNConfig", () => {
     } as unknown as TConfigUpdateInput);
     expect(AsyncStorage.setItem).toHaveBeenCalledWith(
       RN_ASYNC_STORAGE_KEY,
-      expect.any(String) // the JSON string
+      expect.any(String), // the JSON string
     );
   });
 
   test("resetConfig() clears config and AsyncStorage", async () => {
     vi.spyOn(AsyncStorage, "getItem").mockResolvedValueOnce(
-      JSON.stringify(mockConfig)
+      JSON.stringify(mockConfig),
     );
     await new Promise(setImmediate);
 

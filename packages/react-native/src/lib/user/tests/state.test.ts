@@ -1,9 +1,9 @@
 import {
-  type MockInstance,
   afterEach,
   beforeEach,
   describe,
   expect,
+  type MockInstance,
   test,
   vi,
 } from "vitest";

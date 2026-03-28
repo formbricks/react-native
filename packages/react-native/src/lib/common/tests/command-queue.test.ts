@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { CommandQueue } from "@/lib/common/command-queue";
 import { checkSetup } from "@/lib/common/setup";
-import { type Result } from "@/types/error";
+import type { Result } from "@/types/error";
 import { delayedResult } from "../utils";
 
 // Mock the setup module so we can control checkSetup()
@@ -112,7 +112,7 @@ describe("CommandQueue", () => {
 
     expect(consoleErrorSpy).toHaveBeenCalledWith(
       "🧱 Formbricks - Global error: ",
-      expect.any(Error)
+      expect.any(Error),
     );
     consoleErrorSpy.mockRestore();
   });

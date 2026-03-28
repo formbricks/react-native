@@ -1,16 +1,15 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
-  type Mock,
-  type MockInstance,
   afterEach,
   beforeEach,
   describe,
   expect,
+  type Mock,
+  type MockInstance,
   test,
   vi,
 } from "vitest";
-import type * as CommonUtilsModule from "@/lib/common/utils";
-import { RNConfig, RN_ASYNC_STORAGE_KEY } from "@/lib/common/config";
+import { RN_ASYNC_STORAGE_KEY, RNConfig } from "@/lib/common/config";
 import {
   addCleanupEventListeners,
   addEventListeners,
@@ -24,6 +23,7 @@ import {
   setup,
   tearDown,
 } from "@/lib/common/setup";
+import type * as CommonUtilsModule from "@/lib/common/utils";
 import { filterSurveys, isNowExpired } from "@/lib/common/utils";
 import { fetchEnvironmentState } from "@/lib/environment/state";
 import { DEFAULT_USER_STATE_NO_USER_ID } from "@/lib/user/state";
@@ -74,9 +74,8 @@ vi.mock("@/lib/environment/state", () => ({
 
 // 6) Mock filterSurveys
 vi.mock("@/lib/common/utils", async () => {
-  const actual = await vi.importActual<typeof CommonUtilsModule>(
-    "@/lib/common/utils"
-  );
+  const actual =
+    await vi.importActual<typeof CommonUtilsModule>("@/lib/common/utils");
   return {
     ...actual,
     filterSurveys: vi.fn(),
@@ -123,7 +122,7 @@ describe("setup.ts", () => {
       });
       expect(result.ok).toBe(true);
       expect(mockLogger.debug).toHaveBeenCalledWith(
-        "Already set up, skipping setup."
+        "Already set up, skipping setup.",
       );
     });
 
@@ -158,7 +157,7 @@ describe("setup.ts", () => {
       };
 
       getInstanceConfigMock.mockReturnValue(
-        mockConfig as unknown as Promise<RNConfig>
+        mockConfig as unknown as Promise<RNConfig>,
       );
 
       (isNowExpired as unknown as Mock).mockReturnValue(true);
@@ -169,10 +168,10 @@ describe("setup.ts", () => {
       });
       expect(result.ok).toBe(true);
       expect(mockLogger.debug).toHaveBeenCalledWith(
-        "Formbricks was set to an error state."
+        "Formbricks was set to an error state.",
       );
       expect(mockLogger.debug).toHaveBeenCalledWith(
-        "Error state is not expired, skipping setup"
+        "Error state is not expired, skipping setup",
       );
     });
 
@@ -188,7 +187,7 @@ describe("setup.ts", () => {
       };
 
       getInstanceConfigMock.mockReturnValue(
-        mockConfig as unknown as Promise<RNConfig>
+        mockConfig as unknown as Promise<RNConfig>,
       );
 
       const result = await setup({
@@ -197,10 +196,10 @@ describe("setup.ts", () => {
       });
       expect(result.ok).toBe(true);
       expect(mockLogger.debug).toHaveBeenCalledWith(
-        "Formbricks was set to an error state."
+        "Formbricks was set to an error state.",
       );
       expect(mockLogger.debug).toHaveBeenCalledWith(
-        "Error state is expired. Continue with setup."
+        "Error state is expired. Continue with setup.",
       );
     });
 
@@ -220,7 +219,7 @@ describe("setup.ts", () => {
       };
 
       getInstanceConfigMock.mockReturnValue(
-        mockConfig as unknown as Promise<RNConfig>
+        mockConfig as unknown as Promise<RNConfig>,
       );
 
       (isNowExpired as unknown as Mock).mockReturnValue(true);
@@ -270,7 +269,7 @@ describe("setup.ts", () => {
             data: { userId: "user_abc", segments: [] },
           }),
           filteredSurveys: [{ name: "S1" }, { name: "S2" }],
-        })
+        }),
       );
     });
 
@@ -301,7 +300,7 @@ describe("setup.ts", () => {
       };
 
       getInstanceConfigMock.mockReturnValue(
-        mockConfig as unknown as Promise<RNConfig>
+        mockConfig as unknown as Promise<RNConfig>,
       );
       (isNowExpired as unknown as Mock).mockReturnValue(true);
       (fetchEnvironmentState as unknown as Mock).mockResolvedValueOnce({
@@ -321,7 +320,7 @@ describe("setup.ts", () => {
       if (!result.ok) {
         expect(result.error.code).toBe("network_error");
         expect("message" in result.error && result.error.message).toBe(
-          "Error fetching environment state"
+          "Error fetching environment state",
         );
       }
       expect(sendUpdatesToBackend).not.toHaveBeenCalled();
@@ -354,7 +353,7 @@ describe("setup.ts", () => {
       };
 
       getInstanceConfigMock.mockReturnValue(
-        mockConfig as unknown as Promise<RNConfig>
+        mockConfig as unknown as Promise<RNConfig>,
       );
       (isNowExpired as unknown as Mock)
         .mockReturnValueOnce(false)
@@ -376,7 +375,7 @@ describe("setup.ts", () => {
       if (!result.ok) {
         expect(result.error.code).toBe("network_error");
         expect("message" in result.error && result.error.message).toBe(
-          "Error updating user state"
+          "Error updating user state",
         );
       }
     });
@@ -391,7 +390,7 @@ describe("setup.ts", () => {
       };
 
       getInstanceConfigMock.mockReturnValue(
-        mockConfig as unknown as Promise<RNConfig>
+        mockConfig as unknown as Promise<RNConfig>,
       );
 
       (fetchEnvironmentState as unknown as Mock).mockResolvedValueOnce({
@@ -414,10 +413,10 @@ describe("setup.ts", () => {
       });
       expect(result.ok).toBe(true);
       expect(mockLogger.debug).toHaveBeenCalledWith(
-        "No existing configuration found."
+        "No existing configuration found.",
       );
       expect(mockLogger.debug).toHaveBeenCalledWith(
-        "No valid configuration found. Resetting config and creating new one."
+        "No valid configuration found. Resetting config and creating new one.",
       );
       expect(mockConfig.resetConfig).toHaveBeenCalled();
       expect(fetchEnvironmentState).toHaveBeenCalled();
@@ -444,7 +443,7 @@ describe("setup.ts", () => {
       };
 
       getInstanceConfigMock.mockReturnValueOnce(
-        mockConfig as unknown as Promise<RNConfig>
+        mockConfig as unknown as Promise<RNConfig>,
       );
 
       (fetchEnvironmentState as unknown as Mock).mockResolvedValueOnce({
@@ -453,7 +452,7 @@ describe("setup.ts", () => {
       });
 
       await expect(
-        setup({ environmentId: "envX", appUrl: "https://urlX" })
+        setup({ environmentId: "envX", appUrl: "https://urlX" }),
       ).rejects.toThrow("Could not set up formbricks");
     });
 
@@ -467,20 +466,20 @@ describe("setup.ts", () => {
       };
 
       getInstanceConfigMock.mockReturnValueOnce(
-        mockConfig as unknown as Promise<RNConfig>
+        mockConfig as unknown as Promise<RNConfig>,
       );
       (fetchEnvironmentState as unknown as Mock).mockRejectedValueOnce("boom");
 
       await expect(
-        setup({ environmentId: "envX", appUrl: "https://urlX" })
+        setup({ environmentId: "envX", appUrl: "https://urlX" }),
       ).rejects.toThrow("Could not set up formbricks");
 
       expect(mockLogger.error).toHaveBeenCalledWith(
-        "Error during first setup: network_error - Unknown error. Please try again later."
+        "Error during first setup: network_error - Unknown error. Please try again later.",
       );
       expect(AsyncStorage.setItem).toHaveBeenCalledWith(
         RN_ASYNC_STORAGE_KEY,
-        expect.stringContaining('"value":"error"')
+        expect.stringContaining('"value":"error"'),
       );
     });
 
@@ -497,7 +496,7 @@ describe("setup.ts", () => {
       };
 
       getInstanceConfigMock.mockReturnValueOnce(
-        mockConfig as unknown as Promise<RNConfig>
+        mockConfig as unknown as Promise<RNConfig>,
       );
 
       const result = await setup({
@@ -536,7 +535,7 @@ describe("setup.ts", () => {
       };
 
       getInstanceConfigMock.mockReturnValueOnce(
-        mockConfig as unknown as Promise<RNConfig>
+        mockConfig as unknown as Promise<RNConfig>,
       );
 
       await tearDown();
@@ -544,7 +543,7 @@ describe("setup.ts", () => {
       expect(mockConfig.update).toHaveBeenCalledWith(
         expect.objectContaining({
           user: DEFAULT_USER_STATE_NO_USER_ID,
-        })
+        }),
       );
       expect(removeAllEventListeners).toHaveBeenCalled();
     });
@@ -562,7 +561,7 @@ describe("setup.ts", () => {
       // AsyncStorage setItem should be called with the error config
       expect(AsyncStorage.setItem).toHaveBeenCalledWith(
         RN_ASYNC_STORAGE_KEY,
-        expect.stringContaining('"value":"error"')
+        expect.stringContaining('"value":"error"'),
       );
     });
   });

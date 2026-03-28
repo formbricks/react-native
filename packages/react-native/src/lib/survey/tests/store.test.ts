@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
+import { SurveyStore } from "@/lib/survey/store";
 import {
   mockSurveyId,
   mockSurveyName,
 } from "@/lib/survey/tests/__mocks__/store.mock";
-import { SurveyStore } from "@/lib/survey/store";
 import type { TSurvey } from "@/types/survey";
 
 describe("SurveyStore", () => {

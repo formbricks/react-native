@@ -2,11 +2,10 @@ import { RNConfig } from "@/lib/common/config";
 import { Logger } from "@/lib/common/logger";
 import { tearDown } from "@/lib/common/setup";
 import { UpdateQueue } from "@/lib/user/update-queue";
-import { type ApiErrorResponse, type Result, okVoid } from "@/types/error";
+import { type ApiErrorResponse, okVoid, type Result } from "@/types/error";
 
- 
 export const setUserId = async (
-  userId: string
+  userId: string,
 ): Promise<Result<void, ApiErrorResponse>> => {
   const appConfig = await RNConfig.getInstance();
   const logger = Logger.getInstance();
@@ -24,7 +23,9 @@ export const setUserId = async (
 
   // If a different userId is set, clean up the previous user state first
   if (currentUserId) {
-    logger.debug("Different userId is being set, cleaning up previous user state");
+    logger.debug(
+      "Different userId is being set, cleaning up previous user state",
+    );
     await tearDown();
   }
 

@@ -1,4 +1,4 @@
-import { RNConfig, RN_ASYNC_STORAGE_KEY } from "@/lib/common/config";
+import { RN_ASYNC_STORAGE_KEY, RNConfig } from "@/lib/common/config";
 import {
   addCleanupEventListeners,
   addEventListeners,
@@ -14,21 +14,21 @@ import {
 import { fetchEnvironmentState } from "@/lib/environment/state";
 import { DEFAULT_USER_STATE_NO_USER_ID } from "@/lib/user/state";
 import { sendUpdatesToBackend } from "@/lib/user/update";
-import {
-  type TConfig,
-  type TConfigInput,
-  type TEnvironmentState,
-  type TUserState,
+import type {
+  TConfig,
+  TConfigInput,
+  TEnvironmentState,
+  TUserState,
 } from "@/types/config";
 import {
+  err,
   type MissingFieldError,
   type MissingPersonError,
   type NetworkError,
   type NotSetupError,
-  type Result,
-  err,
   ok,
   okVoid,
+  type Result,
 } from "@/types/error";
 
 let isSetup = false;
@@ -38,9 +38,7 @@ export const setIsSetup = (state: boolean): void => {
 };
 
 // Helper: Handle missing field error
-function handleMissingField(
-  field: string
-): Result<void, MissingFieldError> {
+function handleMissingField(field: string): Result<void, MissingFieldError> {
   const logger = Logger.getInstance();
   logger.debug(`No ${field} provided`);
   return err({
@@ -53,7 +51,7 @@ function handleMissingField(
 async function syncEnvironmentStateIfExpired(
   configInput: TConfigInput,
   logger: ReturnType<typeof Logger.getInstance>,
-  existingConfig?: TConfig
+  existingConfig?: TConfig,
 ): Promise<Result<TEnvironmentState, NetworkError>> {
   if (existingConfig && !isNowExpired(existingConfig.environment.expiresAt)) {
     return ok(existingConfig.environment);
@@ -71,7 +69,7 @@ async function syncEnvironmentStateIfExpired(
   }
 
   logger.error(
-    `Error fetching environment state: ${environmentStateResponse.error.code} - ${environmentStateResponse.error.responseMessage ?? ""}`
+    `Error fetching environment state: ${environmentStateResponse.error.code} - ${environmentStateResponse.error.responseMessage ?? ""}`,
   );
 
   return err({
@@ -79,7 +77,7 @@ async function syncEnvironmentStateIfExpired(
     message: "Error fetching environment state",
     status: 500,
     url: new URL(
-      `${configInput.appUrl}/api/v1/client/${configInput.environmentId}/environment`
+      `${configInput.appUrl}/api/v1/client/${configInput.environmentId}/environment`,
     ),
     responseMessage: environmentStateResponse.error.message,
   });
@@ -89,7 +87,7 @@ async function syncEnvironmentStateIfExpired(
 async function syncUserStateIfExpired(
   configInput: TConfigInput,
   logger: ReturnType<typeof Logger.getInstance>,
-  existingConfig?: TConfig
+  existingConfig?: TConfig,
 ): Promise<Result<TUserState, NetworkError>> {
   const userState = existingConfig?.user;
   if (userState && !userState.expiresAt) {
@@ -115,14 +113,14 @@ async function syncUserStateIfExpired(
     }
 
     logger.error(
-      `Error updating user state: ${updatesResponse.error.code} - ${updatesResponse.error.responseMessage ?? ""}`
+      `Error updating user state: ${updatesResponse.error.code} - ${updatesResponse.error.responseMessage ?? ""}`,
     );
     return err({
       code: "network_error",
       message: "Error updating user state",
       status: 500,
       url: new URL(
-        `${configInput.appUrl}/api/v1/client/${configInput.environmentId}/update/contacts/${userState.data.userId}`
+        `${configInput.appUrl}/api/v1/client/${configInput.environmentId}/update/contacts/${userState.data.userId}`,
       ),
       responseMessage: "Unknown error",
     } as const);
@@ -137,7 +135,7 @@ const updateAppConfigWithSyncedStates = (
   environmentState: TEnvironmentState,
   userState: TUserState,
   logger: ReturnType<typeof Logger.getInstance>,
-  existingConfig?: TConfig
+  existingConfig?: TConfig,
 ): void => {
   if (!existingConfig) {
     return;
@@ -154,7 +152,7 @@ const updateAppConfigWithSyncedStates = (
 
   const surveyNames = filteredSurveys.map((s) => s.name);
   logger.debug(
-    `Fetched ${surveyNames.length.toString()} surveys during sync: ${surveyNames.join(", ")}`
+    `Fetched ${surveyNames.length.toString()} surveys during sync: ${surveyNames.join(", ")}`,
   );
 };
 
@@ -162,10 +160,10 @@ const updateAppConfigWithSyncedStates = (
 const createNewConfigAndSync = async (
   appConfig: RNConfig,
   configInput: TConfigInput,
-  logger: ReturnType<typeof Logger.getInstance>
+  logger: ReturnType<typeof Logger.getInstance>,
 ): Promise<void> => {
   logger.debug(
-    "No valid configuration found. Resetting config and creating new one."
+    "No valid configuration found. Resetting config and creating new one.",
   );
 
   await appConfig.resetConfig();
@@ -199,32 +197,30 @@ const createNewConfigAndSync = async (
     });
   } catch (e: unknown) {
     const setupError = normalizeSetupError(e);
-    await handleErrorOnFirstSetup(
-      {
-        code: setupError.code ?? "network_error",
-        responseMessage:
-          setupError.responseMessage ?? setupError.message ?? "Unknown error",
-      }
-    );
+    await handleErrorOnFirstSetup({
+      code: setupError.code ?? "network_error",
+      responseMessage:
+        setupError.responseMessage ?? setupError.message ?? "Unknown error",
+    });
   }
 };
 
 // Helper: Should sync config
 const shouldSyncConfig = (
   existingConfig: TConfig | undefined,
-  configInput: TConfigInput
+  configInput: TConfigInput,
 ): boolean => {
   return Boolean(
     existingConfig?.environment &&
-    existingConfig.environmentId === configInput.environmentId &&
-    existingConfig.appUrl === configInput.appUrl
+      existingConfig.environmentId === configInput.environmentId &&
+      existingConfig.appUrl === configInput.appUrl,
   );
 };
 
 // Helper: Should return early for error state
 const shouldReturnEarlyForErrorState = (
   existingConfig: TConfig | undefined,
-  logger: ReturnType<typeof Logger.getInstance>
+  logger: ReturnType<typeof Logger.getInstance>,
 ): boolean => {
   if (existingConfig?.status.value === "error") {
     logger.debug("Formbricks was set to an error state.");
@@ -252,7 +248,7 @@ const finalizeSetup = (): void => {
 // Helper: Load existing config
 const loadExistingConfig = (
   appConfig: RNConfig,
-  logger: ReturnType<typeof Logger.getInstance>
+  logger: ReturnType<typeof Logger.getInstance>,
 ): TConfig | undefined => {
   let existingConfig: TConfig | undefined;
   try {
@@ -265,7 +261,7 @@ const loadExistingConfig = (
 };
 
 export const setup = async (
-  configInput: TConfigInput
+  configInput: TConfigInput,
 ): Promise<
   Result<void, MissingFieldError | NetworkError | MissingPersonError>
 > => {
@@ -302,7 +298,7 @@ export const setup = async (
       const environmentStateResult = await syncEnvironmentStateIfExpired(
         configInput,
         logger,
-        existingConfig
+        existingConfig,
       );
 
       if (environmentStateResult.ok) {
@@ -314,7 +310,7 @@ export const setup = async (
       const userStateResult = await syncUserStateIfExpired(
         configInput,
         logger,
-        existingConfig
+        existingConfig,
       );
 
       if (userStateResult.ok) {
@@ -328,7 +324,7 @@ export const setup = async (
         environmentState,
         userState,
         logger,
-        existingConfig
+        existingConfig,
       );
     } catch {
       logger.debug("Error during sync. Please try again.");
@@ -363,7 +359,7 @@ export const tearDown = async (): Promise<void> => {
 
   const filteredSurveys = filterSurveys(
     environment,
-    DEFAULT_USER_STATE_NO_USER_ID
+    DEFAULT_USER_STATE_NO_USER_ID,
   );
 
   // clear the user state and set it to the default value
@@ -386,7 +382,7 @@ export const handleErrorOnFirstSetup = async (e: {
     logger.error(`Authorization error: ${e.responseMessage}`);
   } else {
     logger.error(
-      `Error during first setup: ${e.code} - ${e.responseMessage}. Please try again later.`
+      `Error during first setup: ${e.code} - ${e.responseMessage}. Please try again later.`,
     );
   }
 
@@ -401,7 +397,7 @@ export const handleErrorOnFirstSetup = async (e: {
   await wrapThrowsAsync(async () => {
     await AsyncStorage.setItem(
       RN_ASYNC_STORAGE_KEY,
-      JSON.stringify(initialErrorConfig)
+      JSON.stringify(initialErrorConfig),
     );
   })();
 
@@ -409,7 +405,7 @@ export const handleErrorOnFirstSetup = async (e: {
 };
 
 const normalizeSetupError = (
-  error: unknown
+  error: unknown,
 ): Partial<{
   code: string;
   responseMessage: string;

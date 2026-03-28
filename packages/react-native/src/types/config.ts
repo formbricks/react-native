@@ -1,8 +1,7 @@
- 
 import { z } from "zod";
-import { type TResponseUpdate } from "@/types/response";
-import { type TFileUploadParams } from "@/types/storage";
-import { type TActionClass } from "./action-class";
+import type { TResponseUpdate } from "@/types/response";
+import type { TFileUploadParams } from "@/types/storage";
+import type { TActionClass } from "./action-class";
 import type { TProject, TProjectStyling } from "./project";
 import type { TSurvey } from "./survey";
 

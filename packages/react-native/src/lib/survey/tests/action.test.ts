@@ -1,4 +1,4 @@
-import { type Mock, beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, type Mock, test, vi } from "vitest";
 import { RNConfig } from "@/lib/common/config";
 import { Logger } from "@/lib/common/logger";
 import { shouldDisplayBasedOnPercentage } from "@/lib/common/utils";
@@ -75,10 +75,10 @@ describe("survey/action.ts", () => {
 
     // Mock instances
     getInstanceRn.mockReturnValue(
-      mockAppConfig as unknown as Promise<RNConfig>
+      mockAppConfig as unknown as Promise<RNConfig>,
     );
     getInstanceSurveyStore.mockReturnValue(
-      mockSurveyStore as unknown as SurveyStore
+      mockSurveyStore as unknown as SurveyStore,
     );
     getInstanceLogger.mockReturnValue(mockLogger as unknown as Logger);
   });
@@ -86,7 +86,7 @@ describe("survey/action.ts", () => {
   describe("triggerSurvey", () => {
     test("does not trigger survey if displayPercentage criteria is not met", () => {
       const shouldDisplayBasedOnPercentageMock = vi.mocked(
-        shouldDisplayBasedOnPercentage
+        shouldDisplayBasedOnPercentage,
       );
       shouldDisplayBasedOnPercentageMock.mockReturnValueOnce(false);
 
@@ -95,14 +95,14 @@ describe("survey/action.ts", () => {
       // Ensure survey is not set
       expect(mockSurveyStore.setSurvey).not.toHaveBeenCalled();
       expect(mockLogger.debug).toHaveBeenCalledWith(
-        'Survey display of "Test Survey" skipped based on displayPercentage.'
+        'Survey display of "Test Survey" skipped based on displayPercentage.',
       );
     });
 
     test("triggers survey if displayPercentage criteria is met", () => {
       // Mock `shouldDisplayBasedOnPercentage` to return true
       const shouldDisplayBasedOnPercentageMock = vi.mocked(
-        shouldDisplayBasedOnPercentage
+        shouldDisplayBasedOnPercentage,
       );
       shouldDisplayBasedOnPercentageMock.mockReturnValueOnce(true);
 
@@ -141,7 +141,7 @@ describe("survey/action.ts", () => {
       // Ensure no surveys are triggered
       expect(mockSurveyStore.setSurvey).not.toHaveBeenCalled();
       expect(mockLogger.debug).toHaveBeenCalledWith(
-        "No active surveys to display"
+        "No active surveys to display",
       );
     });
 
@@ -149,7 +149,7 @@ describe("survey/action.ts", () => {
       await trackAction("testAction");
 
       expect(mockLogger.debug).toHaveBeenCalledWith(
-        'Formbricks: Action "testAction" tracked'
+        'Formbricks: Action "testAction" tracked',
       );
     });
   });
@@ -185,7 +185,7 @@ describe("survey/action.ts", () => {
       if (!result.ok) {
         expect(result.error.code).toBe("invalid_code");
         expect(result.error.message).toBe(
-          "Action with identifier 'invalidCode' is unknown. Please add this action in Formbricks in order to use it via the SDK action tracking."
+          "Action with identifier 'invalidCode' is unknown. Please add this action in Formbricks in order to use it via the SDK action tracking.",
         );
       }
     });

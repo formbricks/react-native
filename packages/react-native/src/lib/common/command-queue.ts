@@ -6,24 +6,29 @@ import type { Result } from "@/types/error";
 export class CommandQueue {
   private readonly queue: {
     command: (
-      ...args: any[]
+      ...args: unknown[]
     ) => Promise<Result<void, unknown>> | Result<void, unknown> | Promise<void>;
     checkSetup: boolean;
-    commandArgs: any[];
+    commandArgs: unknown[];
   }[] = [];
   private running = false;
   private resolvePromise: (() => void) | null = null;
   private commandPromise: Promise<void> | null = null;
 
-  public add<A>(
+  public add<A extends unknown[]>(
     command: (
-      ...args: A[]
+      ...args: A
     ) => Promise<Result<void, unknown>> | Result<void, unknown> | Promise<void>,
     shouldCheckSetup = true,
-    ...args: A[]
+    ...args: A
   ): void {
     this.queue.push({
-      command,
+      command: command as (
+        ...commandArgs: unknown[]
+      ) =>
+        | Promise<Result<void, unknown>>
+        | Result<void, unknown>
+        | Promise<void>,
       checkSetup: shouldCheckSetup,
       commandArgs: args,
     });
@@ -59,12 +64,11 @@ export class CommandQueue {
         }
       }
 
-      const executeCommand = async (): Promise<Result<void, unknown>> => {
-        return (await currentItem.command.apply(
+      const executeCommand = async (): Promise<Result<void, unknown>> =>
+        (await currentItem.command.apply(
           null,
-          currentItem.commandArgs
+          currentItem.commandArgs,
         )) as Result<void, unknown>;
-      };
 
       const result = await wrapThrowsAsync(executeCommand)();
 

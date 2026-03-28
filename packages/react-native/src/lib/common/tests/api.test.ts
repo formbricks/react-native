@@ -23,7 +23,11 @@ describe("api.ts", () => {
       };
       mockFetch.mockResolvedValue(mockResponse);
 
-      const result = await makeRequest<{ test: string }>("https://example.com", "/api/test", "GET");
+      const result = await makeRequest<{ test: string }>(
+        "https://example.com",
+        "/api/test",
+        "GET",
+      );
 
       expect(mockFetch).toHaveBeenCalledWith("https://example.com/api/test", {
         method: "GET",
@@ -44,9 +48,14 @@ describe("api.ts", () => {
       };
       mockFetch.mockResolvedValue(mockResponse);
 
-      const result = await makeRequest<{ test: string }>("https://example.com", "/api/test", "POST", {
-        input: "data",
-      });
+      const result = await makeRequest<{ test: string }>(
+        "https://example.com",
+        "/api/test",
+        "POST",
+        {
+          input: "data",
+        },
+      );
 
       expect(mockFetch).toHaveBeenCalledWith("https://example.com/api/test", {
         method: "POST",
@@ -69,7 +78,11 @@ describe("api.ts", () => {
       };
       mockFetch.mockRejectedValue(mockError);
 
-      const result = await makeRequest<{ test: string }>("https://example.com", "/api/test", "GET");
+      const result = await makeRequest<{ test: string }>(
+        "https://example.com",
+        "/api/test",
+        "GET",
+      );
 
       expect(result.ok).toBe(false);
       if (!result.ok) {
@@ -88,7 +101,11 @@ describe("api.ts", () => {
       };
       mockFetch.mockResolvedValue(mockResponse);
 
-      const result = await makeRequest<{ test: string }>("https://example.com", "/api/test", "GET");
+      const result = await makeRequest<{ test: string }>(
+        "https://example.com",
+        "/api/test",
+        "GET",
+      );
 
       expect(result.ok).toBe(false);
       if (!result.ok) {
@@ -112,7 +129,11 @@ describe("api.ts", () => {
       };
       mockFetch.mockResolvedValue(mockResponse);
 
-      const result = await makeRequest<{ test: string }>("https://example.com", "/api/test", "GET");
+      const result = await makeRequest<{ test: string }>(
+        "https://example.com",
+        "/api/test",
+        "GET",
+      );
 
       expect(result.ok).toBe(false);
       if (!result.ok) {
@@ -137,7 +158,11 @@ describe("api.ts", () => {
       };
       mockFetch.mockResolvedValue(mockResponse);
 
-      const result = await makeRequest<{ test: string }>("https://example.com", "/api/test", "GET");
+      const result = await makeRequest<{ test: string }>(
+        "https://example.com",
+        "/api/test",
+        "GET",
+      );
 
       expect(result.ok).toBe(false);
       if (!result.ok) {
@@ -158,7 +183,13 @@ describe("api.ts", () => {
       };
       mockFetch.mockResolvedValue(mockResponse);
 
-      await makeRequest<{ test: string }>("https://example.com", "/api/test", "GET", undefined, true);
+      await makeRequest<{ test: string }>(
+        "https://example.com",
+        "/api/test",
+        "GET",
+        undefined,
+        true,
+      );
 
       expect(mockFetch).toHaveBeenCalledWith("https://example.com/api/test", {
         method: "GET",
@@ -211,16 +242,19 @@ describe("api.ts", () => {
         attributes: { name: "John", age: "30" },
       });
 
-      expect(mockFetch).toHaveBeenCalledWith("https://example.com/api/v2/client/env123/user", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+      expect(mockFetch).toHaveBeenCalledWith(
+        "https://example.com/api/v2/client/env123/user",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            userId: "user123",
+            attributes: { name: "John", age: "30" },
+          }),
         },
-        body: JSON.stringify({
-          userId: "user123",
-          attributes: { name: "John", age: "30" },
-        }),
-      });
+      );
 
       expect(result.ok).toBe(true);
       if (result.ok) {
@@ -282,12 +316,15 @@ describe("api.ts", () => {
 
       const result = await apiClient.getEnvironmentState();
 
-      expect(mockFetch).toHaveBeenCalledWith("https://example.com/api/v1/client/env123/environment", {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
+      expect(mockFetch).toHaveBeenCalledWith(
+        "https://example.com/api/v1/client/env123/environment",
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
         },
-      });
+      );
 
       expect(result.ok).toBe(true);
       if (result.ok) {

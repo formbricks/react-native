@@ -1,6 +1,3 @@
-import { StatusBar } from "expo-status-bar";
-import React, { type JSX } from "react";
-import { Button, LogBox, StyleSheet, Text, View } from "react-native";
 import Formbricks, {
   logout,
   setAttribute,
@@ -9,6 +6,9 @@ import Formbricks, {
   setUserId,
   track,
 } from "@formbricks/react-native";
+import { StatusBar } from "expo-status-bar";
+import type { JSX } from "react";
+import { Button, LogBox, StyleSheet, Text, View } from "react-native";
 
 LogBox.ignoreAllLogs();
 
@@ -74,7 +74,7 @@ export default function App(): JSX.Element {
               (error: unknown) => {
                 // eslint-disable-next-line no-console -- logging is allowed in demo apps
                 console.error("Error setting user attributes:", error);
-              }
+              },
             );
           }}
         />
