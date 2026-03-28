@@ -17,18 +17,18 @@
       "cache": false,
       "persistent": true
     },
-    "@formbricks/react-native:build": {
+    "@formbricks/react-native#build": {
       "dependsOn": ["^build"],
       "outputs": ["packages/react-native/dist/**"],
       "cache": false
     },
-    "playground:build": {
-      "dependsOn": ["@formbricks/react-native:build"],
+    "playground#build": {
+      "dependsOn": ["@formbricks/react-native#build"],
       "outputs": ["apps/playground/dist/**"],
       "cache": false
     },
-    "playground:check-types": {
-      "dependsOn": ["@formbricks/react-native:build"]
+    "playground#check-types": {
+      "dependsOn": ["@formbricks/react-native#build"]
     },
     "test": {
       "outputs": []
