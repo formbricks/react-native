@@ -7,6 +7,7 @@ import {
   View,
 } from "react-native";
 import { WebView, type WebViewMessageEvent } from "react-native-webview";
+import { getSurveyScriptUrl } from "@/components/utils/survey-script-url";
 import { RNConfig } from "@/lib/common/config";
 import { Logger } from "@/lib/common/logger";
 import { filterSurveys, getLanguageCode, getStyling } from "@/lib/common/utils";
@@ -381,15 +382,4 @@ const renderHtml = (
     </script>
   </html>
   `;
-};
-
-const getSurveyScriptUrl = (appUrl?: string): string => {
-  const baseUrl = appUrl ?? "http://localhost:3000";
-  const url = new URL("/js/surveys.umd.cjs", baseUrl);
-
-  if (url.protocol !== "http:" && url.protocol !== "https:") {
-    throw new Error("Formbricks appUrl must use http or https");
-  }
-
-  return url.toString();
 };
