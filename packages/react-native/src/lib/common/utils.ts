@@ -15,19 +15,19 @@ export const diffInDays = (date1: Date, date2: Date): number => {
 
 export const wrapThrowsAsync =
   <T, A extends unknown[]>(fn: (...args: A) => Promise<T>) =>
-    async (...args: A): Promise<Result<T>> => {
-      try {
-        return {
-          ok: true,
-          data: await fn(...args),
-        };
-      } catch (error) {
-        return {
-          ok: false,
-          error: error as Error,
-        };
-      }
-    };
+  async (...args: A): Promise<Result<T>> => {
+    try {
+      return {
+        ok: true,
+        data: await fn(...args),
+      };
+    } catch (error) {
+      return {
+        ok: false,
+        error: error as Error,
+      };
+    }
+  };
 
 /**
  * Filters surveys based on the displayOption, recontactDays, and segments
@@ -39,7 +39,7 @@ export const wrapThrowsAsync =
 // takes the environment and user state and returns the filtered surveys
 export const filterSurveys = (
   environmentState: TEnvironmentState,
-  userState: TUserState
+  userState: TUserState,
 ): TSurvey[] => {
   const { project, surveys } = environmentState.data;
   const { displays, responses, lastDisplayAt, segments, userId } =
@@ -111,7 +111,7 @@ export const filterSurveys = (
   if (!userId) {
     // exclude surveys that have a segment with filters
     return filteredSurveys.filter((survey) => {
-      const segmentFilters = survey.segment?.filters as unknown;
+      const segmentFilters = survey.segment?.filters;
       const segmentFiltersLength = Array.isArray(segmentFilters)
         ? segmentFilters.length
         : 0;
@@ -131,7 +131,7 @@ export const filterSurveys = (
 
 export const getStyling = (
   project: TEnvironmentStateProject,
-  survey: TSurvey
+  survey: TSurvey,
 ): TProjectStyling | TSurvey["styling"] => {
   // allow style overwrite is enabled from the project
   if (project.styling.allowStyleOverwrite) {
@@ -157,10 +157,10 @@ export const getDefaultLanguageCode = (survey: TSurvey): string | undefined => {
 
 export const getLanguageCode = (
   survey: TSurvey,
-  language?: string
+  language?: string,
 ): string | undefined => {
   const availableLanguageCodes = survey.languages.map(
-    (surveyLanguage) => surveyLanguage.language.code
+    (surveyLanguage) => surveyLanguage.language.code,
   );
   if (!language) return "default";
 
@@ -174,8 +174,7 @@ export const getLanguageCode = (
     return "default";
   }
   if (
-    !selectedLanguage ||
-    !selectedLanguage.enabled ||
+    !selectedLanguage?.enabled ||
     !availableLanguageCodes.includes(selectedLanguage.language.code)
   ) {
     return undefined;
@@ -184,7 +183,7 @@ export const getLanguageCode = (
 };
 
 export const shouldDisplayBasedOnPercentage = (
-  displayPercentage: number
+  displayPercentage: number,
 ): boolean => {
   return Math.random() * 100 < displayPercentage; // NOSONAR: Math.random() is sufficient for non-security survey display logic
 };

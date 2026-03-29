@@ -42,7 +42,7 @@ export const addUserStateExpiryCheckListener = async (): Promise<void> => {
 
     userStateSyncIntervalId = setInterval(
       intervalHandler,
-      updateInterval
+      updateInterval,
     ) as unknown as number;
   }
 };

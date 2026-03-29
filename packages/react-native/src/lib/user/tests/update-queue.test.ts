@@ -1,10 +1,10 @@
-import { type Mock, beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, type Mock, test, vi } from "vitest";
+import { RNConfig } from "@/lib/common/config";
 import {
   mockAttributes,
   mockUserId1,
   mockUserId2,
 } from "@/lib/user/tests/__mocks__/update-queue.mock";
-import { RNConfig } from "@/lib/common/config";
 import { sendUpdates } from "@/lib/user/update";
 import { UpdateQueue } from "@/lib/user/update-queue";
 
@@ -47,8 +47,11 @@ describe("UpdateQueue", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // Reset singleton instance
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- accessing private static property
-    (UpdateQueue as any).instance = null;
+    (
+      UpdateQueue as unknown as {
+        instance: UpdateQueue | null;
+      }
+    ).instance = null;
     updateQueue = UpdateQueue.getInstance();
   });
 
@@ -164,7 +167,7 @@ describe("UpdateQueue", () => {
 
     await updateQueue.updateAttributes({ name: mockAttributes.name });
     await expect(updateQueue.processUpdates()).rejects.toThrow(
-      "Formbricks can't set attributes without a userId!"
+      "Formbricks can't set attributes without a userId!",
     );
   });
 
@@ -183,7 +186,7 @@ describe("UpdateQueue", () => {
     await updateQueue.processUpdates();
 
     expect(mockLogger.error).toHaveBeenCalledWith(
-      "Failed to send updates: Server error"
+      "Failed to send updates: Server error",
     );
   });
 
@@ -202,7 +205,7 @@ describe("UpdateQueue", () => {
     await updateQueue.processUpdates();
 
     expect(mockLogger.debug).not.toHaveBeenCalledWith(
-      "Updates sent successfully"
+      "Updates sent successfully",
     );
   });
 });

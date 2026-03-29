@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
+import { delayedResult } from "@/lib/common/utils";
 import { setAttributes } from "@/lib/user/attribute";
 import { UpdateQueue } from "@/lib/user/update-queue";
-import { delayedResult } from "@/lib/common/utils";
 
-export const mockAttributes = {
+const mockAttributes = {
   name: "John Doe",
   email: "john@example.com",
 };
@@ -29,7 +29,7 @@ describe("User Attributes", () => {
 
     const getInstanceUpdateQueue = vi.spyOn(UpdateQueue, "getInstance");
     getInstanceUpdateQueue.mockReturnValue(
-      mockUpdateQueue as unknown as UpdateQueue
+      mockUpdateQueue as unknown as UpdateQueue,
     );
   });
 
@@ -39,7 +39,7 @@ describe("User Attributes", () => {
 
       // Verify UpdateQueue methods were called correctly
       expect(mockUpdateQueue.updateAttributes).toHaveBeenCalledWith(
-        mockAttributes
+        mockAttributes,
       );
       expect(mockUpdateQueue.processUpdates).toHaveBeenCalled();
 
@@ -57,11 +57,11 @@ describe("User Attributes", () => {
       expect(mockUpdateQueue.updateAttributes).toHaveBeenCalledTimes(2);
       expect(mockUpdateQueue.updateAttributes).toHaveBeenNthCalledWith(
         1,
-        firstAttributes
+        firstAttributes,
       );
       expect(mockUpdateQueue.updateAttributes).toHaveBeenNthCalledWith(
         2,
-        secondAttributes
+        secondAttributes,
       );
       expect(mockUpdateQueue.processUpdates).toHaveBeenCalledTimes(2);
     });
@@ -71,7 +71,7 @@ describe("User Attributes", () => {
 
       // Mock processUpdates to be async
       mockUpdateQueue.processUpdates.mockImplementation(() =>
-        delayedResult(undefined, 100)
+        delayedResult(undefined, 100),
       );
 
       const result = await setAttributes(attributes);

@@ -32,33 +32,32 @@
     }
   },
   "scripts": {
-    "build": "tsc && vite build",
-    "build:dev": "tsc && vite build --mode dev",
-    "lint": "eslint src --ext .ts,.js,.tsx,.jsx",
+    "build": "rimraf dist tsconfig.build.tsbuildinfo && tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json && vite build",
+    "build:dev": "rimraf dist tsconfig.build.tsbuildinfo && tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json && vite build --mode dev",
+    "lint": "biome check .",
     "dev": "vite build --watch --mode dev",
-    "clean": "rimraf .turbo node_modules dist .turbo",
+    "clean": "rimraf .turbo node_modules dist tsconfig.build.tsbuildinfo",
+    "check-types": "tsc -p tsconfig.json --noEmit",
     "test": "vitest",
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
-    "@react-native-community/netinfo": "11.5.2",
+    "@react-native-community/netinfo": "12.0.1",
     "zod": "4.3.6"
   },
   "devDependencies": {
+    "@types/node": "24.7.2",
     "@types/react": "19.2.14",
-    "@vercel/style-guide": "6.0.0",
-    "@vitest/eslint-plugin": "1.6.12",
-    "@vitest/coverage-v8": "4.0.18",
+    "@vitest/coverage-v8": "4.1.2",
     "react": "19.2.4",
-    "react-native": "0.84.0",
-    "terser": "5.46.0",
-    "vite": "7.3.1",
-    "vite-plugin-dts": "4.5.4",
-    "vitest": "4.0.18"
+    "react-native": "0.84.1",
+    "typescript": "6.0.2",
+    "tsc-alias": "1.8.16",
+    "vite": "8.0.3",
+    "vitest": "4.1.2"
   },
   "peerDependencies": {
     "@react-native-async-storage/async-storage": ">=2.1.0",
-    "eslint": "8.57.0",
     "react": ">=16.8.0",
     "react-native": ">=0.60.0",
     "react-native-webview": ">=13.0.0"

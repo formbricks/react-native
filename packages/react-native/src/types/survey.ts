@@ -22,11 +22,11 @@ export interface SurveyBaseProps {
   isBrandingEnabled: boolean;
   getSetIsError?: (getSetError: (value: boolean) => void) => void;
   getSetIsResponseSendingFinished?: (
-    getSetIsResponseSendingFinished: (value: boolean) => void
+    getSetIsResponseSendingFinished: (value: boolean) => void,
   ) => void;
   getSetQuestionId?: (getSetQuestionId: (value: string) => void) => void;
   getSetResponseData?: (
-    getSetResponseData: (value: TResponseData) => void
+    getSetResponseData: (value: TResponseData) => void,
   ) => void;
   onDisplay?: () => void;
   onResponse?: (response: TResponseUpdate) => void;
@@ -40,7 +40,7 @@ export interface SurveyBaseProps {
   languageCode: string;
   onFileUpload: (
     file: TFileUploadParams["file"],
-    config?: TUploadFileConfig
+    config?: TUploadFileConfig,
   ) => Promise<string>;
   responseCount?: number;
   isCardBorderVisible?: boolean;
@@ -67,7 +67,7 @@ export interface SurveyContainerProps
   onResponseCreated?: () => void | Promise<void>;
   onFileUpload?: (
     file: TJsFileUploadParams["file"],
-    config?: TUploadFileConfig
+    config?: TUploadFileConfig,
   ) => Promise<string>;
   onOpenExternalURL?: (url: string) => void | Promise<void>;
   mode?: "modal" | "inline";
@@ -106,7 +106,7 @@ export interface TSurvey {
     backButtonLabel?: Record<string, string>;
     scale?: "number" | "smiley" | "star";
     range?: 3 | 4 | 5 | 7 | 10;
-    logic?: any[]; // Recursive deep structure, can be expanded if needed
+    logic?: unknown[]; // Recursive deep structure, can be expanded if needed
     logicFallback?: string;
     isDraft?: boolean;
     placeholder?: Record<string, string>;
@@ -288,7 +288,7 @@ export interface TSurvey {
     title: string;
     description: string | null;
     isPrivate: boolean;
-    filters: any; // recursive, optional to expand
+    filters: unknown; // recursive, optional to expand
     environmentId: string;
     createdAt: string;
     updatedAt: string;

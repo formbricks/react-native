@@ -4,7 +4,7 @@ import { RNConfig } from "@/lib/common/config";
 import { Logger } from "@/lib/common/logger";
 import { filterSurveys } from "@/lib/common/utils";
 import type { TConfigInput, TEnvironmentState } from "@/types/config";
-import { type ApiErrorResponse, type Result, err, ok } from "@/types/error";
+import { type ApiErrorResponse, err, ok, type Result } from "@/types/error";
 
 let environmentStateSyncIntervalId: number | null = null;
 
@@ -106,7 +106,7 @@ export const addEnvironmentStateExpiryCheckListener =
 
       environmentStateSyncIntervalId = setInterval(
         () => void intervalHandler(),
-        updateInterval
+        updateInterval,
       ) as unknown as number;
     }
   };

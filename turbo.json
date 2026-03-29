@@ -5,7 +5,7 @@
     "build": {
       "dependsOn": ["^build"],
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
-      "outputs": [".next/**", "!.next/cache/**"]
+      "outputs": ["dist/**"]
     },
     "lint": {
       "dependsOn": ["^lint"]
@@ -17,14 +17,18 @@
       "cache": false,
       "persistent": true
     },
-    "@formbricks/react-native:build": {
+    "@formbricks/react-native#build": {
       "dependsOn": ["^build"],
+      "outputs": ["packages/react-native/dist/**"],
       "cache": false
     },
-    "playground:build": {
-      "dependsOn": ["@formbricks/react-native:build"],
-      "outputs": ["apps/playground/out/**"],
+    "playground#build": {
+      "dependsOn": ["@formbricks/react-native#build"],
+      "outputs": ["apps/playground/dist/**"],
       "cache": false
+    },
+    "playground#check-types": {
+      "dependsOn": ["@formbricks/react-native#build"]
     },
     "test": {
       "outputs": []

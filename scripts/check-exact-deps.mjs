@@ -28,9 +28,7 @@ for (const manifestPath of manifestPaths) {
     manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error(
-      `Failed to parse ${relativePath(manifestPath)}: ${message}`,
-    );
+    console.error(`Failed to parse ${relativePath(manifestPath)}: ${message}`);
     process.exit(1);
   }
 
@@ -38,7 +36,9 @@ for (const manifestPath of manifestPaths) {
     const dependencies = manifest[field] ?? {};
     for (const [name, spec] of Object.entries(dependencies)) {
       if (!isAllowedDependencySpec(spec)) {
-        violations.push(`${relativePath(manifestPath)} :: ${field}.${name} = ${spec}`);
+        violations.push(
+          `${relativePath(manifestPath)} :: ${field}.${name} = ${spec}`,
+        );
       }
     }
   }
@@ -110,7 +110,9 @@ function isExactVersion(spec) {
 
   if (spec.startsWith("npm:")) {
     const aliasIndex = spec.lastIndexOf("@");
-    return aliasIndex > "npm:".length && isExactVersion(spec.slice(aliasIndex + 1));
+    return (
+      aliasIndex > "npm:".length && isExactVersion(spec.slice(aliasIndex + 1))
+    );
   }
 
   return false;

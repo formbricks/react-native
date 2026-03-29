@@ -1,15 +1,15 @@
-import { type Mock, beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, type Mock, test, vi } from "vitest";
+import { ApiClient } from "@/lib/common/api";
+import { RNConfig } from "@/lib/common/config";
+import { Logger } from "@/lib/common/logger";
 import {
   mockAppUrl,
   mockAttributes,
   mockEnvironmentId,
   mockUserId,
 } from "@/lib/user/tests/__mocks__/update.mock";
-import { ApiClient } from "@/lib/common/api";
-import { RNConfig } from "@/lib/common/config";
-import { Logger } from "@/lib/common/logger";
 import { sendUpdates, sendUpdatesToBackend } from "@/lib/user/update";
-import { type TUpdates } from "@/types/config";
+import type { TUpdates } from "@/types/config";
 
 vi.mock("@/lib/common/config", () => ({
   RNConfig: {

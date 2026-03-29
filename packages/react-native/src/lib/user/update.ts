@@ -3,13 +3,8 @@ import { ApiClient } from "@/lib/common/api";
 import { RNConfig } from "@/lib/common/config";
 import { Logger } from "@/lib/common/logger";
 import { filterSurveys } from "@/lib/common/utils";
-import { type TUpdates, type TUserState } from "@/types/config";
-import {
-  type ApiErrorResponse,
-  type Result,
-  err,
-  ok,
-} from "@/types/error";
+import type { TUpdates, TUserState } from "@/types/config";
+import { type ApiErrorResponse, err, ok, type Result } from "@/types/error";
 
 export const sendUpdatesToBackend = async ({
   appUrl,
@@ -89,10 +84,7 @@ export const sendUpdates = async ({
     }
 
     const userState = updatesResponse.data.state;
-    const filteredSurveys = filterSurveys(
-      config.get().environment,
-      userState
-    );
+    const filteredSurveys = filterSurveys(config.get().environment, userState);
 
     // messages => informational debug messages (e.g., "email already exists")
     // errors => error messages that should always be visible (e.g., invalid attribute keys)

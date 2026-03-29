@@ -1,8 +1,8 @@
 import {
-  type MockInstance,
   beforeEach,
   describe,
   expect,
+  type MockInstance,
   test,
   vi,
 } from "vitest";
@@ -80,18 +80,18 @@ describe("user.ts", () => {
       };
 
       getInstanceConfigMock.mockReturnValue(
-        mockConfig as unknown as Promise<RNConfig>
+        mockConfig as unknown as Promise<RNConfig>,
       );
       getInstanceLoggerMock.mockReturnValue(mockLogger as unknown as Logger);
       getInstanceUpdateQueueMock.mockReturnValue(
-        mockUpdateQueue as unknown as UpdateQueue
+        mockUpdateQueue as unknown as UpdateQueue,
       );
 
       const result = await setUserId(mockUserId);
 
       expect(result.ok).toBe(true);
       expect(mockLogger.debug).toHaveBeenCalledWith(
-        "UserId is already set to the same value, skipping"
+        "UserId is already set to the same value, skipping",
       );
       expect(mockUpdateQueue.updateUserId).not.toHaveBeenCalled();
       expect(mockUpdateQueue.processUpdates).not.toHaveBeenCalled();
@@ -119,18 +119,18 @@ describe("user.ts", () => {
       };
 
       getInstanceConfigMock.mockReturnValue(
-        mockConfig as unknown as Promise<RNConfig>
+        mockConfig as unknown as Promise<RNConfig>,
       );
       getInstanceLoggerMock.mockReturnValue(mockLogger as unknown as Logger);
       getInstanceUpdateQueueMock.mockReturnValue(
-        mockUpdateQueue as unknown as UpdateQueue
+        mockUpdateQueue as unknown as UpdateQueue,
       );
 
       const result = await setUserId(mockUserId);
 
       expect(result.ok).toBe(true);
       expect(mockLogger.debug).toHaveBeenCalledWith(
-        "Different userId is being set, cleaning up previous user state"
+        "Different userId is being set, cleaning up previous user state",
       );
       expect(tearDown).toHaveBeenCalled();
       expect(mockUpdateQueue.updateUserId).toHaveBeenCalledWith(mockUserId);
@@ -159,11 +159,11 @@ describe("user.ts", () => {
       };
 
       getInstanceConfigMock.mockReturnValue(
-        mockConfig as unknown as Promise<RNConfig>
+        mockConfig as unknown as Promise<RNConfig>,
       );
       getInstanceLoggerMock.mockReturnValue(mockLogger as unknown as Logger);
       getInstanceUpdateQueueMock.mockReturnValue(
-        mockUpdateQueue as unknown as UpdateQueue
+        mockUpdateQueue as unknown as UpdateQueue,
       );
       const result = await setUserId(mockUserId);
 
@@ -186,7 +186,7 @@ describe("user.ts", () => {
       const result = await logout();
 
       expect(mockLogger.debug).toHaveBeenCalledWith(
-        "Logging out and cleaning user state"
+        "Logging out and cleaning user state",
       );
       expect(tearDown).toHaveBeenCalled();
       expect(result.ok).toBe(true);
@@ -203,7 +203,7 @@ describe("user.ts", () => {
       const result = await logout();
 
       expect(mockLogger.debug).toHaveBeenCalledWith(
-        "Logging out and cleaning user state"
+        "Logging out and cleaning user state",
       );
       expect(tearDown).toHaveBeenCalled();
       expect(result.ok).toBe(true);

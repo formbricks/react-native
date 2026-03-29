@@ -3,14 +3,14 @@ import { RNConfig } from "@/lib/common/config";
 import { Logger } from "@/lib/common/logger";
 import { shouldDisplayBasedOnPercentage } from "@/lib/common/utils";
 import { SurveyStore } from "@/lib/survey/store";
-import type { TSurvey } from "@/types/survey";
 import {
+  err,
   type InvalidCodeError,
   type NetworkError,
-  type Result,
-  err,
   okVoid,
+  type Result,
 } from "@/types/error";
+import type { TSurvey } from "@/types/survey";
 
 /**
  * Triggers the display of a survey if it meets the display percentage criteria
@@ -23,11 +23,11 @@ export const triggerSurvey = (survey: TSurvey): void => {
   // Check if the survey should be displayed based on displayPercentage
   if (survey.displayPercentage) {
     const shouldDisplaySurvey = shouldDisplayBasedOnPercentage(
-      survey.displayPercentage
+      survey.displayPercentage,
     );
     if (!shouldDisplaySurvey) {
       logger.debug(
-        `Survey display of "${survey.name}" skipped based on displayPercentage.`
+        `Survey display of "${survey.name}" skipped based on displayPercentage.`,
       );
       return; // skip displaying the survey
     }
@@ -44,7 +44,7 @@ export const triggerSurvey = (survey: TSurvey): void => {
  */
 export const trackAction = async (
   name: string,
-  alias?: string
+  alias?: string,
 ): Promise<Result<void, NetworkError>> => {
   const logger = Logger.getInstance();
   const appConfig = await RNConfig.getInstance();
@@ -77,7 +77,7 @@ export const trackAction = async (
  * @returns Result indicating success, network error, or invalid code error
  */
 export const track = async (
-  code: string
+  code: string,
 ): Promise<
   | Result<void, NetworkError>
   | Result<void, InvalidCodeError>
@@ -107,7 +107,7 @@ export const track = async (
     } = appConfig.get();
 
     const codeActionClasses = actionClasses.filter(
-      (action) => action.type === "code"
+      (action) => action.type === "code",
     );
     const actionClass = codeActionClasses.find((action) => action.key === code);
 

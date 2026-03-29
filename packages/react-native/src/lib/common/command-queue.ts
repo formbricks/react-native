@@ -1,29 +1,30 @@
 /* eslint-disable no-console -- we need to log global errors */
 import { checkSetup } from "@/lib/common/setup";
 import { wrapThrowsAsync } from "@/lib/common/utils";
-import type { Result } from "@/types/error";
+import { okVoid, type Result } from "@/types/error";
+
+type QueueCommandResult = Result<void, unknown> | void;
+type QueueCommand = (
+  ...args: unknown[]
+) => Promise<QueueCommandResult> | QueueCommandResult;
 
 export class CommandQueue {
   private readonly queue: {
-    command: (
-      ...args: any[]
-    ) => Promise<Result<void, unknown>> | Result<void, unknown> | Promise<void>;
+    command: QueueCommand;
     checkSetup: boolean;
-    commandArgs: any[];
+    commandArgs: unknown[];
   }[] = [];
   private running = false;
   private resolvePromise: (() => void) | null = null;
   private commandPromise: Promise<void> | null = null;
 
-  public add<A>(
-    command: (
-      ...args: A[]
-    ) => Promise<Result<void, unknown>> | Result<void, unknown> | Promise<void>,
+  public add<A extends unknown[]>(
+    command: (...args: A) => Promise<QueueCommandResult> | QueueCommandResult,
     shouldCheckSetup = true,
-    ...args: A[]
+    ...args: A
   ): void {
     this.queue.push({
-      command,
+      command: command as QueueCommand,
       checkSetup: shouldCheckSetup,
       commandArgs: args,
     });
@@ -59,12 +60,10 @@ export class CommandQueue {
         }
       }
 
-      const executeCommand = async (): Promise<Result<void, unknown>> => {
-        return (await currentItem.command.apply(
-          null,
-          currentItem.commandArgs
-        )) as Result<void, unknown>;
-      };
+      const executeCommand = async (): Promise<Result<void, unknown>> =>
+        normalizeQueueCommandResult(
+          await currentItem.command.apply(null, currentItem.commandArgs),
+        );
 
       const result = await wrapThrowsAsync(executeCommand)();
 
@@ -82,3 +81,17 @@ export class CommandQueue {
     }
   }
 }
+
+const normalizeQueueCommandResult = (
+  value: QueueCommandResult,
+): Result<void, unknown> => {
+  if (!value) {
+    return okVoid();
+  }
+
+  if ("ok" in value && typeof value.ok === "boolean") {
+    return value;
+  }
+
+  return okVoid();
+};

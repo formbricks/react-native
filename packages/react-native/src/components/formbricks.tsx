@@ -1,4 +1,5 @@
-import React, { useCallback, useEffect, useSyncExternalStore } from "react";
+import type React from "react";
+import { useCallback, useEffect, useSyncExternalStore } from "react";
 import { View } from "react-native";
 import { SurveyWebView } from "@/components/survey-web-view";
 import { Logger } from "@/lib/common/logger";
@@ -13,7 +14,10 @@ interface FormbricksProps {
 const surveyStore = SurveyStore.getInstance();
 const logger = Logger.getInstance();
 
-export function Formbricks({ appUrl, environmentId }: FormbricksProps): React.JSX.Element | null {
+export function Formbricks({
+  appUrl,
+  environmentId,
+}: FormbricksProps): React.JSX.Element | null {
   // initializes sdk
   useEffect(() => {
     const setupFormbricks = async (): Promise<void> => {

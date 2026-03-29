@@ -1,7 +1,6 @@
 import { resolve } from "node:path";
 import { defineConfig } from "vite";
-import { ViteUserConfig } from "vitest/config";
-import dts from "vite-plugin-dts";
+import type { ViteUserConfig } from "vitest/config";
 
 const config = (): ViteUserConfig => {
   return defineConfig({
@@ -15,7 +14,6 @@ const config = (): ViteUserConfig => {
     },
     build: {
       emptyOutDir: false,
-      minify: "terser",
       rollupOptions: {
         external: [
           "react",
@@ -25,6 +23,9 @@ const config = (): ViteUserConfig => {
           "@react-native-async-storage/async-storage",
           "@react-native-community/netinfo",
         ],
+        output: {
+          exports: "named",
+        },
       },
       lib: {
         entry: resolve(__dirname, "src/index.ts"),
@@ -33,9 +34,6 @@ const config = (): ViteUserConfig => {
         fileName: "index",
       },
     },
-    plugins: [
-      dts({ rollupTypes: true, bundledPackages: ["@formbricks/types"] }),
-    ],
     test: {
       setupFiles: ["./vitest.setup.ts"],
       coverage: {

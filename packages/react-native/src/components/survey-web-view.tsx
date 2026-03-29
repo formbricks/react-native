@@ -1,17 +1,22 @@
-/* eslint-disable no-console -- debugging*/
-import React, { type JSX, useEffect, useRef, useState } from "react";
-import { KeyboardAvoidingView, Modal, View, StyleSheet } from "react-native";
+import { type JSX, useEffect, useRef, useState } from "react";
+import {
+  KeyboardAvoidingView,
+  Linking,
+  Modal,
+  StyleSheet,
+  View,
+} from "react-native";
 import { WebView, type WebViewMessageEvent } from "react-native-webview";
+import { getSurveyScriptUrl } from "@/components/utils/survey-script-url";
 import { RNConfig } from "@/lib/common/config";
 import { Logger } from "@/lib/common/logger";
 import { filterSurveys, getLanguageCode, getStyling } from "@/lib/common/utils";
 import { SurveyStore } from "@/lib/survey/store";
 import { type TUserState, ZJsRNWebViewOnMessageData } from "@/types/config";
-import type { TSurvey, SurveyContainerProps } from "@/types/survey";
+import type { SurveyContainerProps, TSurvey } from "@/types/survey";
 
 const logger = Logger.getInstance();
-logger.configure({ logLevel: "debug" });
-
+logger.configure({ logLevel: __DEV__ ? "debug" : "error" });
 
 const surveyStore = SurveyStore.getInstance();
 
@@ -19,10 +24,8 @@ interface SurveyWebViewProps {
   readonly survey: TSurvey;
 }
 
-export function SurveyWebView(
-  props: SurveyWebViewProps
-): JSX.Element | null {
-  const webViewRef = useRef(null);
+export function SurveyWebView(props: SurveyWebViewProps): JSX.Element | null {
+  const webViewRef = useRef<WebView>(null);
   const [isSurveyRunning, setIsSurveyRunning] = useState(false);
   const [showSurvey, setShowSurvey] = useState(false);
   const [appConfig, setAppConfig] = useState<RNConfig | null>(null);
@@ -50,7 +53,7 @@ export function SurveyWebView(
       const displayLanguage = getLanguageCode(props.survey, language);
       if (!displayLanguage) {
         logger.debug(
-          `Survey "${props.survey.name}" is not available in specified language.`
+          `Survey "${props.survey.name}" is not available in specified language.`,
         );
         setIsSurveyRunning(false);
         setShowSurvey(false);
@@ -72,7 +75,7 @@ export function SurveyWebView(
 
     if (props.survey.delay) {
       logger.debug(
-        `Delaying survey "${props.survey.name}" by ${String(props.survey.delay)} seconds`
+        `Delaying survey "${props.survey.name}" by ${String(props.survey.delay)} seconds`,
       );
       const timerId = setTimeout(() => {
         setShowSurvey(true);
@@ -115,8 +118,8 @@ export function SurveyWebView(
   const clickOutside =
     props.survey.projectOverwrites?.clickOutsideClose ??
     project.clickOutsideClose;
-  const overlay =
-    props.survey.projectOverwrites?.overlay ?? project.overlay;
+  const overlay = props.survey.projectOverwrites?.overlay ?? project.overlay;
+  const appUrl = appConfig.get().appUrl;
 
   return (
     <Modal
@@ -135,7 +138,7 @@ export function SurveyWebView(
         >
           <WebView
             ref={webViewRef}
-            originWhitelist={["*"]}
+            originWhitelist={["https://*", "http://*"]}
             source={{
               html: renderHtml({
                 environmentId: appConfig.get().environmentId,
@@ -145,11 +148,11 @@ export function SurveyWebView(
                 styling,
                 languageCode,
                 placement: surveyPlacement,
-                appUrl: appConfig.get().appUrl,
+                appUrl,
                 clickOutside,
                 overlay,
                 getSetIsResponseSendingFinished: (
-                  _f: (value: boolean) => void
+                  _f: (value: boolean) => void,
                 ) => undefined,
                 isWebEnvironment: false,
               }),
@@ -160,18 +163,14 @@ export function SurveyWebView(
             domStorageEnabled
             startInLoadingState
             scrollEnabled={false}
-            mixedContentMode="always"
-            allowFileAccess
-            webviewDebuggingEnabled
-            allowFileAccessFromFileURLs
-            allowUniversalAccessFromFileURLs
+            setSupportMultipleWindows={false}
             onShouldStartLoadWithRequest={(event) => {
-              // prevent webview from redirecting if users taps on formbricks link.
-              if (event.url.startsWith("https://formbricks")) {
-                return false;
+              if (isAllowedWebViewNavigation(event.url, appUrl)) {
+                return true;
               }
 
-              return true;
+              void openExternalUrl(event.url);
+              return false;
             }}
             onMessage={(event: WebViewMessageEvent) => {
               try {
@@ -183,9 +182,12 @@ export function SurveyWebView(
 
                 // debugger
                 if (unvalidatedMessage.type === "Console") {
-                  console.info(
-                    `[Console] ${JSON.stringify(unvalidatedMessage.data)}`
-                  );
+                  if (__DEV__) {
+                    console.info(
+                      `[Console] ${JSON.stringify(unvalidatedMessage.data)}`,
+                    );
+                  }
+                  return;
                 }
 
                 const validatedMessage =
@@ -195,8 +197,13 @@ export function SurveyWebView(
                   return;
                 }
 
-                const { onDisplayCreated, onResponseCreated, onClose } =
-                  validatedMessage.data;
+                const {
+                  onClose,
+                  onDisplayCreated,
+                  onOpenExternalURL,
+                  onOpenExternalURLParams,
+                  onResponseCreated,
+                } = validatedMessage.data;
                 if (onDisplayCreated) {
                   const existingDisplays = appConfig.get().user.data.displays;
                   const newDisplay = {
@@ -218,7 +225,7 @@ export function SurveyWebView(
 
                   const filteredSurveys = filterSurveys(
                     previousConfig.environment,
-                    updatedPersonState
+                    updatedPersonState,
                   );
 
                   appConfig.update({
@@ -240,7 +247,7 @@ export function SurveyWebView(
 
                   const filteredSurveys = filterSurveys(
                     appConfig.get().environment,
-                    newPersonState
+                    newPersonState,
                   );
 
                   appConfig.update({
@@ -250,12 +257,15 @@ export function SurveyWebView(
                     filteredSurveys,
                   });
                 }
+                if (onOpenExternalURL && onOpenExternalURLParams?.url) {
+                  void openExternalUrl(onOpenExternalURLParams.url);
+                }
                 if (onClose) {
                   onCloseSurvey();
                 }
               } catch (error) {
                 logger.error(
-                  `Error handling WebView message: ${error as string}`
+                  `Error handling WebView message: ${error as string}`,
                 );
               }
             }}
@@ -265,6 +275,38 @@ export function SurveyWebView(
     </Modal>
   );
 }
+
+const isAllowedWebViewNavigation = (
+  candidateUrl: string,
+  appUrl: string,
+): boolean => {
+  if (candidateUrl === "about:blank") {
+    return true;
+  }
+
+  try {
+    const allowedOrigin = new URL(appUrl).origin;
+    return new URL(candidateUrl).origin === allowedOrigin;
+  } catch {
+    return false;
+  }
+};
+
+const openExternalUrl = async (candidateUrl: string): Promise<void> => {
+  try {
+    const url = new URL(candidateUrl);
+    if (url.protocol !== "http:" && url.protocol !== "https:") {
+      logger.error(
+        `Blocked unsupported external URL protocol: ${url.protocol}`,
+      );
+      return;
+    }
+
+    await Linking.openURL(url.toString());
+  } catch (error) {
+    logger.error(`Failed to open external URL: ${error as string}`);
+  }
+};
 
 const styles = StyleSheet.create({
   modalContainer: {
@@ -280,8 +322,24 @@ const styles = StyleSheet.create({
 });
 
 const renderHtml = (
-  options: Partial<SurveyContainerProps> & { appUrl?: string }
+  options: Partial<SurveyContainerProps> & { appUrl?: string },
 ): string => {
+  const surveyScriptUrl = getSurveyScriptUrl(options.appUrl);
+
+  if (!surveyScriptUrl) {
+    return `
+  <!doctype html>
+  <html>
+    <meta name="viewport" content="initial-scale=1.0, maximum-scale=1.0">
+    <head>
+      <title>Formbricks WebView Survey</title>
+    </head>
+    <body style="overflow: hidden; height: 100vh; margin: 0;">
+    </body>
+  </html>
+  `;
+  }
+
   return `
   <!doctype html>
   <html>
@@ -327,7 +385,7 @@ const renderHtml = (
       }
 
       const script = document.createElement("script");
-      script.src = "${options.appUrl ?? "http://localhost:3000"}/js/surveys.umd.cjs";
+      script.src = ${JSON.stringify(surveyScriptUrl)};
       script.async = true;
       script.onload = () => loadSurvey();
       script.onerror = (error) => {

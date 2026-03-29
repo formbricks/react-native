@@ -1,12 +1,18 @@
 import { z } from "zod";
 
-export type TResponseData = Record<string, string | number | string[] | Record<string, string>>;
+export type TResponseData = Record<
+  string,
+  string | number | string[] | Record<string, string>
+>;
 
 export type TResponseTtc = Record<string, number>;
 
 export type TResponseVariables = Record<string, string | number>;
 
-export type TResponseHiddenFieldValue = Record<string, string | number | string[]>;
+export type TResponseHiddenFieldValue = Record<
+  string,
+  string | number | string[]
+>;
 
 export interface TResponseUpdate {
   finished: boolean;
@@ -20,10 +26,20 @@ export interface TResponseUpdate {
   endingId?: string | null;
 }
 
-export const ZResponseData = z.record(z.string(), z.union([z.string(), z.number(), z.array(z.string())]));
-export const ZResponseVariables = z.record(z.string(), z.union([z.string(), z.number()]));
+const ZNestedResponseData = z.record(z.string(), z.string());
+export const ZResponseData = z.record(
+  z.string(),
+  z.union([z.string(), z.number(), z.array(z.string()), ZNestedResponseData]),
+);
+export const ZResponseVariables = z.record(
+  z.string(),
+  z.union([z.string(), z.number()]),
+);
 export const ZResponseTtc = z.record(z.string(), z.number());
-export const ZResponseHiddenFieldValue = z.record(z.string(), z.union([z.string(), z.number(), z.array(z.string())]));
+export const ZResponseHiddenFieldValue = z.record(
+  z.string(),
+  z.union([z.string(), z.number(), z.array(z.string())]),
+);
 
 export const ZResponseUpdate = z.object({
   finished: z.boolean(),

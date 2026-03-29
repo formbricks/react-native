@@ -1,18 +1,18 @@
 import { wrapThrowsAsync } from "@/lib/common/utils";
-import {
-  type ApiResponse,
-  type ApiSuccessResponse,
-  type CreateOrUpdateUserResponse,
+import type {
+  ApiResponse,
+  ApiSuccessResponse,
+  CreateOrUpdateUserResponse,
 } from "@/types/api";
-import { type TEnvironmentState } from "@/types/config";
-import { type ApiErrorResponse, type Result, err, ok } from "@/types/error";
+import type { TEnvironmentState } from "@/types/config";
+import { type ApiErrorResponse, err, ok, type Result } from "@/types/error";
 
 export const makeRequest = async <T>(
   appUrl: string,
   endpoint: string,
   method: "GET" | "POST" | "PUT" | "DELETE",
   data?: unknown,
-  isDebug = false
+  isDebug = false,
 ): Promise<Result<T, ApiErrorResponse>> => {
   const url = new URL(appUrl + endpoint);
   const body = data ? JSON.stringify(data) : undefined;
@@ -88,7 +88,7 @@ export class ApiClient {
         userId: userUpdateInput.userId,
         attributes: userUpdateInput.attributes,
       },
-      this.isDebug
+      this.isDebug,
     );
   }
 
@@ -100,7 +100,7 @@ export class ApiClient {
       `/api/v1/client/${this.environmentId}/environment`,
       "GET",
       undefined,
-      this.isDebug
+      this.isDebug,
     );
   }
 }
