@@ -1,7 +1,7 @@
 import type { TResponseData, TResponseUpdate } from "@/types/response";
 import type { TFileUploadParams, TUploadFileConfig } from "@/types/storage";
 import type { TOverlay } from "./common";
-import type { TProjectStyling } from "./project";
+import type { TWorkspaceStyling } from "./workspace";
 
 export interface TJsFileUploadParams {
   file: {
@@ -18,7 +18,7 @@ export interface TJsFileUploadParams {
 
 export interface SurveyBaseProps {
   survey: TSurvey;
-  styling: TSurvey["styling"] | TProjectStyling;
+  styling: TSurvey["styling"] | TWorkspaceStyling;
   isBrandingEnabled: boolean;
   getSetIsError?: (getSetError: (value: boolean) => void) => void;
   getSetIsResponseSendingFinished?: (
@@ -57,10 +57,14 @@ export interface SurveyInlineProps extends SurveyBaseProps {
   placement: "bottomLeft" | "bottomRight" | "topLeft" | "topRight" | "center";
 }
 
-export interface SurveyContainerProps
-  extends Omit<SurveyBaseProps, "onFileUpload"> {
+export interface SurveyContainerProps extends Omit<
+  SurveyBaseProps,
+  "onFileUpload"
+> {
   appUrl?: string;
+  /** @deprecated Use `workspaceId` instead. Still works as a backward-compatible alias. */
   environmentId?: string;
+  workspaceId?: string;
   userId?: string;
   contactId?: string;
   onDisplayCreated?: () => void | Promise<void>;

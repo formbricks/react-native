@@ -58,8 +58,8 @@ describe("RNConfig", () => {
   test("loadFromStorage() returns err if config is expired", async () => {
     const expiredConfig = {
       ...mockConfig,
-      environment: {
-        ...mockConfig.environment,
+      workspace: {
+        ...mockConfig.workspace,
         expiresAt: new Date("2000-01-01T00:00:00Z"),
       },
     };

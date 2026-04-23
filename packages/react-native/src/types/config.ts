@@ -2,32 +2,31 @@ import { z } from "zod";
 import type { TResponseUpdate } from "@/types/response";
 import type { TFileUploadParams } from "@/types/storage";
 import type { TActionClass } from "./action-class";
-import type { TProject, TProjectStyling } from "./project";
+import type { TWorkspace, TWorkspaceStyling } from "./workspace";
 import type { TSurvey } from "./survey";
 
-export type TEnvironmentStateProject = Pick<
-  TProject,
-  | "id"
+export type TWorkspaceStateSettings = Pick<
+  TWorkspace,
   | "recontactDays"
   | "clickOutsideClose"
   | "overlay"
   | "placement"
   | "inAppSurveyBranding"
 > & {
-  styling: TProjectStyling;
+  styling: TWorkspaceStyling;
 };
 
-export type TEnvironmentStateActionClass = Pick<
+export type TWorkspaceStateActionClass = Pick<
   TActionClass,
   "id" | "key" | "type" | "name" | "noCodeConfig"
 >;
 
-export interface TEnvironmentState {
+export interface TWorkspaceState {
   expiresAt: Date;
   data: {
     surveys: TSurvey[];
-    actionClasses: TEnvironmentStateActionClass[];
-    project: TEnvironmentStateProject;
+    actionClasses: TWorkspaceStateActionClass[];
+    settings: TWorkspaceStateSettings;
   };
 }
 
@@ -45,9 +44,9 @@ export interface TUserState {
 }
 
 export interface TConfig {
-  environmentId: string;
+  workspaceId: string;
   appUrl: string;
-  environment: TEnvironmentState;
+  workspace: TWorkspaceState;
   user: TUserState;
   filteredSurveys: TSurvey[];
   status: {
@@ -66,9 +65,28 @@ export type TConfigUpdateInput = Omit<TConfig, "status"> & {
 export type TAttributes = Record<string, string | number>;
 
 export interface TConfigInput {
-  environmentId: string;
+  /** @deprecated Use `workspaceId` instead. Still works as a backward-compatible alias. */
+  environmentId?: string;
+  workspaceId?: string;
   appUrl: string;
 }
+
+/**
+ * Legacy config shape persisted before the workspace rename.
+ * Used to migrate AsyncStorage payloads that still use `environmentId` / `environment`.
+ */
+export type TLegacyConfig = TConfig & {
+  environmentId?: string;
+  environment?: {
+    expiresAt: Date;
+    data: {
+      surveys: TSurvey[];
+      actionClasses: TWorkspaceStateActionClass[];
+      project?: TWorkspaceStateSettings;
+      settings?: TWorkspaceStateSettings;
+    };
+  };
+};
 
 export interface TWebViewOnMessageData {
   onFinished?: boolean | null;

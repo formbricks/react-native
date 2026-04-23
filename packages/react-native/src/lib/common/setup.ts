@@ -11,14 +11,14 @@ import {
   isNowExpired,
   wrapThrowsAsync,
 } from "@/lib/common/utils";
-import { fetchEnvironmentState } from "@/lib/environment/state";
 import { DEFAULT_USER_STATE_NO_USER_ID } from "@/lib/user/state";
 import { sendUpdatesToBackend } from "@/lib/user/update";
+import { fetchWorkspaceState } from "@/lib/workspace/state";
 import type {
   TConfig,
   TConfigInput,
-  TEnvironmentState,
   TUserState,
+  TWorkspaceState,
 } from "@/types/config";
 import {
   err,
@@ -47,45 +47,45 @@ function handleMissingField(field: string): Result<void, MissingFieldError> {
   } as const);
 }
 
-// Helper: Sync environment state if expired
-async function syncEnvironmentStateIfExpired(
-  configInput: TConfigInput,
+// Helper: Sync workspace state if expired
+async function syncWorkspaceStateIfExpired(
+  configInput: { appUrl: string; workspaceId: string },
   logger: ReturnType<typeof Logger.getInstance>,
   existingConfig?: TConfig,
-): Promise<Result<TEnvironmentState, NetworkError>> {
-  if (existingConfig && !isNowExpired(existingConfig.environment.expiresAt)) {
-    return ok(existingConfig.environment);
+): Promise<Result<TWorkspaceState, NetworkError>> {
+  if (existingConfig && !isNowExpired(existingConfig.workspace.expiresAt)) {
+    return ok(existingConfig.workspace);
   }
 
-  logger.debug("Environment state expired. Syncing.");
+  logger.debug("Workspace state expired. Syncing.");
 
-  const environmentStateResponse = await fetchEnvironmentState({
+  const workspaceResponse = await fetchWorkspaceState({
     appUrl: configInput.appUrl,
-    environmentId: configInput.environmentId,
+    workspaceId: configInput.workspaceId,
   });
 
-  if (environmentStateResponse.ok) {
-    return ok(environmentStateResponse.data);
+  if (workspaceResponse.ok) {
+    return ok(workspaceResponse.data);
   }
 
   logger.error(
-    `Error fetching environment state: ${environmentStateResponse.error.code} - ${environmentStateResponse.error.responseMessage ?? ""}`,
+    `Error fetching workspace state: ${workspaceResponse.error.code} - ${workspaceResponse.error.responseMessage ?? ""}`,
   );
 
   return err({
     code: "network_error",
-    message: "Error fetching environment state",
+    message: "Error fetching workspace state",
     status: 500,
     url: new URL(
-      `${configInput.appUrl}/api/v1/client/${configInput.environmentId}/environment`,
+      `${configInput.appUrl}/api/v1/client/${configInput.workspaceId}/environment`,
     ),
-    responseMessage: environmentStateResponse.error.message,
+    responseMessage: workspaceResponse.error.message,
   });
 }
 
 // Helper: Sync user state if expired
 async function syncUserStateIfExpired(
-  configInput: TConfigInput,
+  configInput: { appUrl: string; workspaceId: string },
   logger: ReturnType<typeof Logger.getInstance>,
   existingConfig?: TConfig,
 ): Promise<Result<TUserState, NetworkError>> {
@@ -103,7 +103,7 @@ async function syncUserStateIfExpired(
   if (userState?.data.userId) {
     const updatesResponse = await sendUpdatesToBackend({
       appUrl: configInput.appUrl,
-      environmentId: configInput.environmentId,
+      workspaceId: configInput.workspaceId,
       updates: {
         userId: userState.data.userId,
       },
@@ -120,7 +120,7 @@ async function syncUserStateIfExpired(
       message: "Error updating user state",
       status: 500,
       url: new URL(
-        `${configInput.appUrl}/api/v1/client/${configInput.environmentId}/update/contacts/${userState.data.userId}`,
+        `${configInput.appUrl}/api/v1/client/${configInput.workspaceId}/update/contacts/${userState.data.userId}`,
       ),
       responseMessage: "Unknown error",
     } as const);
@@ -132,7 +132,7 @@ async function syncUserStateIfExpired(
 // Helper: Update app config with synced states
 const updateAppConfigWithSyncedStates = (
   appConfig: RNConfig,
-  environmentState: TEnvironmentState,
+  workspace: TWorkspaceState,
   userState: TUserState,
   logger: ReturnType<typeof Logger.getInstance>,
   existingConfig?: TConfig,
@@ -141,11 +141,11 @@ const updateAppConfigWithSyncedStates = (
     return;
   }
 
-  const filteredSurveys = filterSurveys(environmentState, userState);
+  const filteredSurveys = filterSurveys(workspace, userState);
 
   appConfig.update({
     ...existingConfig,
-    environment: environmentState,
+    workspace,
     user: userState,
     filteredSurveys,
   });
@@ -159,7 +159,7 @@ const updateAppConfigWithSyncedStates = (
 // Helper: Create new config and sync
 const createNewConfigAndSync = async (
   appConfig: RNConfig,
-  configInput: TConfigInput,
+  configInput: { appUrl: string; workspaceId: string },
   logger: ReturnType<typeof Logger.getInstance>,
 ): Promise<void> => {
   logger.debug(
@@ -170,30 +170,30 @@ const createNewConfigAndSync = async (
   logger.debug("Syncing.");
 
   try {
-    const environmentStateResponse = await fetchEnvironmentState({
+    const workspaceResponse = await fetchWorkspaceState({
       appUrl: configInput.appUrl,
-      environmentId: configInput.environmentId,
+      workspaceId: configInput.workspaceId,
     });
 
-    if (environmentStateResponse.ok) {
+    if (workspaceResponse.ok) {
       const personState = DEFAULT_USER_STATE_NO_USER_ID;
-      const environmentState = environmentStateResponse.data;
-      const filteredSurveys = filterSurveys(environmentState, personState);
+      const workspace = workspaceResponse.data;
+      const filteredSurveys = filterSurveys(workspace, personState);
       appConfig.update({
         appUrl: configInput.appUrl,
-        environmentId: configInput.environmentId,
+        workspaceId: configInput.workspaceId,
         user: personState,
-        environment: environmentState,
+        workspace,
         filteredSurveys,
       });
       return;
     }
 
     await handleErrorOnFirstSetup({
-      code: environmentStateResponse.error.code,
+      code: workspaceResponse.error.code,
       responseMessage:
-        environmentStateResponse.error.responseMessage ??
-        environmentStateResponse.error.message,
+        workspaceResponse.error.responseMessage ??
+        workspaceResponse.error.message,
     });
   } catch (e: unknown) {
     const setupError = normalizeSetupError(e);
@@ -208,11 +208,11 @@ const createNewConfigAndSync = async (
 // Helper: Should sync config
 const shouldSyncConfig = (
   existingConfig: TConfig | undefined,
-  configInput: TConfigInput,
+  configInput: { appUrl: string; workspaceId: string },
 ): boolean => {
   return Boolean(
-    existingConfig?.environment &&
-      existingConfig.environmentId === configInput.environmentId &&
+    existingConfig?.workspace &&
+      existingConfig.workspaceId === configInput.workspaceId &&
       existingConfig.appUrl === configInput.appUrl,
   );
 };
@@ -281,34 +281,48 @@ export const setup = async (
 
   logger.debug("Start setup");
 
-  if (!configInput.environmentId) {
-    return handleMissingField("environmentId");
+  // Resolve effective ID: prefer workspaceId, fall back to environmentId
+  const effectiveId = configInput.workspaceId ?? configInput.environmentId;
+
+  if (!effectiveId) {
+    return handleMissingField("workspaceId");
+  }
+
+  if (configInput.environmentId && !configInput.workspaceId) {
+    logger.debug(
+      "environmentId is deprecated and will be removed in a future version. Please use workspaceId instead.",
+    );
   }
 
   if (!configInput.appUrl) {
     return handleMissingField("appUrl");
   }
 
-  if (shouldSyncConfig(existingConfig, configInput)) {
+  const resolvedInput = {
+    appUrl: configInput.appUrl,
+    workspaceId: effectiveId,
+  };
+
+  if (shouldSyncConfig(existingConfig, resolvedInput)) {
     logger.debug("Configuration fits setup parameters.");
-    let environmentState: TEnvironmentState | undefined;
+    let workspace: TWorkspaceState | undefined;
     let userState: TUserState | undefined;
 
     try {
-      const environmentStateResult = await syncEnvironmentStateIfExpired(
-        configInput,
+      const workspaceResult = await syncWorkspaceStateIfExpired(
+        resolvedInput,
         logger,
         existingConfig,
       );
 
-      if (environmentStateResult.ok) {
-        environmentState = environmentStateResult.data;
+      if (workspaceResult.ok) {
+        workspace = workspaceResult.data;
       } else {
-        return err(environmentStateResult.error);
+        return err(workspaceResult.error);
       }
 
       const userStateResult = await syncUserStateIfExpired(
-        configInput,
+        resolvedInput,
         logger,
         existingConfig,
       );
@@ -321,7 +335,7 @@ export const setup = async (
 
       updateAppConfigWithSyncedStates(
         appConfig,
-        environmentState,
+        workspace,
         userState,
         logger,
         existingConfig,
@@ -330,7 +344,7 @@ export const setup = async (
       logger.debug("Error during sync. Please try again.");
     }
   } else {
-    await createNewConfigAndSync(appConfig, configInput, logger);
+    await createNewConfigAndSync(appConfig, resolvedInput, logger);
   }
   finalizeSetup();
   return okVoid();
@@ -355,10 +369,10 @@ export const tearDown = async (): Promise<void> => {
 
   logger.debug("Setting user state to default");
 
-  const { environment } = appConfig.get();
+  const { workspace } = appConfig.get();
 
   const filteredSurveys = filterSurveys(
-    environment,
+    workspace,
     DEFAULT_USER_STATE_NO_USER_ID,
   );
 

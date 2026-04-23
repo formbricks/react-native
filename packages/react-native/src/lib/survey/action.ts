@@ -101,7 +101,7 @@ export const track = async (
     }
 
     const {
-      environment: {
+      workspace: {
         data: { actionClasses = [] },
       },
     } = appConfig.get();
