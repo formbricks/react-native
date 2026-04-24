@@ -4,8 +4,8 @@ import type {
   TWorkspaceStateSettings,
 } from "@/types/config";
 import type { Result } from "@/types/error";
-import type { TWorkspaceStyling } from "@/types/workspace";
 import type { TSurvey } from "@/types/survey";
+import type { TWorkspaceStyling } from "@/types/workspace";
 
 // Helper function to calculate difference in days between two dates
 export const diffInDays = (date1: Date, date2: Date): number => {

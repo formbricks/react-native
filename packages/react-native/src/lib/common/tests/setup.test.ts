@@ -222,16 +222,8 @@ describe("setup.ts", () => {
 
     test("logs deprecation warning when only environmentId is used", async () => {
       const mockConfig = {
-        get: vi.fn().mockReturnValue({
-          workspaceId: "env_123",
-          appUrl: "https://my.url",
-          workspace: {
-            expiresAt: new Date(Date.now() - 5000),
-            data: { actionClasses: [] },
-          },
-          user: { data: {}, expiresAt: null },
-          status: { value: "success", expiresAt: null },
-        }),
+        get: vi.fn().mockReturnValue(undefined),
+        resetConfig: vi.fn(),
         update: vi.fn(),
       };
 
@@ -239,10 +231,21 @@ describe("setup.ts", () => {
         mockConfig as unknown as Promise<RNConfig>,
       );
 
-      await setup({
+      (fetchWorkspaceState as unknown as Mock).mockResolvedValueOnce({
+        ok: true,
+        data: {
+          data: { surveys: [] },
+          expiresAt: new Date(Date.now() + 60000),
+        },
+      });
+
+      (filterSurveys as unknown as Mock).mockReturnValueOnce([]);
+
+      const result = await setup({
         environmentId: "env_123",
         appUrl: "https://my.url",
       });
+      expect(result.ok).toBe(true);
       expect(mockLogger.debug).toHaveBeenCalledWith(
         "environmentId is deprecated and will be removed in a future version. Please use workspaceId instead.",
       );

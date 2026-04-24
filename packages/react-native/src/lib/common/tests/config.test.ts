@@ -75,6 +75,63 @@ describe("RNConfig", () => {
     }
   });
 
+  test("loadFromStorage() migrates legacy { environmentId, environment } shape", async () => {
+    const { workspaceId, workspace, ...rest } = mockConfig;
+    const legacyStored = {
+      ...rest,
+      environmentId: workspaceId,
+      environment: workspace,
+    };
+
+    vi.spyOn(AsyncStorage, "getItem").mockResolvedValueOnce(
+      JSON.stringify(legacyStored),
+    );
+
+    const result = await configInstance.loadFromStorage();
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.data.workspaceId).toBe(workspaceId);
+      expect(result.data.workspace.data.settings).toEqual(
+        workspace.data.settings,
+      );
+      expect(result.data.workspace.data.surveys).toEqual(
+        workspace.data.surveys,
+      );
+      expect(
+        (result.data as unknown as Record<string, unknown>).environmentId,
+      ).toBeUndefined();
+      expect(
+        (result.data as unknown as Record<string, unknown>).environment,
+      ).toBeUndefined();
+    }
+  });
+
+  test("loadFromStorage() migrates legacy environment.data.project to workspace.data.settings", async () => {
+    const { workspaceId, workspace, ...rest } = mockConfig;
+    const { settings, ...envDataWithoutSettings } = workspace.data;
+    const legacyStored = {
+      ...rest,
+      environmentId: workspaceId,
+      environment: {
+        expiresAt: workspace.expiresAt,
+        data: {
+          ...envDataWithoutSettings,
+          project: settings,
+        },
+      },
+    };
+
+    vi.spyOn(AsyncStorage, "getItem").mockResolvedValueOnce(
+      JSON.stringify(legacyStored),
+    );
+
+    const result = await configInstance.loadFromStorage();
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.data.workspace.data.settings).toEqual(settings);
+    }
+  });
+
   test("loadFromStorage() returns err if no or invalid config in storage", async () => {
     // Simulate no data
     vi.spyOn(AsyncStorage, "getItem").mockResolvedValueOnce(null);

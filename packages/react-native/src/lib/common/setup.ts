@@ -120,7 +120,7 @@ async function syncUserStateIfExpired(
       message: "Error updating user state",
       status: 500,
       url: new URL(
-        `${configInput.appUrl}/api/v1/client/${configInput.workspaceId}/update/contacts/${userState.data.userId}`,
+        `${configInput.appUrl}/api/v2/client/${configInput.workspaceId}/user`,
       ),
       responseMessage: "Unknown error",
     } as const);

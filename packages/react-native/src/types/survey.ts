@@ -57,10 +57,8 @@ export interface SurveyInlineProps extends SurveyBaseProps {
   placement: "bottomLeft" | "bottomRight" | "topLeft" | "topRight" | "center";
 }
 
-export interface SurveyContainerProps extends Omit<
-  SurveyBaseProps,
-  "onFileUpload"
-> {
+export interface SurveyContainerProps
+  extends Omit<SurveyBaseProps, "onFileUpload"> {
   appUrl?: string;
   /** @deprecated Use `workspaceId` instead. Still works as a backward-compatible alias. */
   environmentId?: string;

@@ -75,68 +75,67 @@ export const fetchWorkspaceState = async ({
 /**
  * Add a listener to check if the workspace state has expired with a certain interval
  */
-export const addWorkspaceStateExpiryCheckListener =
-  async (): Promise<void> => {
-    const appConfig = await RNConfig.getInstance();
-    const logger = Logger.getInstance();
+export const addWorkspaceStateExpiryCheckListener = async (): Promise<void> => {
+  const appConfig = await RNConfig.getInstance();
+  const logger = Logger.getInstance();
 
-    const updateInterval = 1000 * 60; // every minute
+  const updateInterval = 1000 * 60; // every minute
 
-    if (workspaceSyncIntervalId === null) {
-      const intervalHandler = async (): Promise<void> => {
-        const expiresAt = appConfig.get().workspace.expiresAt;
+  if (workspaceSyncIntervalId === null) {
+    const intervalHandler = async (): Promise<void> => {
+      const expiresAt = appConfig.get().workspace.expiresAt;
 
-        try {
-          // check if the workspace state has not expired yet
-          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- expiresAt is checked for null
-          if (expiresAt && new Date(expiresAt) >= new Date()) {
-            return;
-          }
-
-          logger.debug("Workspace state has expired. Starting sync.");
-
-          const personState = appConfig.get().user;
-          const workspace = await fetchWorkspaceState({
-            appUrl: appConfig.get().appUrl,
-            workspaceId: appConfig.get().workspaceId,
-          });
-
-          if (workspace.ok) {
-            const { data: state } = workspace;
-            const filteredSurveys = filterSurveys(state, personState);
-
-            appConfig.update({
-              ...appConfig.get(),
-              workspace: state,
-              filteredSurveys,
-            });
-          } else {
-            // eslint-disable-next-line @typescript-eslint/only-throw-error -- error is an ApiErrorResponse
-            throw workspace.error;
-          }
-        } catch (e) {
-          console.error(`Error during expiry check: `, e);
-          logger.debug("Extending config and try again later.");
-          const existingConfig = appConfig.get();
-          appConfig.update({
-            ...existingConfig,
-            workspace: {
-              ...existingConfig.workspace,
-              expiresAt: new Date(Date.now() + 1000 * 60 * 30), // 30 minutes
-            },
-          });
+      try {
+        // check if the workspace state has not expired yet
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- expiresAt is checked for null
+        if (expiresAt && new Date(expiresAt) >= new Date()) {
+          return;
         }
-      };
 
-      workspaceSyncIntervalId = setInterval(
-        () => void intervalHandler(),
-        updateInterval,
-      ) as unknown as number;
-    }
-  };
+        logger.debug("Workspace state has expired. Starting sync.");
+
+        const personState = appConfig.get().user;
+        const workspace = await fetchWorkspaceState({
+          appUrl: appConfig.get().appUrl,
+          workspaceId: appConfig.get().workspaceId,
+        });
+
+        if (workspace.ok) {
+          const { data: state } = workspace;
+          const filteredSurveys = filterSurveys(state, personState);
+
+          appConfig.update({
+            ...appConfig.get(),
+            workspace: state,
+            filteredSurveys,
+          });
+        } else {
+          // eslint-disable-next-line @typescript-eslint/only-throw-error -- error is an ApiErrorResponse
+          throw workspace.error;
+        }
+      } catch (e) {
+        console.error(`Error during expiry check: `, e);
+        logger.debug("Extending config and try again later.");
+        const existingConfig = appConfig.get();
+        appConfig.update({
+          ...existingConfig,
+          workspace: {
+            ...existingConfig.workspace,
+            expiresAt: new Date(Date.now() + 1000 * 60 * 30), // 30 minutes
+          },
+        });
+      }
+    };
+
+    workspaceSyncIntervalId = setInterval(
+      () => void intervalHandler(),
+      updateInterval,
+    ) as unknown as number;
+  }
+};
 
 export const clearWorkspaceStateExpiryCheckListener = (): void => {
-  if (workspaceSyncIntervalId) {
+  if (workspaceSyncIntervalId !== null) {
     clearInterval(workspaceSyncIntervalId);
     workspaceSyncIntervalId = null;
   }

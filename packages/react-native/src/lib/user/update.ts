@@ -24,7 +24,7 @@ export const sendUpdatesToBackend = async ({
     ApiErrorResponse
   >
 > => {
-  const url = `${appUrl}/api/v1/client/${workspaceId}/user`;
+  const url = `${appUrl}/api/v2/client/${workspaceId}/user`;
   const api = new ApiClient({ appUrl, workspaceId, isDebug: false });
 
   try {
@@ -70,7 +70,7 @@ export const sendUpdates = async ({
 
   const { appUrl, workspaceId } = config.get();
   // update endpoint call
-  const url = `${appUrl}/api/v1/client/${workspaceId}/user`;
+  const url = `${appUrl}/api/v2/client/${workspaceId}/user`;
 
   try {
     const updatesResponse = await sendUpdatesToBackend({

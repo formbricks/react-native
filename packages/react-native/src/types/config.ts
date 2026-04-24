@@ -2,8 +2,8 @@ import { z } from "zod";
 import type { TResponseUpdate } from "@/types/response";
 import type { TFileUploadParams } from "@/types/storage";
 import type { TActionClass } from "./action-class";
-import type { TWorkspace, TWorkspaceStyling } from "./workspace";
 import type { TSurvey } from "./survey";
+import type { TWorkspace, TWorkspaceStyling } from "./workspace";
 
 export type TWorkspaceStateSettings = Pick<
   TWorkspace,

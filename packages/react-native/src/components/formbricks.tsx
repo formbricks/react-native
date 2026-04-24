@@ -6,12 +6,17 @@ import { Logger } from "@/lib/common/logger";
 import { setup } from "@/lib/common/setup";
 import { SurveyStore } from "@/lib/survey/store";
 
-interface FormbricksProps {
-  appUrl: string;
-  /** @deprecated Use `workspaceId` instead. Still works as a backward-compatible alias. */
-  environmentId?: string;
-  workspaceId?: string;
-}
+type FormbricksProps = { appUrl: string } & (
+  | {
+      workspaceId: string;
+      environmentId?: never;
+    }
+  | {
+      /** @deprecated Use `workspaceId` instead. Still works as a backward-compatible alias. */
+      environmentId: string;
+      workspaceId?: never;
+    }
+);
 
 const surveyStore = SurveyStore.getInstance();
 const logger = Logger.getInstance();
