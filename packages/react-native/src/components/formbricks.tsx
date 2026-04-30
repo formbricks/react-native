@@ -6,10 +6,17 @@ import { Logger } from "@/lib/common/logger";
 import { setup } from "@/lib/common/setup";
 import { SurveyStore } from "@/lib/survey/store";
 
-interface FormbricksProps {
-  appUrl: string;
-  environmentId: string;
-}
+type FormbricksProps = { appUrl: string } & (
+  | {
+      workspaceId: string;
+      environmentId?: never;
+    }
+  | {
+      /** @deprecated Use `workspaceId` instead. Still works as a backward-compatible alias. */
+      environmentId: string;
+      workspaceId?: never;
+    }
+);
 
 const surveyStore = SurveyStore.getInstance();
 const logger = Logger.getInstance();
@@ -17,12 +24,14 @@ const logger = Logger.getInstance();
 export function Formbricks({
   appUrl,
   environmentId,
+  workspaceId,
 }: FormbricksProps): React.JSX.Element | null {
   // initializes sdk
   useEffect(() => {
     const setupFormbricks = async (): Promise<void> => {
       try {
         await setup({
+          workspaceId,
           environmentId,
           appUrl,
         });
@@ -34,7 +43,7 @@ export function Formbricks({
     setupFormbricks().catch(() => {
       logger.debug("Initialization error");
     });
-  }, [environmentId, appUrl]);
+  }, [environmentId, workspaceId, appUrl]);
 
   const subscribe = useCallback((callback: () => void) => {
     const unsubscribe = surveyStore.subscribe(callback);

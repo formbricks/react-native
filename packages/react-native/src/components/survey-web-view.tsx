@@ -93,19 +93,18 @@ export function SurveyWebView(props: SurveyWebViewProps): JSX.Element | null {
     return null;
   }
 
-  const project = appConfig.get().environment.data.project;
-  const styling = getStyling(project, props.survey);
-  const isBrandingEnabled = project.inAppSurveyBranding;
+  const settings = appConfig.get().workspace.data.settings;
+  const styling = getStyling(settings, props.survey);
+  const isBrandingEnabled = settings.inAppSurveyBranding;
 
   const onCloseSurvey = (): void => {
-    const { environment: environmentState, user: personState } =
-      appConfig.get();
-    const filteredSurveys = filterSurveys(environmentState, personState);
+    const { workspace, user: userState } = appConfig.get();
+    const filteredSurveys = filterSurveys(workspace, userState);
 
     appConfig.update({
       ...appConfig.get(),
-      environment: environmentState,
-      user: personState,
+      workspace,
+      user: userState,
       filteredSurveys,
     });
 
@@ -114,11 +113,11 @@ export function SurveyWebView(props: SurveyWebViewProps): JSX.Element | null {
   };
 
   const surveyPlacement =
-    props.survey.projectOverwrites?.placement ?? project.placement;
+    props.survey.projectOverwrites?.placement ?? settings.placement;
   const clickOutside =
     props.survey.projectOverwrites?.clickOutsideClose ??
-    project.clickOutsideClose;
-  const overlay = props.survey.projectOverwrites?.overlay ?? project.overlay;
+    settings.clickOutsideClose;
+  const overlay = props.survey.projectOverwrites?.overlay ?? settings.overlay;
   const appUrl = appConfig.get().appUrl;
 
   return (
@@ -141,7 +140,7 @@ export function SurveyWebView(props: SurveyWebViewProps): JSX.Element | null {
             originWhitelist={["https://*", "http://*"]}
             source={{
               html: renderHtml({
-                environmentId: appConfig.get().environmentId,
+                workspaceId: appConfig.get().workspaceId,
                 contactId: appConfig.get().user.data.contactId ?? undefined,
                 survey: props.survey,
                 isBrandingEnabled,
@@ -214,7 +213,7 @@ export function SurveyWebView(props: SurveyWebViewProps): JSX.Element | null {
                   const displays = [...existingDisplays, newDisplay];
                   const previousConfig = appConfig.get();
 
-                  const updatedPersonState = {
+                  const updatedUserState = {
                     ...previousConfig.user,
                     data: {
                       ...previousConfig.user.data,
@@ -224,14 +223,14 @@ export function SurveyWebView(props: SurveyWebViewProps): JSX.Element | null {
                   };
 
                   const filteredSurveys = filterSurveys(
-                    previousConfig.environment,
-                    updatedPersonState,
+                    previousConfig.workspace,
+                    updatedUserState,
                   );
 
                   appConfig.update({
                     ...previousConfig,
-                    environment: previousConfig.environment,
-                    user: updatedPersonState,
+                    workspace: previousConfig.workspace,
+                    user: updatedUserState,
                     filteredSurveys,
                   });
                 }
@@ -246,13 +245,13 @@ export function SurveyWebView(props: SurveyWebViewProps): JSX.Element | null {
                   };
 
                   const filteredSurveys = filterSurveys(
-                    appConfig.get().environment,
+                    appConfig.get().workspace,
                     newPersonState,
                   );
 
                   appConfig.update({
                     ...appConfig.get(),
-                    environment: appConfig.get().environment,
+                    workspace: appConfig.get().workspace,
                     user: newPersonState,
                     filteredSurveys,
                   });
@@ -380,7 +379,7 @@ const renderHtml = (
           onResponseCreated,
           onClose,
         };
-        
+
         window.formbricksSurveys.renderSurvey(surveyProps);
       }
 

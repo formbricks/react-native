@@ -1,11 +1,11 @@
 import type {
-  TEnvironmentState,
-  TEnvironmentStateProject,
   TUserState,
+  TWorkspaceState,
+  TWorkspaceStateSettings,
 } from "@/types/config";
 import type { Result } from "@/types/error";
-import type { TProjectStyling } from "@/types/project";
 import type { TSurvey } from "@/types/survey";
+import type { TWorkspaceStyling } from "@/types/workspace";
 
 // Helper function to calculate difference in days between two dates
 export const diffInDays = (date1: Date, date2: Date): number => {
@@ -31,17 +31,17 @@ export const wrapThrowsAsync =
 
 /**
  * Filters surveys based on the displayOption, recontactDays, and segments
- * @param environmentSate -  The environment state
+ * @param workspace - The workspace state
  * @param userState - The user state
  * @returns The filtered surveys
  */
 
-// takes the environment and user state and returns the filtered surveys
+// takes the workspace and user state and returns the filtered surveys
 export const filterSurveys = (
-  environmentState: TEnvironmentState,
+  workspace: TWorkspaceState,
   userState: TUserState,
 ): TSurvey[] => {
-  const { project, surveys } = environmentState.data;
+  const { settings, surveys } = workspace.data;
   const { displays, responses, lastDisplayAt, segments, userId } =
     userState.data;
 
@@ -96,10 +96,11 @@ export const filterSurveys = (
       );
     }
 
-    // use recontactDays of the project if survey does not have recontactDays
-    if (project.recontactDays) {
+    // use recontactDays of the workspace if survey does not have recontactDays
+    if (settings.recontactDays) {
       return (
-        diffInDays(new Date(), new Date(lastDisplayAt)) >= project.recontactDays
+        diffInDays(new Date(), new Date(lastDisplayAt)) >=
+        settings.recontactDays
       );
     }
 
@@ -130,22 +131,22 @@ export const filterSurveys = (
 };
 
 export const getStyling = (
-  project: TEnvironmentStateProject,
+  settings: TWorkspaceStateSettings,
   survey: TSurvey,
-): TProjectStyling | TSurvey["styling"] => {
-  // allow style overwrite is enabled from the project
-  if (project.styling.allowStyleOverwrite) {
+): TWorkspaceStyling | TSurvey["styling"] => {
+  // allow style overwrite is enabled from the workspace
+  if (settings.styling.allowStyleOverwrite) {
     // survey style overwrite is disabled
     if (!survey.styling?.overwriteThemeStyling) {
-      return project.styling;
+      return settings.styling;
     }
 
     // survey style overwrite is enabled
     return survey.styling;
   }
 
-  // allow style overwrite is disabled from the project
-  return project.styling;
+  // allow style overwrite is disabled from the workspace
+  return settings.styling;
 };
 
 export const getDefaultLanguageCode = (survey: TSurvey): string | undefined => {

@@ -25,9 +25,9 @@ import {
 } from "@/lib/common/setup";
 import type * as CommonUtilsModule from "@/lib/common/utils";
 import { filterSurveys, isNowExpired } from "@/lib/common/utils";
-import { fetchEnvironmentState } from "@/lib/environment/state";
 import { DEFAULT_USER_STATE_NO_USER_ID } from "@/lib/user/state";
 import { sendUpdatesToBackend } from "@/lib/user/update";
+import { fetchWorkspaceState } from "@/lib/workspace/state";
 
 // 1) Mock AsyncStorage
 vi.mock("@react-native-async-storage/async-storage", () => ({
@@ -67,9 +67,9 @@ vi.mock("@/lib/common/event-listeners", () => ({
   removeAllEventListeners: vi.fn(),
 }));
 
-// 5) Mock fetchEnvironmentState
-vi.mock("@/lib/environment/state", () => ({
-  fetchEnvironmentState: vi.fn(),
+// 5) Mock fetchWorkspaceState
+vi.mock("@/lib/workspace/state", () => ({
+  fetchWorkspaceState: vi.fn(),
 }));
 
 // 6) Mock filterSurveys
@@ -126,7 +126,16 @@ describe("setup.ts", () => {
       );
     });
 
-    test("fails if no environmentId is provided", async () => {
+    test("fails if no environmentId or workspaceId is provided", async () => {
+      const result = await setup({ appUrl: "https://my.url" });
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.error.code).toBe("missing_field");
+        expect(result.error).toHaveProperty("field", "workspaceId");
+      }
+    });
+
+    test("fails if empty environmentId is provided without workspaceId", async () => {
       const result = await setup({
         environmentId: "",
         appUrl: "https://my.url",
@@ -145,12 +154,109 @@ describe("setup.ts", () => {
       }
     });
 
+    test("succeeds with workspaceId instead of environmentId", async () => {
+      const mockConfig = {
+        get: vi.fn().mockReturnValue(undefined),
+        resetConfig: vi.fn(),
+        update: vi.fn(),
+      };
+
+      getInstanceConfigMock.mockReturnValue(
+        mockConfig as unknown as Promise<RNConfig>,
+      );
+
+      (fetchWorkspaceState as unknown as Mock).mockResolvedValueOnce({
+        ok: true,
+        data: {
+          data: { surveys: [] },
+          expiresAt: new Date(Date.now() + 60000),
+        },
+      });
+
+      (filterSurveys as unknown as Mock).mockReturnValueOnce([]);
+
+      const result = await setup({
+        workspaceId: "ws_123",
+        appUrl: "https://my.url",
+      });
+      expect(result.ok).toBe(true);
+      expect(fetchWorkspaceState).toHaveBeenCalledWith(
+        expect.objectContaining({ workspaceId: "ws_123" }),
+      );
+      expect(mockConfig.update).toHaveBeenCalledWith(
+        expect.objectContaining({ workspaceId: "ws_123" }),
+      );
+    });
+
+    test("prefers workspaceId over environmentId when both provided", async () => {
+      const mockConfig = {
+        get: vi.fn().mockReturnValue(undefined),
+        resetConfig: vi.fn(),
+        update: vi.fn(),
+      };
+
+      getInstanceConfigMock.mockReturnValue(
+        mockConfig as unknown as Promise<RNConfig>,
+      );
+
+      (fetchWorkspaceState as unknown as Mock).mockResolvedValueOnce({
+        ok: true,
+        data: {
+          data: { surveys: [] },
+          expiresAt: new Date(Date.now() + 60000),
+        },
+      });
+
+      (filterSurveys as unknown as Mock).mockReturnValueOnce([]);
+
+      const result = await setup({
+        workspaceId: "ws_123",
+        environmentId: "env_456",
+        appUrl: "https://my.url",
+      });
+      expect(result.ok).toBe(true);
+      expect(fetchWorkspaceState).toHaveBeenCalledWith(
+        expect.objectContaining({ workspaceId: "ws_123" }),
+      );
+    });
+
+    test("logs deprecation warning when only environmentId is used", async () => {
+      const mockConfig = {
+        get: vi.fn().mockReturnValue(undefined),
+        resetConfig: vi.fn(),
+        update: vi.fn(),
+      };
+
+      getInstanceConfigMock.mockReturnValue(
+        mockConfig as unknown as Promise<RNConfig>,
+      );
+
+      (fetchWorkspaceState as unknown as Mock).mockResolvedValueOnce({
+        ok: true,
+        data: {
+          data: { surveys: [] },
+          expiresAt: new Date(Date.now() + 60000),
+        },
+      });
+
+      (filterSurveys as unknown as Mock).mockReturnValueOnce([]);
+
+      const result = await setup({
+        environmentId: "env_123",
+        appUrl: "https://my.url",
+      });
+      expect(result.ok).toBe(true);
+      expect(mockLogger.debug).toHaveBeenCalledWith(
+        "environmentId is deprecated and will be removed in a future version. Please use workspaceId instead.",
+      );
+    });
+
     test("skips setup if existing config is in error state and not expired", async () => {
       const mockConfig = {
         get: vi.fn().mockReturnValue({
-          environmentId: "env_123",
+          workspaceId: "env_123",
           appUrl: "https://my.url",
-          environment: {},
+          workspace: {},
           user: { data: {}, expiresAt: null },
           status: { value: "error", expiresAt: new Date(Date.now() + 10000) },
         }),
@@ -178,9 +284,9 @@ describe("setup.ts", () => {
     test("proceeds if error state is expired", async () => {
       const mockConfig = {
         get: vi.fn().mockReturnValue({
-          environmentId: "env_123",
+          workspaceId: "env_123",
           appUrl: "https://my.url",
-          environment: {},
+          workspace: {},
           user: { data: {}, expiresAt: null },
           status: { value: "error", expiresAt: new Date(Date.now() - 10000) }, // expired
         }),
@@ -203,12 +309,12 @@ describe("setup.ts", () => {
       );
     });
 
-    test("uses existing config if environmentId/appUrl match, checks for expiration sync", async () => {
+    test("uses existing config if workspaceId/appUrl match, checks for expiration sync", async () => {
       const mockConfig = {
         get: vi.fn().mockReturnValue({
-          environmentId: "env_123",
+          workspaceId: "env_123",
           appUrl: "https://my.url",
-          environment: { expiresAt: new Date(Date.now() - 5000) }, // environment expired
+          workspace: { expiresAt: new Date(Date.now() - 5000) }, // workspace expired
           user: {
             data: { userId: "user_abc" },
             expiresAt: new Date(Date.now() - 5000), // also expired
@@ -224,8 +330,8 @@ describe("setup.ts", () => {
 
       (isNowExpired as unknown as Mock).mockReturnValue(true);
 
-      // Mock environment fetch success
-      (fetchEnvironmentState as unknown as Mock).mockResolvedValueOnce({
+      // Mock workspace state fetch success
+      (fetchWorkspaceState as unknown as Mock).mockResolvedValueOnce({
         ok: true,
         data: {
           data: { surveys: [] },
@@ -255,8 +361,8 @@ describe("setup.ts", () => {
       });
       expect(result.ok).toBe(true);
 
-      // environmentState was fetched
-      expect(fetchEnvironmentState).toHaveBeenCalled();
+      // workspace was fetched
+      expect(fetchWorkspaceState).toHaveBeenCalled();
       // user state was updated
       expect(sendUpdatesToBackend).toHaveBeenCalled();
       // filterSurveys called
@@ -273,12 +379,12 @@ describe("setup.ts", () => {
       );
     });
 
-    test("returns an error when environment sync fails", async () => {
+    test("returns an error when workspace sync fails", async () => {
       const mockConfig = {
         get: vi.fn().mockReturnValue({
-          environmentId: "env_123",
+          workspaceId: "env_123",
           appUrl: "https://my.url",
-          environment: {
+          workspace: {
             data: { surveys: [] },
             expiresAt: new Date(Date.now() - 5000),
           },
@@ -303,7 +409,7 @@ describe("setup.ts", () => {
         mockConfig as unknown as Promise<RNConfig>,
       );
       (isNowExpired as unknown as Mock).mockReturnValue(true);
-      (fetchEnvironmentState as unknown as Mock).mockResolvedValueOnce({
+      (fetchWorkspaceState as unknown as Mock).mockResolvedValueOnce({
         ok: false,
         error: {
           code: "network_error",
@@ -320,7 +426,7 @@ describe("setup.ts", () => {
       if (!result.ok) {
         expect(result.error.code).toBe("network_error");
         expect("message" in result.error && result.error.message).toBe(
-          "Error fetching environment state",
+          "Error fetching workspace state",
         );
       }
       expect(sendUpdatesToBackend).not.toHaveBeenCalled();
@@ -329,9 +435,9 @@ describe("setup.ts", () => {
     test("returns an error when user sync fails", async () => {
       const mockConfig = {
         get: vi.fn().mockReturnValue({
-          environmentId: "env_123",
+          workspaceId: "env_123",
           appUrl: "https://my.url",
-          environment: {
+          workspace: {
             data: { surveys: [] },
             expiresAt: new Date(Date.now() + 60_000),
           },
@@ -380,7 +486,7 @@ describe("setup.ts", () => {
       }
     });
 
-    test("resets config if no valid config found, fetches environment, sets default user", async () => {
+    test("resets config if no valid config found, fetches workspace state, sets default user", async () => {
       const mockConfig = {
         get: () => {
           throw new Error("no config found");
@@ -393,7 +499,7 @@ describe("setup.ts", () => {
         mockConfig as unknown as Promise<RNConfig>,
       );
 
-      (fetchEnvironmentState as unknown as Mock).mockResolvedValueOnce({
+      (fetchWorkspaceState as unknown as Mock).mockResolvedValueOnce({
         ok: true,
         data: {
           data: {
@@ -419,12 +525,12 @@ describe("setup.ts", () => {
         "No valid configuration found. Resetting config and creating new one.",
       );
       expect(mockConfig.resetConfig).toHaveBeenCalled();
-      expect(fetchEnvironmentState).toHaveBeenCalled();
+      expect(fetchWorkspaceState).toHaveBeenCalled();
       expect(mockConfig.update).toHaveBeenCalledWith({
         appUrl: "https://urlX",
-        environmentId: "envX",
+        workspaceId: "envX",
         user: DEFAULT_USER_STATE_NO_USER_ID,
-        environment: {
+        workspace: {
           data: {
             surveys: [{ name: "SurveyA" }],
             // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- required for testing this object
@@ -435,7 +541,7 @@ describe("setup.ts", () => {
       });
     });
 
-    test("calls handleErrorOnFirstSetup if environment fetch fails initially", async () => {
+    test("calls handleErrorOnFirstSetup if workspace fetch fails initially", async () => {
       const mockConfig = {
         get: vi.fn().mockReturnValue(undefined),
         update: vi.fn(),
@@ -446,7 +552,7 @@ describe("setup.ts", () => {
         mockConfig as unknown as Promise<RNConfig>,
       );
 
-      (fetchEnvironmentState as unknown as Mock).mockResolvedValueOnce({
+      (fetchWorkspaceState as unknown as Mock).mockResolvedValueOnce({
         ok: false,
         error: { code: "forbidden", responseMessage: "No access" },
       });
@@ -468,7 +574,7 @@ describe("setup.ts", () => {
       getInstanceConfigMock.mockReturnValueOnce(
         mockConfig as unknown as Promise<RNConfig>,
       );
-      (fetchEnvironmentState as unknown as Mock).mockRejectedValueOnce("boom");
+      (fetchWorkspaceState as unknown as Mock).mockRejectedValueOnce("boom");
 
       await expect(
         setup({ environmentId: "envX", appUrl: "https://urlX" }),
@@ -486,9 +592,9 @@ describe("setup.ts", () => {
     test("adds event listeners and sets isSetup", async () => {
       const mockConfig = {
         get: vi.fn().mockReturnValue({
-          environmentId: "env_abc",
+          workspaceId: "env_abc",
           appUrl: "https://test.app",
-          environment: {},
+          workspace: {},
           user: { data: {}, expiresAt: null },
           status: { value: "success", expiresAt: null },
         }),
@@ -530,6 +636,7 @@ describe("setup.ts", () => {
       const mockConfig = {
         get: vi.fn().mockReturnValue({
           user: { data: { userId: "XYZ" } },
+          workspace: { data: { surveys: [] } },
         }),
         update: vi.fn(),
       };

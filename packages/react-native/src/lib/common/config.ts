@@ -1,10 +1,52 @@
 /* eslint-disable no-console -- Required for error logging */
 import { AsyncStorage } from "@/lib/common/storage";
 import { wrapThrowsAsync } from "@/lib/common/utils";
-import type { TConfig, TConfigUpdateInput } from "@/types/config";
+import type {
+  TConfig,
+  TConfigUpdateInput,
+  TLegacyConfig,
+} from "@/types/config";
 import { err, ok, type Result } from "@/types/error";
 
 export const RN_ASYNC_STORAGE_KEY = "formbricks-react-native";
+
+/**
+ * Migrate AsyncStorage config from the pre-workspace rename shape:
+ *  - `environmentId` → `workspaceId`
+ *  - `environment`   → `workspace`
+ *  - `environment.data.project` (or legacy `workspace`) → `workspace.data.settings`
+ */
+const migrateLegacyConfig = (parsed: TLegacyConfig): TConfig => {
+  // Already in the new shape
+  if (parsed.workspace && parsed.workspaceId) {
+    return parsed;
+  }
+
+  const legacyEnvironment = parsed.environment;
+  const migratedWorkspace = legacyEnvironment
+    ? (() => {
+        const envData = legacyEnvironment.data;
+        const settings = envData.settings ?? envData.project;
+        return {
+          expiresAt: legacyEnvironment.expiresAt,
+          data: {
+            surveys: envData.surveys,
+            actionClasses: envData.actionClasses,
+            settings: settings as TConfig["workspace"]["data"]["settings"],
+          },
+        } as TConfig["workspace"];
+      })()
+    : undefined;
+
+  const { environmentId, environment, ...rest } = parsed;
+
+  return {
+    ...(rest as unknown as TConfig),
+    workspaceId:
+      (rest as unknown as TConfig).workspaceId ?? (environmentId as string),
+    ...(migratedWorkspace ? { workspace: migratedWorkspace } : {}),
+  } as TConfig;
+};
 
 export class RNConfig {
   private static instance: RNConfig | null = null;
@@ -57,13 +99,15 @@ export class RNConfig {
     try {
       const savedConfig = await AsyncStorage.getItem(RN_ASYNC_STORAGE_KEY);
       if (savedConfig) {
-        const parsedConfig = JSON.parse(savedConfig) as TConfig;
+        const parsedConfig = migrateLegacyConfig(
+          JSON.parse(savedConfig) as TLegacyConfig,
+        );
 
         // check if the config has expired
         if (
           // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- need to check if expiresAt is set
-          parsedConfig.environment.expiresAt &&
-          new Date(parsedConfig.environment.expiresAt) <= new Date()
+          parsedConfig.workspace.expiresAt &&
+          new Date(parsedConfig.workspace.expiresAt) <= new Date()
         ) {
           return err(new Error("Config in local storage has expired"));
         }
