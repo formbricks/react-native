@@ -1,7 +1,7 @@
 // api.test.ts
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { ApiClient, makeRequest } from "@/lib/common/api";
-import type { TEnvironmentState } from "@/types/config";
+import type { TWorkspaceState } from "@/types/config";
 
 // Mock fetch
 const mockFetch = vi.fn();
@@ -210,7 +210,7 @@ describe("api.ts", () => {
     beforeEach(() => {
       apiClient = new ApiClient({
         appUrl: "https://example.com",
-        environmentId: "env123",
+        workspaceId: "env123",
         isDebug: false,
       });
     });
@@ -286,14 +286,13 @@ describe("api.ts", () => {
       }
     });
 
-    test("gets environment state successfully", async () => {
-      const mockEnvironmentState: TEnvironmentState = {
+    test("gets workspace state successfully", async () => {
+      const mockWorkspaceState: TWorkspaceState = {
         expiresAt: new Date("2023-01-01"),
         data: {
           surveys: [],
           actionClasses: [],
-          project: {
-            id: "project123",
+          settings: {
             recontactDays: 30,
             clickOutsideClose: true,
             overlay: "none",
@@ -309,12 +308,12 @@ describe("api.ts", () => {
       const mockResponse = {
         ok: true,
         json: vi.fn().mockResolvedValue({
-          data: mockEnvironmentState,
+          data: mockWorkspaceState,
         }),
       };
       mockFetch.mockResolvedValue(mockResponse);
 
-      const result = await apiClient.getEnvironmentState();
+      const result = await apiClient.getWorkspaceState();
 
       expect(mockFetch).toHaveBeenCalledWith(
         "https://example.com/api/v1/client/env123/environment",
@@ -328,27 +327,27 @@ describe("api.ts", () => {
 
       expect(result.ok).toBe(true);
       if (result.ok) {
-        expect(result.data).toEqual(mockEnvironmentState);
+        expect(result.data).toEqual(mockWorkspaceState);
       }
     });
 
-    test("gets environment state with error", async () => {
+    test("gets workspace state with error", async () => {
       const mockResponse = {
         ok: false,
         status: 404,
         json: vi.fn().mockResolvedValue({
           code: "not_found",
-          message: "Environment not found",
+          message: "Workspace not found",
         }),
       };
       mockFetch.mockResolvedValue(mockResponse);
 
-      const result = await apiClient.getEnvironmentState();
+      const result = await apiClient.getWorkspaceState();
 
       expect(result.ok).toBe(false);
       if (!result.ok) {
         expect(result.error.code).toBe("network_error");
-        expect(result.error.message).toBe("Environment not found");
+        expect(result.error.message).toBe("Workspace not found");
       }
     });
   });

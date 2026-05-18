@@ -4,7 +4,7 @@ import type {
   ApiSuccessResponse,
   CreateOrUpdateUserResponse,
 } from "@/types/api";
-import type { TEnvironmentState } from "@/types/config";
+import type { TWorkspaceState } from "@/types/config";
 import { type ApiErrorResponse, err, ok, type Result } from "@/types/error";
 
 export const makeRequest = async <T>(
@@ -57,20 +57,20 @@ export const makeRequest = async <T>(
 // Simple API client using fetch
 export class ApiClient {
   private readonly appUrl: string;
-  private readonly environmentId: string;
+  private readonly workspaceId: string;
   private readonly isDebug: boolean;
 
   constructor({
     appUrl,
-    environmentId,
+    workspaceId,
     isDebug = false,
   }: {
     appUrl: string;
-    environmentId: string;
+    workspaceId: string;
     isDebug: boolean;
   }) {
     this.appUrl = appUrl;
-    this.environmentId = environmentId;
+    this.workspaceId = workspaceId;
     this.isDebug = isDebug;
   }
 
@@ -82,7 +82,7 @@ export class ApiClient {
     // The backend will use the JS type to determine the attribute data type
     return makeRequest(
       this.appUrl,
-      `/api/v2/client/${this.environmentId}/user`,
+      `/api/v2/client/${this.workspaceId}/user`,
       "POST",
       {
         userId: userUpdateInput.userId,
@@ -92,12 +92,12 @@ export class ApiClient {
     );
   }
 
-  async getEnvironmentState(): Promise<
-    Result<TEnvironmentState, ApiErrorResponse>
+  async getWorkspaceState(): Promise<
+    Result<TWorkspaceState, ApiErrorResponse>
   > {
     return makeRequest(
       this.appUrl,
-      `/api/v1/client/${this.environmentId}/environment`,
+      `/api/v1/client/${this.workspaceId}/environment`,
       "GET",
       undefined,
       this.isDebug,

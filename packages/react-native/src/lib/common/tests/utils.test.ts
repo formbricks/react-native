@@ -1,9 +1,6 @@
 // utils.test.ts
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import {
-  mockProjectId,
-  mockSurveyId,
-} from "@/lib/common/tests/__mocks__/config.mock";
+import { mockSurveyId } from "@/lib/common/tests/__mocks__/config.mock";
 import {
   delayedResult,
   diffInDays,
@@ -15,9 +12,9 @@ import {
   wrapThrowsAsync,
 } from "@/lib/common/utils";
 import type {
-  TEnvironmentState,
-  TEnvironmentStateProject,
   TUserState,
+  TWorkspaceState,
+  TWorkspaceStateSettings,
 } from "@/types/config";
 import type { TSurvey } from "@/types/survey";
 
@@ -87,8 +84,8 @@ describe("utils.ts", () => {
   // filterSurveys
   // ---------------------------------------------------------------------------------
   describe("filterSurveys()", () => {
-    // We'll create a minimal environment state
-    let environment: TEnvironmentState;
+    // We'll create a minimal workspace state
+    let workspace: TWorkspaceState;
     let user: TUserState;
     const baseSurvey: Partial<TSurvey> = {
       id: mockSurveyId,
@@ -99,18 +96,17 @@ describe("utils.ts", () => {
     };
 
     beforeEach(() => {
-      environment = {
+      workspace = {
         expiresAt: new Date(),
         data: {
-          project: {
-            id: mockProjectId,
+          settings: {
             recontactDays: 7, // fallback if survey doesn't have it
             clickOutsideClose: false,
             overlay: "none",
             placement: "bottomRight",
             inAppSurveyBranding: true,
             styling: { allowStyleOverwrite: false },
-          } as TEnvironmentStateProject,
+          } as TWorkspaceStateSettings,
           surveys: [],
           actionClasses: [],
         },
@@ -131,7 +127,7 @@ describe("utils.ts", () => {
     test("returns no surveys if user has no segments and userId is set", () => {
       user.data.userId = "user_abc";
       // environment has a single survey
-      environment.data.surveys = [
+      workspace.data.surveys = [
         {
           ...baseSurvey,
           id: mockSurveyId1,
@@ -139,13 +135,13 @@ describe("utils.ts", () => {
         } as TSurvey,
       ];
 
-      const result = filterSurveys(environment, user);
+      const result = filterSurveys(workspace, user);
       expect(result).toEqual([]); // no segments => none pass
     });
 
     test("returns surveys if user has no userId but displayOnce and no displays yet", () => {
       // userId is null => it won't segment filter
-      environment.data.surveys = [
+      workspace.data.surveys = [
         {
           ...baseSurvey,
           id: mockSurveyId1,
@@ -153,13 +149,13 @@ describe("utils.ts", () => {
         } as TSurvey,
       ];
 
-      const result = filterSurveys(environment, user);
+      const result = filterSurveys(workspace, user);
       expect(result).toHaveLength(1);
       expect(result[0].id).toBe(mockSurveyId1);
     });
 
     test("filters out surveys that have a segment with filters if userId is not set", () => {
-      environment.data.surveys = [
+      workspace.data.surveys = [
         {
           ...baseSurvey,
           id: mockSurveyId1,
@@ -170,12 +166,12 @@ describe("utils.ts", () => {
         } as TSurvey,
       ];
 
-      const result = filterSurveys(environment, user);
+      const result = filterSurveys(workspace, user);
       expect(result).toHaveLength(0);
     });
 
     test("includes surveys without segment filters for anonymous users", () => {
-      environment.data.surveys = [
+      workspace.data.surveys = [
         {
           ...baseSurvey,
           id: mockSurveyId1,
@@ -188,12 +184,12 @@ describe("utils.ts", () => {
         } as TSurvey,
       ];
 
-      const result = filterSurveys(environment, user);
+      const result = filterSurveys(workspace, user);
       expect(result).toHaveLength(2);
     });
 
     test("skips surveys that already displayed if displayOnce is used", () => {
-      environment.data.surveys = [
+      workspace.data.surveys = [
         {
           ...baseSurvey,
           id: mockSurveyId1,
@@ -202,12 +198,12 @@ describe("utils.ts", () => {
       ];
       user.data.displays = [{ surveyId: mockSurveyId1, createdAt: new Date() }];
 
-      const result = filterSurveys(environment, user);
+      const result = filterSurveys(workspace, user);
       expect(result).toEqual([]);
     });
 
     test("skips surveys if user responded to them and displayOption=displayMultiple", () => {
-      environment.data.surveys = [
+      workspace.data.surveys = [
         {
           ...baseSurvey,
           id: mockSurveyId1,
@@ -216,12 +212,12 @@ describe("utils.ts", () => {
       ];
       user.data.responses = [mockSurveyId1];
 
-      const result = filterSurveys(environment, user);
+      const result = filterSurveys(workspace, user);
       expect(result).toEqual([]);
     });
 
     test("handles displaySome logic with displayLimit", () => {
-      environment.data.surveys = [
+      workspace.data.surveys = [
         {
           ...baseSurvey,
           id: mockSurveyId1,
@@ -233,13 +229,13 @@ describe("utils.ts", () => {
       user.data.displays = [{ surveyId: mockSurveyId1, createdAt: new Date() }];
 
       // No responses => so it's still allowed
-      const result = filterSurveys(environment, user);
+      const result = filterSurveys(workspace, user);
       expect(result).toHaveLength(1);
     });
 
     test("filters out surveys if recontactDays not met", () => {
       // Suppose survey uses project fallback (7 days)
-      environment.data.surveys = [
+      workspace.data.surveys = [
         {
           ...baseSurvey,
           id: mockSurveyId1,
@@ -249,7 +245,7 @@ describe("utils.ts", () => {
       // user last displayAt is only 3 days ago
       user.data.lastDisplayAt = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
 
-      const result = filterSurveys(environment, user);
+      const result = filterSurveys(workspace, user);
       expect(result).toHaveLength(0);
     });
 
@@ -257,7 +253,7 @@ describe("utils.ts", () => {
       // user last displayAt is 8 days ago
       user.data.lastDisplayAt = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000);
 
-      environment.data.surveys = [
+      workspace.data.surveys = [
         {
           ...baseSurvey,
           id: mockSurveyId1,
@@ -265,14 +261,14 @@ describe("utils.ts", () => {
           recontactDays: null,
         } as TSurvey,
       ];
-      const result = filterSurveys(environment, user);
+      const result = filterSurveys(workspace, user);
       expect(result).toHaveLength(1);
     });
 
     test("filters by segment if userId is set and user has segments", () => {
       user.data.userId = "user_abc";
       user.data.segments = [mockSegmentId1];
-      environment.data.surveys = [
+      workspace.data.surveys = [
         {
           ...baseSurvey,
           id: mockSurveyId1,
@@ -287,7 +283,7 @@ describe("utils.ts", () => {
         } as TSurvey,
       ];
 
-      const result = filterSurveys(environment, user);
+      const result = filterSurveys(workspace, user);
       // only the one that matches user's segment
       expect(result).toHaveLength(1);
       expect(result[0].id).toBe(mockSurveyId1);
@@ -298,11 +294,10 @@ describe("utils.ts", () => {
   // getStyling
   // ---------------------------------------------------------------------------------
   describe("getStyling()", () => {
-    test("returns project styling if allowStyleOverwrite=false", () => {
-      const project = {
-        id: "p1",
+    test("returns workspace styling if allowStyleOverwrite=false", () => {
+      const settings = {
         styling: { allowStyleOverwrite: false, brandColor: { light: "#fff" } },
-      } as TEnvironmentStateProject;
+      } as TWorkspaceStateSettings;
       const survey = {
         styling: {
           overwriteThemeStyling: true,
@@ -310,16 +305,15 @@ describe("utils.ts", () => {
         } as TSurvey["styling"],
       } as TSurvey;
 
-      const result = getStyling(project, survey);
+      const result = getStyling(settings, survey);
       // should get project styling
-      expect(result).toEqual(project.styling);
+      expect(result).toEqual(settings.styling);
     });
 
-    test("returns project styling if allowStyleOverwrite=true but survey overwriteThemeStyling=false", () => {
-      const project = {
-        id: "p1",
+    test("returns workspace styling if allowStyleOverwrite=true but survey overwriteThemeStyling=false", () => {
+      const settings = {
         styling: { allowStyleOverwrite: true, brandColor: { light: "#fff" } },
-      } as TEnvironmentStateProject;
+      } as TWorkspaceStateSettings;
       const survey = {
         styling: {
           overwriteThemeStyling: false,
@@ -327,16 +321,15 @@ describe("utils.ts", () => {
         } as TSurvey["styling"],
       } as TSurvey;
 
-      const result = getStyling(project, survey);
+      const result = getStyling(settings, survey);
       // should get project styling still
-      expect(result).toEqual(project.styling);
+      expect(result).toEqual(settings.styling);
     });
 
     test("returns survey styling if allowStyleOverwrite=true and survey overwriteThemeStyling=true", () => {
-      const project = {
-        id: "p1",
+      const settings = {
         styling: { allowStyleOverwrite: true, brandColor: { light: "#fff" } },
-      } as TEnvironmentStateProject;
+      } as TWorkspaceStateSettings;
       const survey = {
         styling: {
           overwriteThemeStyling: true,
@@ -344,7 +337,7 @@ describe("utils.ts", () => {
         } as TSurvey["styling"],
       } as TSurvey;
 
-      const result = getStyling(project, survey);
+      const result = getStyling(settings, survey);
       expect(result).toEqual(survey.styling);
     });
   });

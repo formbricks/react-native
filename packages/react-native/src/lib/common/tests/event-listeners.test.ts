@@ -6,17 +6,17 @@ import {
   removeCleanupEventListeners,
 } from "@/lib/common/event-listeners";
 import {
-  addEnvironmentStateExpiryCheckListener,
-  clearEnvironmentStateExpiryCheckListener,
-} from "@/lib/environment/state";
-import {
   addUserStateExpiryCheckListener,
   clearUserStateExpiryCheckListener,
 } from "@/lib/user/state";
+import {
+  addWorkspaceStateExpiryCheckListener,
+  clearWorkspaceStateExpiryCheckListener,
+} from "@/lib/workspace/state";
 
-vi.mock("@/lib/environment/state", () => ({
-  addEnvironmentStateExpiryCheckListener: vi.fn(),
-  clearEnvironmentStateExpiryCheckListener: vi.fn(),
+vi.mock("@/lib/workspace/state", () => ({
+  addWorkspaceStateExpiryCheckListener: vi.fn(),
+  clearWorkspaceStateExpiryCheckListener: vi.fn(),
 }));
 
 vi.mock("@/lib/user/state", () => ({
@@ -30,10 +30,10 @@ describe("event-listeners.ts", () => {
     vi.clearAllMocks();
   });
 
-  test("adds environment and user expiry listeners", () => {
+  test("adds workspace and user expiry listeners", () => {
     addEventListeners();
 
-    expect(addEnvironmentStateExpiryCheckListener).toHaveBeenCalledTimes(1);
+    expect(addWorkspaceStateExpiryCheckListener).toHaveBeenCalledTimes(1);
     expect(addUserStateExpiryCheckListener).toHaveBeenCalledTimes(1);
   });
 
@@ -41,14 +41,14 @@ describe("event-listeners.ts", () => {
     addCleanupEventListeners();
     addCleanupEventListeners();
 
-    expect(clearEnvironmentStateExpiryCheckListener).toHaveBeenCalledTimes(1);
+    expect(clearWorkspaceStateExpiryCheckListener).toHaveBeenCalledTimes(1);
     expect(clearUserStateExpiryCheckListener).toHaveBeenCalledTimes(1);
   });
 
   test("does nothing when cleanup listeners were not added", () => {
     removeCleanupEventListeners();
 
-    expect(clearEnvironmentStateExpiryCheckListener).not.toHaveBeenCalled();
+    expect(clearWorkspaceStateExpiryCheckListener).not.toHaveBeenCalled();
     expect(clearUserStateExpiryCheckListener).not.toHaveBeenCalled();
   });
 
@@ -57,7 +57,7 @@ describe("event-listeners.ts", () => {
     removeCleanupEventListeners();
     addCleanupEventListeners();
 
-    expect(clearEnvironmentStateExpiryCheckListener).toHaveBeenCalledTimes(3);
+    expect(clearWorkspaceStateExpiryCheckListener).toHaveBeenCalledTimes(3);
     expect(clearUserStateExpiryCheckListener).toHaveBeenCalledTimes(3);
   });
 
@@ -67,7 +67,7 @@ describe("event-listeners.ts", () => {
 
     removeAllEventListeners();
 
-    expect(clearEnvironmentStateExpiryCheckListener).toHaveBeenCalledTimes(2);
+    expect(clearWorkspaceStateExpiryCheckListener).toHaveBeenCalledTimes(2);
     expect(clearUserStateExpiryCheckListener).toHaveBeenCalledTimes(2);
   });
 });

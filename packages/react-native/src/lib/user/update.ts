@@ -8,11 +8,11 @@ import { type ApiErrorResponse, err, ok, type Result } from "@/types/error";
 
 export const sendUpdatesToBackend = async ({
   appUrl,
-  environmentId,
+  workspaceId,
   updates,
 }: {
   appUrl: string;
-  environmentId: string;
+  workspaceId: string;
   updates: TUpdates;
 }): Promise<
   Result<
@@ -24,8 +24,8 @@ export const sendUpdatesToBackend = async ({
     ApiErrorResponse
   >
 > => {
-  const url = `${appUrl}/api/v1/client/${environmentId}/user`;
-  const api = new ApiClient({ appUrl, environmentId, isDebug: false });
+  const url = `${appUrl}/api/v2/client/${workspaceId}/user`;
+  const api = new ApiClient({ appUrl, workspaceId, isDebug: false });
 
   try {
     const response = await api.createOrUpdateUser({
@@ -68,14 +68,14 @@ export const sendUpdates = async ({
   const config = await RNConfig.getInstance();
   const logger = Logger.getInstance();
 
-  const { appUrl, environmentId } = config.get();
+  const { appUrl, workspaceId } = config.get();
   // update endpoint call
-  const url = `${appUrl}/api/v1/client/${environmentId}/user`;
+  const url = `${appUrl}/api/v2/client/${workspaceId}/user`;
 
   try {
     const updatesResponse = await sendUpdatesToBackend({
       appUrl,
-      environmentId,
+      workspaceId,
       updates,
     });
 
@@ -84,7 +84,7 @@ export const sendUpdates = async ({
     }
 
     const userState = updatesResponse.data.state;
-    const filteredSurveys = filterSurveys(config.get().environment, userState);
+    const filteredSurveys = filterSurveys(config.get().workspace, userState);
 
     // messages => informational debug messages (e.g., "email already exists")
     // errors => error messages that should always be visible (e.g., invalid attribute keys)
