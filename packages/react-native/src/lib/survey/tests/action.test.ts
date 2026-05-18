@@ -164,7 +164,7 @@ describe("survey/action.ts", () => {
 
     beforeEach(() => {
       mockAppConfig.get.mockReturnValue({
-        environment: {
+        workspace: {
           data: { actionClasses: mockActionClasses },
         },
       });
