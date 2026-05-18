@@ -53,7 +53,7 @@ export function SurveyWebView(props: SurveyWebViewProps): JSX.Element | null {
       const displayLanguage = getLanguageCode(props.survey, language);
       if (!displayLanguage) {
         logger.debug(
-          `Survey "${props.survey.name}" is not available in specified language.`,
+          `Survey "${props.survey.id}" is not available in specified language.`,
         );
         setIsSurveyRunning(false);
         setShowSurvey(false);
@@ -75,7 +75,7 @@ export function SurveyWebView(props: SurveyWebViewProps): JSX.Element | null {
 
     if (props.survey.delay) {
       logger.debug(
-        `Delaying survey "${props.survey.name}" by ${String(props.survey.delay)} seconds`,
+        `Delaying survey "${props.survey.id}" by ${String(props.survey.delay)} seconds`,
       );
       const timerId = setTimeout(() => {
         setShowSurvey(true);
@@ -87,7 +87,7 @@ export function SurveyWebView(props: SurveyWebViewProps): JSX.Element | null {
     }
 
     setShowSurvey(true);
-  }, [props.survey.delay, isSurveyRunning, props.survey.name]);
+  }, [props.survey.delay, isSurveyRunning, props.survey.id]);
 
   if (!appConfig) {
     return null;

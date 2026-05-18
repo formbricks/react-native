@@ -27,7 +27,7 @@ export const triggerSurvey = (survey: TSurvey): void => {
     );
     if (!shouldDisplaySurvey) {
       logger.debug(
-        `Survey display of "${survey.name}" skipped based on displayPercentage.`,
+        `Survey display of "${survey.id}" skipped based on displayPercentage.`,
       );
       return; // skip displaying the survey
     }

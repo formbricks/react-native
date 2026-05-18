@@ -150,9 +150,9 @@ const updateAppConfigWithSyncedStates = (
     filteredSurveys,
   });
 
-  const surveyNames = filteredSurveys.map((s) => s.name);
+  const surveyIds = filteredSurveys.map((s) => s.id);
   logger.debug(
-    `Fetched ${surveyNames.length.toString()} surveys during sync: ${surveyNames.join(", ")}`,
+    `Fetched ${surveyIds.length.toString()} surveys during sync: ${surveyIds.join(", ")}`,
   );
 };
 

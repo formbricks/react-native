@@ -135,7 +135,7 @@ describe("utils.ts", () => {
         {
           ...baseSurvey,
           id: mockSurveyId1,
-          segment: { id: mockSegmentId1 },
+          segment: { id: mockSegmentId1, hasFilters: false },
         } as TSurvey,
       ];
 
@@ -158,20 +158,46 @@ describe("utils.ts", () => {
       expect(result[0].id).toBe(mockSurveyId1);
     });
 
-    test("filters out surveys that have a segment with filters if userId is not set", () => {
+    test("filters out surveys that have a segment with filters if userId is not set (new shape: hasFilters=true)", () => {
       environment.data.surveys = [
         {
           ...baseSurvey,
           id: mockSurveyId1,
           segment: {
             id: mockSegmentId1,
-            filters: [{ type: "string", key: "name", value: "John" }],
+            hasFilters: true,
           },
         } as TSurvey,
       ];
 
       const result = filterSurveys(environment, user);
       expect(result).toHaveLength(0);
+    });
+
+    test("filters out surveys with segment filters when cached payload uses legacy shape (filters array)", () => {
+      // Simulates an AsyncStorage payload written by an older SDK version that
+      // still has `segment.filters` and no `hasFilters`. The defensive check
+      // must fall back to the legacy shape so anonymous users don't receive
+      // segment-targeted surveys.
+      environment.data.surveys = [
+        {
+          ...baseSurvey,
+          id: mockSurveyId1,
+          segment: {
+            id: mockSegmentId1,
+            filters: [{ type: "attribute", value: "plan" }],
+          },
+        } as unknown as TSurvey,
+        {
+          ...baseSurvey,
+          id: mockSurveyId2,
+          segment: { id: mockSegmentId2, filters: [] },
+        } as unknown as TSurvey,
+      ];
+
+      const result = filterSurveys(environment, user);
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe(mockSurveyId2);
     });
 
     test("includes surveys without segment filters for anonymous users", () => {
@@ -184,7 +210,7 @@ describe("utils.ts", () => {
         {
           ...baseSurvey,
           id: mockSurveyId2,
-          segment: { id: mockSegmentId1 }, // Segment but no filters
+          segment: { id: mockSegmentId1, hasFilters: false }, // Segment but no filters
         } as TSurvey,
       ];
 
@@ -276,13 +302,13 @@ describe("utils.ts", () => {
         {
           ...baseSurvey,
           id: mockSurveyId1,
-          segment: { id: mockSegmentId1 },
+          segment: { id: mockSegmentId1, hasFilters: false },
           displayOption: "respondMultiple",
         } as TSurvey,
         {
           ...baseSurvey,
           id: mockSurveyId2,
-          segment: { id: mockSegmentId2 },
+          segment: { id: mockSegmentId2, hasFilters: false },
           displayOption: "respondMultiple",
         } as TSurvey,
       ];
