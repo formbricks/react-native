@@ -45,7 +45,6 @@ vi.mock("@react-native-community/netinfo", () => ({
 describe("survey/action.ts", () => {
   const mockSurvey = {
     id: "survey_001",
-    name: "Test Survey",
     displayPercentage: 50,
     triggers: [
       {
@@ -95,7 +94,7 @@ describe("survey/action.ts", () => {
       // Ensure survey is not set
       expect(mockSurveyStore.setSurvey).not.toHaveBeenCalled();
       expect(mockLogger.debug).toHaveBeenCalledWith(
-        'Survey display of "Test Survey" skipped based on displayPercentage.',
+        'Survey display of "survey_001" skipped based on displayPercentage.',
       );
     });
 

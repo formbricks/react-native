@@ -1,9 +1,6 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { SurveyStore } from "@/lib/survey/store";
-import {
-  mockSurveyId,
-  mockSurveyName,
-} from "@/lib/survey/tests/__mocks__/store.mock";
+import { mockSurveyId } from "@/lib/survey/tests/__mocks__/store.mock";
 import type { TSurvey } from "@/types/survey";
 
 describe("SurveyStore", () => {
@@ -32,8 +29,8 @@ describe("SurveyStore", () => {
     test("returns current survey when set", () => {
       const mockSurvey: TSurvey = {
         id: mockSurveyId,
-        name: mockSurveyName,
-      } as TSurvey;
+        displayPercentage: 100,
+      } as unknown as TSurvey;
 
       store.setSurvey(mockSurvey);
       expect(store.getSurvey()).toBe(mockSurvey);
@@ -45,8 +42,8 @@ describe("SurveyStore", () => {
       const listener = vi.fn();
       const mockSurvey: TSurvey = {
         id: mockSurveyId,
-        name: mockSurveyName,
-      } as TSurvey;
+        displayPercentage: 100,
+      } as unknown as TSurvey;
 
       store.subscribe(listener);
       store.setSurvey(mockSurvey);
@@ -59,8 +56,8 @@ describe("SurveyStore", () => {
       const listener = vi.fn();
       const mockSurvey: TSurvey = {
         id: mockSurveyId,
-        name: mockSurveyName,
-      } as TSurvey;
+        displayPercentage: 100,
+      } as unknown as TSurvey;
 
       store.setSurvey(mockSurvey);
       store.subscribe(listener);
@@ -75,8 +72,8 @@ describe("SurveyStore", () => {
       const listener = vi.fn();
       const mockSurvey: TSurvey = {
         id: mockSurveyId,
-        name: mockSurveyName,
-      } as TSurvey;
+        displayPercentage: 100,
+      } as unknown as TSurvey;
 
       store.setSurvey(mockSurvey);
       store.subscribe(listener);
@@ -101,8 +98,8 @@ describe("SurveyStore", () => {
       const listener = vi.fn();
       const mockSurvey: TSurvey = {
         id: mockSurveyId,
-        name: mockSurveyName,
-      } as TSurvey;
+        displayPercentage: 100,
+      } as unknown as TSurvey;
 
       const unsubscribe = store.subscribe(listener);
       store.setSurvey(mockSurvey);
@@ -111,8 +108,8 @@ describe("SurveyStore", () => {
       unsubscribe();
       store.setSurvey({
         ...mockSurvey,
-        name: "Updated Survey",
-      } as TSurvey);
+        displayPercentage: 50,
+      } as unknown as TSurvey);
       expect(listener).toHaveBeenCalledTimes(1); // Still 1, not called after unsubscribe
     });
 
@@ -121,8 +118,8 @@ describe("SurveyStore", () => {
       const listener2 = vi.fn();
       const mockSurvey: TSurvey = {
         id: mockSurveyId,
-        name: mockSurveyName,
-      } as TSurvey;
+        displayPercentage: 100,
+      } as unknown as TSurvey;
 
       store.subscribe(listener1);
       store.subscribe(listener2);

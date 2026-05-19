@@ -18,7 +18,6 @@ export const mockConfig: TConfig = {
       surveys: [
         {
           id: mockSurveyId,
-          name: "Onboarding Survey",
           welcomeCard: null,
           questions: [],
           variables: [],

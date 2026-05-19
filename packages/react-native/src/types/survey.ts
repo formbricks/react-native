@@ -85,7 +85,6 @@ export interface SurveyContainerProps
 
 export interface TSurvey {
   id: string;
-  name: string;
   welcomeCard: {
     enabled: boolean;
     headline?: Record<string, string>;
@@ -285,17 +284,11 @@ export interface TSurvey {
       environmentId: string;
     };
   }[];
+  // Minimal segment shape — full filter logic is evaluated server-side and must not reach the client
   segment?: {
     id: string;
-    title: string;
-    description: string | null;
-    isPrivate: boolean;
-    filters: unknown; // recursive, optional to expand
-    environmentId: string;
-    createdAt: string;
-    updatedAt: string;
-    surveys: string[];
-  };
+    hasFilters: boolean;
+  } | null;
   displayPercentage: number;
   styling?: {
     brandColor?: {
