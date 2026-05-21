@@ -150,9 +150,6 @@ export function SurveyWebView(props: SurveyWebViewProps): JSX.Element | null {
                 appUrl,
                 clickOutside,
                 overlay,
-                getSetIsResponseSendingFinished: (
-                  _f: (value: boolean) => void,
-                ) => undefined,
                 isWebEnvironment: false,
               }),
             }}
@@ -371,6 +368,9 @@ const renderHtml = (
         window.ReactNativeWebView.postMessage(JSON.stringify({ onResponseCreated: true }));
       };
 
+      function getSetIsResponseSendingFinished() { /* noop — presence flips initial state to false so loading spinner renders until ResponseQueue resolves */ };
+      function getSetIsError() { /* noop */ };
+
       function loadSurvey() {
         const options = ${JSON.stringify(options)};
         const surveyProps = {
@@ -378,6 +378,8 @@ const renderHtml = (
           onDisplayCreated,
           onResponseCreated,
           onClose,
+          getSetIsResponseSendingFinished,
+          getSetIsError,
         };
 
         window.formbricksSurveys.renderSurvey(surveyProps);
