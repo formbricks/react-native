@@ -104,9 +104,7 @@ export default function App(): JSX.Element {
 
       <Formbricks
         appUrl={process.env.EXPO_PUBLIC_APP_URL as string}
-        workspaceId={
-          process.env.EXPO_PUBLIC_FORMBRICKS_WORKSPACE_ID as string
-        }
+        workspaceId={process.env.EXPO_PUBLIC_FORMBRICKS_WORKSPACE_ID as string}
       />
     </View>
   );
