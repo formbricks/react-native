@@ -13,8 +13,8 @@ import { Button, LogBox, StyleSheet, Text, View } from "react-native";
 LogBox.ignoreAllLogs();
 
 export default function App(): JSX.Element {
-  if (!process.env.EXPO_PUBLIC_FORMBRICKS_ENVIRONMENT_ID) {
-    throw new Error("EXPO_PUBLIC_FORMBRICKS_ENVIRONMENT_ID is required");
+  if (!process.env.EXPO_PUBLIC_FORMBRICKS_WORKSPACE_ID) {
+    throw new Error("EXPO_PUBLIC_FORMBRICKS_WORKSPACE_ID is required");
   }
 
   if (!process.env.EXPO_PUBLIC_APP_URL) {
@@ -104,8 +104,8 @@ export default function App(): JSX.Element {
 
       <Formbricks
         appUrl={process.env.EXPO_PUBLIC_APP_URL as string}
-        environmentId={
-          process.env.EXPO_PUBLIC_FORMBRICKS_ENVIRONMENT_ID as string
+        workspaceId={
+          process.env.EXPO_PUBLIC_FORMBRICKS_WORKSPACE_ID as string
         }
       />
     </View>

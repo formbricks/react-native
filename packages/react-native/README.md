@@ -29,13 +29,15 @@ export default function App() {
       {/* Your app code */}
       <Formbricks
         appUrl="https://app.formbricks.com"
-        environmentId="your-environment-id"
+        workspaceId="your-workspace-id"
       />
     </View>
   );
 }
 ```
 
-Replace your-environment-id with your actual environment ID. You can find your environment ID in the **Connections instructions** in the Formbricks **Configuration** pages.
+Replace your-workspace-id with your actual workspace ID. You can find your workspace ID in the **Connections instructions** in the Formbricks **Configuration** pages.
+
+> **Note:** The `environmentId` prop is still supported as a backward-compatible alias for `workspaceId`, but it is deprecated and will be removed in a future major release. New integrations should use `workspaceId`.
 
 For more detailed guides for different frameworks, check out our [Framework Guides](https://formbricks.com/docs/getting-started/framework-guides).
