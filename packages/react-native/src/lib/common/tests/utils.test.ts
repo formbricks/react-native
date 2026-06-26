@@ -453,6 +453,17 @@ describe("utils.ts", () => {
       expect(getLanguageCode(survey, "fr")).toBe("fr");
       expect(getLanguageCode(survey, "fr-FR")).toBe("fr");
     });
+
+    test("matches a region-tagged canonical code case-insensitively", () => {
+      const survey = {
+        languages: [
+          { language: { code: "en-US" }, default: true, enabled: true },
+          { language: { code: "de-DE" }, default: false, enabled: true },
+        ],
+      } as unknown as TSurvey;
+      // Canonical codes carry an uppercase region; the matcher must lowercase both sides.
+      expect(getLanguageCode(survey, "de-DE")).toBe("de-DE");
+    });
   });
 
   // ---------------------------------------------------------------------------------
