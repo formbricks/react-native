@@ -179,7 +179,7 @@ export const getLanguageCode = (
 
   const selectedLanguage = survey.languages.find((surveyLanguage) => {
     return (
-      surveyLanguage.language.code === language.toLowerCase() ||
+      surveyLanguage.language.code.toLowerCase() === language.toLowerCase() ||
       surveyLanguage.language.alias?.toLowerCase() === language.toLowerCase()
     );
   });
