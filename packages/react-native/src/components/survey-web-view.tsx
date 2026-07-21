@@ -372,7 +372,11 @@ const renderHtml = (
       function getSetIsError() { /* noop */ };
 
       function loadSurvey() {
-        const options = ${JSON.stringify(options)};
+        // Escape "<" so survey content can't inject "</script>" (or "<script"/"<!--") and
+        // break out of this inline script. "<" appears only inside JSON string values, and
+        // the JS engine decodes \\u003c back to "<" when parsing this object literal, so the
+        // payload is preserved exactly. See ENG-1813.
+        const options = ${JSON.stringify(options).replace(/</g, "\\u003c")};
         const surveyProps = {
           ...options,
           onDisplayCreated,
