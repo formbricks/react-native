@@ -336,6 +336,15 @@ const renderHtml = (
   `;
   }
 
+  // Escape "<" so survey content can't inject "</script>" (or "<script"/"<!--") and break
+  // out of the inline <script> below: "<" occurs only inside JSON string values, and the
+  // WebView's JS engine decodes the escaped "<" back to a literal "<" when parsing the
+  // object literal, so the payload is preserved exactly. See ENG-1813.
+  const optionsJson = JSON.stringify(options).replaceAll(
+    "<",
+    String.raw`\u003c`,
+  );
+
   return `
   <!doctype html>
   <html>
@@ -372,11 +381,7 @@ const renderHtml = (
       function getSetIsError() { /* noop */ };
 
       function loadSurvey() {
-        // Escape "<" so survey content can't inject "</script>" (or "<script"/"<!--") and
-        // break out of this inline script. "<" appears only inside JSON string values, and
-        // the JS engine decodes \\u003c back to "<" when parsing this object literal, so the
-        // payload is preserved exactly. See ENG-1813.
-        const options = ${JSON.stringify(options).replace(/</g, "\\u003c")};
+        const options = ${optionsJson};
         const surveyProps = {
           ...options,
           onDisplayCreated,
