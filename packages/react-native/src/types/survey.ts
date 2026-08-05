@@ -313,4 +313,12 @@ export interface TSurvey {
     } | null;
     overwriteThemeStyling?: boolean | null;
   };
+  // Per-survey gate for the post-interaction segment refresh: whether an interaction with THIS
+  // survey (display / response / finish) can change any live survey's membership. Absent for
+  // workspaces without interaction targeting, where no refresh is ever needed.
+  interactionRefresh?: {
+    onDisplay: boolean;
+    onResponse: boolean;
+    onFinished: boolean;
+  };
 }
