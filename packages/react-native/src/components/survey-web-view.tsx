@@ -12,6 +12,7 @@ import { RNConfig } from "@/lib/common/config";
 import { Logger } from "@/lib/common/logger";
 import { filterSurveys, getLanguageCode, getStyling } from "@/lib/common/utils";
 import { SurveyStore } from "@/lib/survey/store";
+import { refreshSegmentsAfterInteraction } from "@/lib/user/interaction-refresh";
 import { type TUserState, ZJsRNWebViewOnMessageData } from "@/types/config";
 import type { SurveyContainerProps, TSurvey } from "@/types/survey";
 
@@ -196,6 +197,7 @@ export function SurveyWebView(props: SurveyWebViewProps): JSX.Element | null {
                 const {
                   onClose,
                   onDisplayCreated,
+                  onFinished,
                   onOpenExternalURL,
                   onOpenExternalURLParams,
                   onResponseCreated,
@@ -230,6 +232,16 @@ export function SurveyWebView(props: SurveyWebViewProps): JSX.Element | null {
                     user: updatedUserState,
                     filteredSurveys,
                   });
+
+                  // A new display can flip "have seen X" / "have not seen X" segments. The
+                  // optimistic update above keeps recontact/display-cap correct locally; this
+                  // pulls fresh `segments` (gated + coalesced) so interaction targeting is
+                  // current by the time this survey closes and the next trigger evaluates.
+                  refreshSegmentsAfterInteraction(
+                    previousConfig.user.data.userId,
+                    props.survey,
+                    "onDisplay",
+                  );
                 }
                 if (onResponseCreated) {
                   const responses = appConfig.get().user.data.responses;
@@ -252,6 +264,24 @@ export function SurveyWebView(props: SurveyWebViewProps): JSX.Element | null {
                     user: newPersonState,
                     filteredSurveys,
                   });
+
+                  // A created response flips "have started responding to X" segments. The
+                  // "completed X" case is handled by onFinished below.
+                  refreshSegmentsAfterInteraction(
+                    appConfig.get().user.data.userId,
+                    props.survey,
+                    "onResponse",
+                  );
+                }
+                if (onFinished) {
+                  // Survey completion flips "have completed X" (and clears "have not completed
+                  // X") segments. The surveys library only fires this after the finished
+                  // response has been sent, so the server recompute sees finished=true.
+                  refreshSegmentsAfterInteraction(
+                    appConfig.get().user.data.userId,
+                    props.survey,
+                    "onFinished",
+                  );
                 }
                 if (onOpenExternalURL && onOpenExternalURLParams?.url) {
                   void openExternalUrl(onOpenExternalURLParams.url);
@@ -317,7 +347,8 @@ const styles = StyleSheet.create({
   },
 });
 
-const renderHtml = (
+/** Exported for tests — not re-exported from the package entry point. */
+export const renderHtml = (
   options: Partial<SurveyContainerProps> & { appUrl?: string },
 ): string => {
   const surveyScriptUrl = getSurveyScriptUrl(options.appUrl);
@@ -377,6 +408,13 @@ const renderHtml = (
         window.ReactNativeWebView.postMessage(JSON.stringify({ onResponseCreated: true }));
       };
 
+      // Fires once the finished response has been accepted by the backend — the surveys library
+      // gates this on \`isResponseSendingFinished\`, and \`getSetIsResponseSendingFinished\` below
+      // flips that initial state to false.
+      function onFinished() {
+        window.ReactNativeWebView.postMessage(JSON.stringify({ onFinished: true }));
+      };
+
       function getSetIsResponseSendingFinished() { /* noop — presence flips initial state to false so loading spinner renders until ResponseQueue resolves */ };
       function getSetIsError() { /* noop */ };
 
@@ -386,6 +424,7 @@ const renderHtml = (
           ...options,
           onDisplayCreated,
           onResponseCreated,
+          onFinished,
           onClose,
           getSetIsResponseSendingFinished,
           getSetIsError,

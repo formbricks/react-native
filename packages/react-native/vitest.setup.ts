@@ -1,5 +1,8 @@
 import { afterEach, beforeEach, vi } from "vitest";
 
+// React Native injects `__DEV__` at build time; modules that branch on it need it defined here.
+vi.stubGlobal("__DEV__", false);
+
 beforeEach(() => {
   vi.resetModules();
   vi.resetAllMocks();
