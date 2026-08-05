@@ -24,6 +24,9 @@ const survey = (interactionRefresh?: TSurvey["interactionRefresh"]): TSurvey =>
 describe("refreshSegmentsAfterInteraction", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // The shared vitest setup calls `resetAllMocks`, which strips implementations — so the
+    // resolved value has to be re-established or `processUpdates()` returns undefined.
+    processUpdates.mockResolvedValue(undefined);
   });
 
   test("no-ops for an anonymous user even when the gate is open", () => {
@@ -96,6 +99,42 @@ describe("refreshSegmentsAfterInteraction", () => {
     expect(processUpdates).not.toHaveBeenCalled();
 
     refreshSegmentsAfterInteraction("user-1", survey(partial), "onDisplay");
+    expect(processUpdates).toHaveBeenCalledOnce();
+  });
+
+  /**
+   * The flush is fire-and-forget, so a bare `void` would leave a rejection unhandled. Asserting
+   * that `.catch` is called is white-box, but Node only reports an unhandled rejection on a
+   * later tick, so watching `process.on("unhandledRejection")` here passes either way — it does
+   * not actually pin the behaviour.
+   */
+  test("attaches a rejection handler to the fire-and-forget flush", () => {
+    const catchSpy = vi.fn().mockReturnValue(undefined);
+    processUpdates.mockReturnValueOnce({
+      catch: catchSpy,
+    } as unknown as Promise<void>);
+
+    refreshSegmentsAfterInteraction(
+      "user-1",
+      survey({ onDisplay: true, onResponse: false, onFinished: false }),
+      "onDisplay",
+    );
+
+    expect(catchSpy).toHaveBeenCalledOnce();
+  });
+
+  test("a rejected flush never surfaces to the caller", async () => {
+    processUpdates.mockRejectedValueOnce(new Error("flush blew up"));
+
+    expect(() => {
+      refreshSegmentsAfterInteraction(
+        "user-1",
+        survey({ onDisplay: true, onResponse: false, onFinished: false }),
+        "onDisplay",
+      );
+    }).not.toThrow();
+
+    await Promise.resolve();
     expect(processUpdates).toHaveBeenCalledOnce();
   });
 

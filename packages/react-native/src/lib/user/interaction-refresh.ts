@@ -38,5 +38,8 @@ export const refreshSegmentsAfterInteraction = (
 
   const updateQueue = UpdateQueue.getInstance();
   updateQueue.updateUserId(userId);
-  void updateQueue.processUpdates();
+  // `processUpdates` rejects if the flush throws, and this is fire-and-forget — a bare
+  // `void` would leave that as an unhandled rejection. The queue already logs the real
+  // cause, so swallow it here rather than reporting it twice.
+  void updateQueue.processUpdates().catch(() => undefined);
 };
