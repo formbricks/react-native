@@ -44,6 +44,26 @@ describe("WebView harness", () => {
     expect(propsBlock).toContain("onClose,");
   });
 
+  /**
+   * The Embedded Data bag (ENG-1844/2472) rides the props blob that already exists — no new bridge
+   * message. The blob is JSON, so this pins that the key survives serialization under the name the
+   * renderer reads, with the SDK doing no filtering of its own: the renderer owns the allow-list.
+   */
+  test("carries hiddenFieldsRecord into the payload, raw and unfiltered", () => {
+    const html = renderHtml({
+      appUrl: "https://app.formbricks.com",
+      workspaceId: "ws-1",
+      hiddenFieldsRecord: {
+        plan: "pro",
+        notDeclaredBySurvey: "kept — the renderer decides, not the SDK",
+      },
+    });
+
+    expect(html).toContain('"hiddenFieldsRecord":{');
+    expect(html).toContain('"plan":"pro"');
+    expect(html).toContain('"notDeclaredBySurvey"');
+  });
+
   test("still escapes < in the payload so survey content cannot break out of the script", () => {
     const html = renderHtml({
       appUrl: "https://app.formbricks.com",

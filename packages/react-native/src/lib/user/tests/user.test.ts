@@ -9,6 +9,7 @@ import {
 import { RNConfig } from "@/lib/common/config";
 import { Logger } from "@/lib/common/logger";
 import { tearDown } from "@/lib/common/setup";
+import { EmbeddedDataStore } from "@/lib/survey/embedded-data";
 import { UpdateQueue } from "@/lib/user/update-queue";
 import { logout, setUserId } from "@/lib/user/user";
 
@@ -207,6 +208,72 @@ describe("user.ts", () => {
       );
       expect(tearDown).toHaveBeenCalled();
       expect(result.ok).toBe(true);
+    });
+  });
+
+  /**
+   * The ambient Embedded Data bag survives a survey, so it has to be cleared where identity
+   * changes — otherwise one user's context rides onto the next user's responses on a shared
+   * device. Deliberately NOT cleared on first identification: a host legitimately pushes context
+   * before it knows who the user is.
+   */
+  describe("Embedded Data bag on identity change", () => {
+    const store = (): EmbeddedDataStore => EmbeddedDataStore.getInstance();
+
+    const mockDeps = (currentUserId: string | null): void => {
+      getInstanceConfigMock.mockReturnValue({
+        get: vi
+          .fn()
+          .mockReturnValue({ user: { data: { userId: currentUserId } } }),
+      } as unknown as Promise<RNConfig>);
+      getInstanceLoggerMock.mockReturnValue({
+        debug: vi.fn(),
+        error: vi.fn(),
+      } as unknown as Logger);
+      getInstanceUpdateQueueMock.mockReturnValue({
+        updateUserId: vi.fn(),
+        processUpdates: vi.fn(),
+      } as unknown as UpdateQueue);
+    };
+
+    beforeEach(() => {
+      store().clearEmbeddedData();
+    });
+
+    test("switching to a different userId clears the bag", async () => {
+      mockDeps("existing-user");
+      store().setEmbeddedData({ plan: "pro" });
+
+      await setUserId(mockUserId);
+
+      expect(store().getSnapshot()).toEqual({});
+    });
+
+    test("identifying for the first time keeps the bag", async () => {
+      mockDeps(null);
+      store().setEmbeddedData({ plan: "pro" });
+
+      await setUserId(mockUserId);
+
+      expect(store().getSnapshot()).toEqual({ plan: "pro" });
+    });
+
+    test("setting the same userId again keeps the bag", async () => {
+      mockDeps(mockUserId);
+      store().setEmbeddedData({ plan: "pro" });
+
+      await setUserId(mockUserId);
+
+      expect(store().getSnapshot()).toEqual({ plan: "pro" });
+    });
+
+    test("logout clears the bag", async () => {
+      mockDeps(mockUserId);
+      store().setEmbeddedData({ plan: "pro" });
+
+      await logout();
+
+      expect(store().getSnapshot()).toEqual({});
     });
   });
 });
