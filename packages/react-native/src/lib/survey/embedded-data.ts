@@ -33,7 +33,7 @@ export type TEmbeddedDataInput = Record<
  */
 export class EmbeddedDataStore {
   private static instance: EmbeddedDataStore | undefined;
-  private data = new Map<string, string | number | boolean | Date>();
+  private readonly data = new Map<string, string | number | boolean | Date>();
 
   static getInstance(): EmbeddedDataStore {
     EmbeddedDataStore.instance ??= new EmbeddedDataStore();

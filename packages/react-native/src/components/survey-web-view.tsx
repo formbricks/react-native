@@ -88,6 +88,14 @@ export function SurveyWebView(props: SurveyWebViewProps): JSX.Element | null {
       return;
     }
 
+    /**
+     * Shows the survey, taking the Embedded Data snapshot in the same update.
+     *
+     * Both calls belong together and in this order: React batches them into one render, so the
+     * WebView mounts with the bag already frozen rather than mounting empty and re-rendering with
+     * it — which would change `source` and reload the survey. Called directly, or from the delay
+     * timeout below, so the snapshot is always taken at the moment the survey actually appears.
+     */
     const display = (): void => {
       setEmbeddedDataSnapshot(EmbeddedDataStore.getInstance().getSnapshot());
       setShowSurvey(true);
