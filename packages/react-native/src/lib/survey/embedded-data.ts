@@ -1,5 +1,5 @@
 import { Logger } from "@/lib/common/logger";
-import type { TResponseData } from "@/types/response";
+import type { TIngestedFieldsRecord } from "@/types/response";
 
 /** What a host app may hand to `setEmbeddedData`. `null` removes the key; `undefined` is a no-op. */
 export type TEmbeddedDataInput = Record<
@@ -66,6 +66,17 @@ export class EmbeddedDataStore {
         this.data.delete(key);
         continue;
       }
+      // Refused rather than stored: `toISOString()` throws a RangeError on an invalid Date, and
+      // `getSnapshot` runs inside the effect that displays the survey — so one `new Date("nope")`
+      // from host code would cost the survey, not the field. This guard exists here and not in
+      // js-core because serializing the Date is this SDK's own step: js-core hands the Date object
+      // straight to the renderer, which coerces it. Never fatal, always logged.
+      if (value instanceof Date && Number.isNaN(value.getTime())) {
+        Logger.getInstance().error(
+          `setEmbeddedData: "${key}" is an invalid Date — the key was skipped`,
+        );
+        continue;
+      }
       this.data.set(key, value);
     }
   }
@@ -101,15 +112,18 @@ export class EmbeddedDataStore {
    *
    * Dates are serialized here rather than at the JSON boundary: `renderHtml` stringifies the props
    * blob, and an ISO 8601 string is exactly what the renderer's ingest contract accepts for a `date`
-   * field. The cast is the same one js-core makes — the contract accepts boolean and date scalars
-   * that the narrower legacy `hiddenFields` type cannot spell, and normalizes them before storage.
+   * field. `setEmbeddedData` refuses an invalid Date, so `toISOString` here cannot throw.
+   *
+   * The return type spells booleans rather than asserting them away: the bag really does hold them,
+   * the renderer's contract really does accept them, and only the legacy `TResponseData` could not
+   * say so.
    */
-  public getSnapshot(): TResponseData {
+  public getSnapshot(): TIngestedFieldsRecord {
     return Object.fromEntries(
       Array.from(this.data, ([key, value]) => [
         key,
         value instanceof Date ? value.toISOString() : value,
       ]),
-    ) as TResponseData;
+    );
   }
 }

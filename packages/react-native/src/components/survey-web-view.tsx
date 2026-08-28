@@ -15,7 +15,7 @@ import { EmbeddedDataStore } from "@/lib/survey/embedded-data";
 import { SurveyStore } from "@/lib/survey/store";
 import { refreshSegmentsAfterInteraction } from "@/lib/user/interaction-refresh";
 import { type TUserState, ZJsRNWebViewOnMessageData } from "@/types/config";
-import type { TResponseData } from "@/types/response";
+import type { TIngestedFieldsRecord } from "@/types/response";
 import type { SurveyContainerProps, TSurvey } from "@/types/survey";
 
 const logger = Logger.getInstance();
@@ -44,7 +44,7 @@ export function SurveyWebView(props: SurveyWebViewProps): JSX.Element | null {
    * js-core snapshots at too (it builds its own bag inside the delay timeout).
    */
   const [embeddedDataSnapshot, setEmbeddedDataSnapshot] =
-    useState<TResponseData>({});
+    useState<TIngestedFieldsRecord>({});
 
   useEffect(() => {
     const fetchConfig = async (): Promise<void> => {

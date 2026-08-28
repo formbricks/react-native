@@ -80,6 +80,27 @@ describe("EmbeddedDataStore", () => {
     });
   });
 
+  test("an invalid Date is refused rather than costing the survey", () => {
+    // THE guard: `toISOString()` throws a RangeError on an invalid Date, and `getSnapshot` runs
+    // inside the effect that displays the survey — so storing one would mean no survey at all,
+    // not a missing field.
+    store.setEmbeddedData({ plan: "pro" });
+
+    store.setEmbeddedData({ signedUpAt: new Date("not a date") });
+
+    expect(store.getSnapshot()).toEqual({ plan: "pro" });
+    expect(() => store.getSnapshot()).not.toThrow();
+  });
+
+  test("a valid Date alongside an invalid one still lands", () => {
+    store.setEmbeddedData({
+      good: new Date("2026-08-20T10:00:00.000Z"),
+      bad: new Date(Number.NaN),
+    });
+
+    expect(store.getSnapshot()).toEqual({ good: "2026-08-20T10:00:00.000Z" });
+  });
+
   test("a __proto__ key is stored as data, not swallowed by the prototype", () => {
     store.setEmbeddedData({ ["__proto__"]: "value" });
 

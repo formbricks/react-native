@@ -1,4 +1,8 @@
-import type { TResponseData, TResponseUpdate } from "@/types/response";
+import type {
+  TIngestedFieldsRecord,
+  TResponseData,
+  TResponseUpdate,
+} from "@/types/response";
 import type { TFileUploadParams, TUploadFileConfig } from "@/types/storage";
 import type { TOverlay } from "./common";
 import type { TWorkspaceStyling } from "./workspace";
@@ -47,7 +51,7 @@ export interface SurveyBaseProps {
   startAtQuestionId?: string;
   clickOutside?: boolean;
   overlay?: TOverlay;
-  hiddenFieldsRecord?: TResponseData;
+  hiddenFieldsRecord?: TIngestedFieldsRecord;
   shouldResetQuestionId?: boolean;
   fullSizeCards?: boolean;
 }
