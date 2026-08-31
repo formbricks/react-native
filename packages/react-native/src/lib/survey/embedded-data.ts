@@ -90,8 +90,10 @@ export class EmbeddedDataStore {
     // `setEmbeddedData` gets zero confirmation until a survey happens to display. Debug level, which
     // this SDK gates on `__DEV__`, so a release build never prints it. Keys only, never values — the
     // documented use of this bag includes hashed identity fields.
+    const removedSegment =
+      removed.length > 0 ? `, removed [${removed.join(", ")}]` : "";
     Logger.getInstance().debug(
-      `setEmbeddedData: set [${set.join(", ")}]${removed.length > 0 ? `, removed [${removed.join(", ")}]` : ""} — the bag now holds [${[...this.data.keys()].join(", ")}]. Keys land on a response only if the survey declares them as ingested Embedded Data fields.`,
+      `setEmbeddedData: set [${set.join(", ")}]${removedSegment} — the bag now holds [${[...this.data.keys()].join(", ")}]. Keys land on a response only if the survey declares them as ingested Embedded Data fields.`,
     );
   }
 
