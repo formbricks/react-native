@@ -1,9 +1,14 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { EmbeddedDataStore } from "@/lib/survey/embedded-data";
 
-// The guards log through Logger; mocked so refused inputs don't spray the test output.
+const { mockLogger } = vi.hoisted(() => ({
+  mockLogger: { error: vi.fn(), debug: vi.fn() },
+}));
+
+// The guards log errors and the success trace logs at debug; mocked so refused inputs don't spray
+// the test output, and a stable instance lets the trace tests below assert on what was written.
 vi.mock("@/lib/common/logger", () => ({
-  Logger: { getInstance: vi.fn(() => ({ error: vi.fn(), debug: vi.fn() })) },
+  Logger: { getInstance: vi.fn(() => mockLogger) },
 }));
 
 type TSetInput = Parameters<EmbeddedDataStore["setEmbeddedData"]>[0];
@@ -164,5 +169,69 @@ describe("input guards (never fatal)", () => {
     store.clearEmbeddedData(undefined as unknown as string);
 
     expect(store.getSnapshot()).toEqual({ plan: "pro", screen: "product" });
+  });
+});
+
+describe("the debug success trace — the bag's only success feedback", () => {
+  let store: EmbeddedDataStore;
+
+  beforeEach(() => {
+    store = EmbeddedDataStore.getInstance();
+    store.clearEmbeddedData();
+    mockLogger.debug.mockClear();
+  });
+
+  test("a successful set logs the keys it set and what the bag now holds — keys only, never values", () => {
+    store.setEmbeddedData({ plan: "pro", hashed_email: "s3cret-hash" });
+
+    expect(mockLogger.debug).toHaveBeenCalledTimes(1);
+    const message = mockLogger.debug.mock.calls[0][0] as string;
+    expect(message).toContain("set [plan, hashed_email]");
+    expect(message).toContain("the bag now holds [plan, hashed_email]");
+    // The bag's documented use includes hashed identity fields; values must never reach a log line.
+    expect(message).not.toContain("pro");
+    expect(message).not.toContain("s3cret-hash");
+  });
+
+  test("a null removal shows up in the trace as removed, not set", () => {
+    store.setEmbeddedData({ plan: "pro" });
+    mockLogger.debug.mockClear();
+
+    store.setEmbeddedData({ plan: null, screen: "product" });
+
+    const message = mockLogger.debug.mock.calls[0][0] as string;
+    expect(message).toContain("set [screen]");
+    expect(message).toContain("removed [plan]");
+    expect(message).toContain("the bag now holds [screen]");
+  });
+
+  test("a skipped invalid Date appears in neither list, and its value never reaches the log", () => {
+    store.setEmbeddedData({ plan: "pro", signedUpAt: new Date("nope") });
+
+    const message = mockLogger.debug.mock.calls[0][0] as string;
+    expect(message).toContain("set [plan]");
+    expect(message).not.toContain("signedUpAt");
+  });
+
+  test("clearEmbeddedData traces both forms", () => {
+    store.setEmbeddedData({ plan: "pro", screen: "product" });
+    mockLogger.debug.mockClear();
+
+    store.clearEmbeddedData("plan");
+    expect(mockLogger.debug.mock.calls[0][0]).toContain('removed "plan"');
+
+    store.clearEmbeddedData();
+    expect(mockLogger.debug.mock.calls[1][0]).toContain(
+      "cleared the whole bag (1 keys)",
+    );
+  });
+
+  test("a refused input logs an error and no success trace", () => {
+    mockLogger.error.mockClear();
+
+    store.setEmbeddedData(null as unknown as TSetInput);
+
+    expect(mockLogger.error).toHaveBeenCalledTimes(1);
+    expect(mockLogger.debug).not.toHaveBeenCalled();
   });
 });
