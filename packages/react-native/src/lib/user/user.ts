@@ -1,6 +1,7 @@
 import { RNConfig } from "@/lib/common/config";
 import { Logger } from "@/lib/common/logger";
 import { tearDown } from "@/lib/common/setup";
+import { EmbeddedDataStore } from "@/lib/survey/embedded-data";
 import { UpdateQueue } from "@/lib/user/update-queue";
 import { type ApiErrorResponse, okVoid, type Result } from "@/types/error";
 
@@ -27,6 +28,12 @@ export const setUserId = async (
       "Different userId is being set, cleaning up previous user state",
     );
     await tearDown();
+    // An identity switch: the ambient Embedded Data bag may carry the previous user's context
+    // (hashed ids and the like), which must not ride onto the next user's responses. Deliberately
+    // not in tearDown() itself — the setup-error teardown is not an identity switch, and app
+    // context should survive a setup retry. First-time identification (no currentUserId) keeps the
+    // bag too: the host legitimately pushes context before identifying.
+    EmbeddedDataStore.getInstance().clearEmbeddedData();
   }
 
   updateQueue.updateUserId(userId);
@@ -39,5 +46,8 @@ export const logout = async (): Promise<Result<void>> => {
 
   logger.debug("Logging out and cleaning user state");
   await tearDown();
+  // Same identity-switch rule as setUserId above: logout must not let the previous user's ambient
+  // context leak onto whoever uses the app next.
+  EmbeddedDataStore.getInstance().clearEmbeddedData();
   return okVoid();
 };

@@ -11,9 +11,11 @@ import { getSurveyScriptUrl } from "@/components/utils/survey-script-url";
 import { RNConfig } from "@/lib/common/config";
 import { Logger } from "@/lib/common/logger";
 import { filterSurveys, getLanguageCode, getStyling } from "@/lib/common/utils";
+import { EmbeddedDataStore } from "@/lib/survey/embedded-data";
 import { SurveyStore } from "@/lib/survey/store";
 import { refreshSegmentsAfterInteraction } from "@/lib/user/interaction-refresh";
 import { type TUserState, ZJsRNWebViewOnMessageData } from "@/types/config";
+import type { TIngestedFieldsRecord } from "@/types/response";
 import type { SurveyContainerProps, TSurvey } from "@/types/survey";
 
 const logger = Logger.getInstance();
@@ -31,6 +33,18 @@ export function SurveyWebView(props: SurveyWebViewProps): JSX.Element | null {
   const [showSurvey, setShowSurvey] = useState(false);
   const [appConfig, setAppConfig] = useState<RNConfig | null>(null);
   const [languageCode, setLanguageCode] = useState("default");
+  /**
+   * The Embedded Data bag, snapshotted at the moment the survey is shown and frozen for the rest of
+   * its life (ENG-1844). Held in state rather than read inline in the render pass on purpose: the
+   * html string below is an *input* to the WebView, so reading a mutable bag while rendering would
+   * let a later `setEmbeddedData` rewrite `source` and reload the WebView mid-survey — losing the
+   * respondent's answers. A later write therefore reaches the next response, never this one.
+   *
+   * Set in the same update as `setShowSurvey(true)`, which is the delay-aware display moment
+   * js-core snapshots at too (it builds its own bag inside the delay timeout).
+   */
+  const [embeddedDataSnapshot, setEmbeddedDataSnapshot] =
+    useState<TIngestedFieldsRecord>({});
 
   useEffect(() => {
     const fetchConfig = async (): Promise<void> => {
@@ -74,20 +88,31 @@ export function SurveyWebView(props: SurveyWebViewProps): JSX.Element | null {
       return;
     }
 
+    /**
+     * Shows the survey, taking the Embedded Data snapshot in the same update.
+     *
+     * Both calls belong together and in this order: React batches them into one render, so the
+     * WebView mounts with the bag already frozen rather than mounting empty and re-rendering with
+     * it — which would change `source` and reload the survey. Called directly, or from the delay
+     * timeout below, so the snapshot is always taken at the moment the survey actually appears.
+     */
+    const display = (): void => {
+      setEmbeddedDataSnapshot(EmbeddedDataStore.getInstance().getSnapshot());
+      setShowSurvey(true);
+    };
+
     if (props.survey.delay) {
       logger.debug(
         `Delaying survey "${props.survey.id}" by ${String(props.survey.delay)} seconds`,
       );
-      const timerId = setTimeout(() => {
-        setShowSurvey(true);
-      }, props.survey.delay * 1000);
+      const timerId = setTimeout(display, props.survey.delay * 1000);
 
       return () => {
         clearTimeout(timerId);
       };
     }
 
-    setShowSurvey(true);
+    display();
   }, [props.survey.delay, isSurveyRunning, props.survey.id]);
 
   if (!appConfig) {
@@ -152,6 +177,11 @@ export function SurveyWebView(props: SurveyWebViewProps): JSX.Element | null {
                 clickOutside,
                 overlay,
                 isWebEnvironment: false,
+                // Passed straight through, unfiltered: the Embedded Data ingest contract lives in
+                // the renderer (ENG-1845/2472), so all four mobile SDKs inherit the same allow-list,
+                // coercion and size rules without each shipping a copy. The renderer drops unknown
+                // and locked keys and logs what it refused; the server re-runs all of it on ingest.
+                hiddenFieldsRecord: embeddedDataSnapshot,
               }),
             }}
             style={styles.webView}

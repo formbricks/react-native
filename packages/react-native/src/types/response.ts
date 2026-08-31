@@ -14,6 +14,20 @@ export type TResponseHiddenFieldValue = Record<
   string | number | string[]
 >;
 
+/**
+ * What the renderer accepts for `hiddenFieldsRecord`: the legacy shape plus the booleans its
+ * Embedded Data ingest contract normalizes (`TIngestableScalar` is `string | number | boolean |
+ * Date`) but that the older types cannot spell. Dates are serialized to ISO 8601 before they get
+ * here, so they arrive as strings.
+ *
+ * Its own type rather than a cast to `TResponseData`: the store really does hold booleans, and an
+ * assertion there would only hide the mismatch from the compiler while the value flows on regardless.
+ */
+export type TIngestedFieldsRecord = Record<
+  string,
+  string | number | boolean | string[] | Record<string, string>
+>;
+
 export interface TResponseUpdate {
   finished: boolean;
   data: TResponseData;
