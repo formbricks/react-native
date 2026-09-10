@@ -54,7 +54,7 @@
     "typescript": "6.0.2",
     "tsc-alias": "1.8.16",
     "vite": "8.0.16",
-    "vitest": "4.1.2"
+    "vitest": "5.0.0"
   },
   "peerDependencies": {
     "@react-native-async-storage/async-storage": ">=2.1.0",
