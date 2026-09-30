@@ -1,13 +1,23 @@
 import { type JSX, useEffect, useRef, useState } from "react";
 import {
+  BackHandler,
+  Dimensions,
+  Keyboard,
   KeyboardAvoidingView,
   Linking,
   Modal,
+  Platform,
   StyleSheet,
   View,
 } from "react-native";
 import { WebView, type WebViewMessageEvent } from "react-native-webview";
 import { getSurveyScriptUrl } from "@/components/utils/survey-script-url";
+import {
+  androidKeyboardPadding,
+  getPassthroughFrames,
+  parseCardRectMessage,
+  type TCardState,
+} from "@/components/utils/survey-touch-region";
 import { RNConfig } from "@/lib/common/config";
 import { Logger } from "@/lib/common/logger";
 import { filterSurveys, getLanguageCode, getStyling } from "@/lib/common/utils";
@@ -45,6 +55,32 @@ export function SurveyWebView(props: SurveyWebViewProps): JSX.Element | null {
    */
   const [embeddedDataSnapshot, setEmbeddedDataSnapshot] =
     useState<TIngestedFieldsRecord>({});
+  /** The card's state as the renderer reports it; see `TCardState` for why it has three values. */
+  const [cardState, setCardState] = useState<TCardState>(undefined);
+  /** The area a no-overlay survey renders over, so the WebView keeps exactly that size. */
+  const [hostSize, setHostSize] = useState({ width: 0, height: 0 });
+  /** Android only; see `androidKeyboardPadding`. */
+  const [androidKeyboardHeight, setAndroidKeyboardHeight] = useState(0);
+
+  useEffect(() => {
+    if (Platform.OS !== "android") return;
+    const subscriptions = [
+      Keyboard.addListener("keyboardDidShow", (event) => {
+        setAndroidKeyboardHeight(
+          androidKeyboardPadding(
+            Dimensions.get("window").height,
+            event.endCoordinates.screenY,
+          ),
+        );
+      }),
+      Keyboard.addListener("keyboardDidHide", () => {
+        setAndroidKeyboardHeight(0);
+      }),
+    ];
+    return () => {
+      for (const subscription of subscriptions) subscription.remove();
+    };
+  }, []);
 
   useEffect(() => {
     const fetchConfig = async (): Promise<void> => {
@@ -146,190 +182,265 @@ export function SurveyWebView(props: SurveyWebViewProps): JSX.Element | null {
   const overlay = props.survey.projectOverwrites?.overlay ?? settings.overlay;
   const appUrl = appConfig.get().appUrl;
 
-  return (
-    <Modal
-      animationType="slide"
-      visible={showSurvey}
-      transparent
-      onRequestClose={() => {
-        setShowSurvey(false);
-        setIsSurveyRunning(false);
+  const isPassThrough = (overlay ?? "none") === "none";
+
+  const webView = (
+    <WebView
+      ref={webViewRef}
+      originWhitelist={["https://*", "http://*"]}
+      source={{
+        html: renderHtml({
+          workspaceId: appConfig.get().workspaceId,
+          contactId: appConfig.get().user.data.contactId ?? undefined,
+          survey: props.survey,
+          isBrandingEnabled,
+          styling,
+          languageCode,
+          placement: surveyPlacement,
+          appUrl,
+          clickOutside,
+          overlay,
+          isWebEnvironment: false,
+          // Passed straight through, unfiltered: the Embedded Data ingest contract lives in
+          // the renderer (ENG-1845/2472), so all four mobile SDKs inherit the same allow-list,
+          // coercion and size rules without each shipping a copy. The renderer drops unknown
+          // and locked keys and logs what it refused; the server re-runs all of it on ingest.
+          hiddenFieldsRecord: embeddedDataSnapshot,
+        }),
       }}
-    >
-      <View style={styles.modalContainer}>
-        <KeyboardAvoidingView
-          behavior="padding"
-          style={styles.keyboardAvoidingView}
-        >
-          <WebView
-            ref={webViewRef}
-            originWhitelist={["https://*", "http://*"]}
-            source={{
-              html: renderHtml({
-                workspaceId: appConfig.get().workspaceId,
-                contactId: appConfig.get().user.data.contactId ?? undefined,
-                survey: props.survey,
-                isBrandingEnabled,
-                styling,
-                languageCode,
-                placement: surveyPlacement,
-                appUrl,
-                clickOutside,
-                overlay,
-                isWebEnvironment: false,
-                // Passed straight through, unfiltered: the Embedded Data ingest contract lives in
-                // the renderer (ENG-1845/2472), so all four mobile SDKs inherit the same allow-list,
-                // coercion and size rules without each shipping a copy. The renderer drops unknown
-                // and locked keys and logs what it refused; the server re-runs all of it on ingest.
-                hiddenFieldsRecord: embeddedDataSnapshot,
-              }),
-            }}
-            style={styles.webView}
-            contentMode="mobile"
-            javaScriptEnabled
-            domStorageEnabled
-            startInLoadingState
-            scrollEnabled={false}
-            setSupportMultipleWindows={false}
-            onShouldStartLoadWithRequest={(event) => {
-              if (isAllowedWebViewNavigation(event.url, appUrl)) {
-                return true;
-              }
+      style={styles.webView}
+      contentMode="mobile"
+      javaScriptEnabled
+      domStorageEnabled
+      startInLoadingState
+      scrollEnabled={false}
+      setSupportMultipleWindows={false}
+      onShouldStartLoadWithRequest={(event) => {
+        if (isAllowedWebViewNavigation(event.url, appUrl)) {
+          return true;
+        }
 
-              void openExternalUrl(event.url);
-              return false;
-            }}
-            onMessage={(event: WebViewMessageEvent) => {
-              try {
-                const { data } = event.nativeEvent;
-                const unvalidatedMessage = JSON.parse(data) as {
-                  type: string;
-                  data: unknown;
-                };
+        void openExternalUrl(event.url);
+        return false;
+      }}
+      onMessage={(event: WebViewMessageEvent) => {
+        try {
+          const { data } = event.nativeEvent;
+          const unvalidatedMessage = JSON.parse(data) as {
+            type: string;
+            data: unknown;
+          };
 
-                // debugger
-                if (unvalidatedMessage.type === "Console") {
-                  if (__DEV__) {
-                    console.info(
-                      `[Console] ${JSON.stringify(unvalidatedMessage.data)}`,
-                    );
-                  }
-                  return;
-                }
+          if (unvalidatedMessage.type === "CardRect") {
+            const card = parseCardRectMessage(unvalidatedMessage.data);
+            if (card === undefined) {
+              logger.error("Error parsing card rect from WebView.");
+              return;
+            }
+            setCardState(card);
+            return;
+          }
 
-                const validatedMessage =
-                  ZJsRNWebViewOnMessageData.safeParse(unvalidatedMessage);
-                if (!validatedMessage.success) {
-                  logger.error("Error parsing message from WebView.");
-                  return;
-                }
+          // debugger
+          if (unvalidatedMessage.type === "Console") {
+            if (__DEV__) {
+              console.info(
+                `[Console] ${JSON.stringify(unvalidatedMessage.data)}`,
+              );
+            }
+            return;
+          }
 
-                const {
-                  onClose,
-                  onDisplayCreated,
-                  onFinished,
-                  onOpenExternalURL,
-                  onOpenExternalURLParams,
-                  onResponseCreated,
-                } = validatedMessage.data;
-                if (onDisplayCreated) {
-                  const existingDisplays = appConfig.get().user.data.displays;
-                  const newDisplay = {
-                    surveyId: props.survey.id,
-                    createdAt: new Date(),
-                  };
+          const validatedMessage =
+            ZJsRNWebViewOnMessageData.safeParse(unvalidatedMessage);
+          if (!validatedMessage.success) {
+            logger.error("Error parsing message from WebView.");
+            return;
+          }
 
-                  const displays = [...existingDisplays, newDisplay];
-                  const previousConfig = appConfig.get();
+          const {
+            onClose,
+            onDisplayCreated,
+            onFinished,
+            onOpenExternalURL,
+            onOpenExternalURLParams,
+            onResponseCreated,
+          } = validatedMessage.data;
+          if (onDisplayCreated) {
+            const existingDisplays = appConfig.get().user.data.displays;
+            const newDisplay = {
+              surveyId: props.survey.id,
+              createdAt: new Date(),
+            };
 
-                  const updatedUserState = {
-                    ...previousConfig.user,
-                    data: {
-                      ...previousConfig.user.data,
-                      displays,
-                      lastDisplayAt: new Date(),
-                    },
-                  };
+            const displays = [...existingDisplays, newDisplay];
+            const previousConfig = appConfig.get();
 
-                  const filteredSurveys = filterSurveys(
-                    previousConfig.workspace,
-                    updatedUserState,
-                  );
+            const updatedUserState = {
+              ...previousConfig.user,
+              data: {
+                ...previousConfig.user.data,
+                displays,
+                lastDisplayAt: new Date(),
+              },
+            };
 
-                  appConfig.update({
-                    ...previousConfig,
-                    workspace: previousConfig.workspace,
-                    user: updatedUserState,
-                    filteredSurveys,
-                  });
+            const filteredSurveys = filterSurveys(
+              previousConfig.workspace,
+              updatedUserState,
+            );
 
-                  // A new display can flip "have seen X" / "have not seen X" segments. The
-                  // optimistic update above keeps recontact/display-cap correct locally; this
-                  // pulls fresh `segments` (gated + coalesced) so interaction targeting is
-                  // current by the time this survey closes and the next trigger evaluates.
-                  refreshSegmentsAfterInteraction(
-                    previousConfig.user.data.userId,
-                    props.survey,
-                    "onDisplay",
-                  );
-                }
-                if (onResponseCreated) {
-                  const responses = appConfig.get().user.data.responses;
-                  const newPersonState: TUserState = {
-                    ...appConfig.get().user,
-                    data: {
-                      ...appConfig.get().user.data,
-                      responses: [...responses, props.survey.id],
-                    },
-                  };
+            appConfig.update({
+              ...previousConfig,
+              workspace: previousConfig.workspace,
+              user: updatedUserState,
+              filteredSurveys,
+            });
 
-                  const filteredSurveys = filterSurveys(
-                    appConfig.get().workspace,
-                    newPersonState,
-                  );
+            // A new display can flip "have seen X" / "have not seen X" segments. The
+            // optimistic update above keeps recontact/display-cap correct locally; this
+            // pulls fresh `segments` (gated + coalesced) so interaction targeting is
+            // current by the time this survey closes and the next trigger evaluates.
+            refreshSegmentsAfterInteraction(
+              previousConfig.user.data.userId,
+              props.survey,
+              "onDisplay",
+            );
+          }
+          if (onResponseCreated) {
+            const responses = appConfig.get().user.data.responses;
+            const newPersonState: TUserState = {
+              ...appConfig.get().user,
+              data: {
+                ...appConfig.get().user.data,
+                responses: [...responses, props.survey.id],
+              },
+            };
 
-                  appConfig.update({
-                    ...appConfig.get(),
-                    workspace: appConfig.get().workspace,
-                    user: newPersonState,
-                    filteredSurveys,
-                  });
+            const filteredSurveys = filterSurveys(
+              appConfig.get().workspace,
+              newPersonState,
+            );
 
-                  // A created response flips "have started responding to X" segments. The
-                  // "completed X" case is handled by onFinished below.
-                  refreshSegmentsAfterInteraction(
-                    appConfig.get().user.data.userId,
-                    props.survey,
-                    "onResponse",
-                  );
-                }
-                if (onFinished) {
-                  // Survey completion flips "have completed X" (and clears "have not completed
-                  // X") segments. The surveys library only fires this after the finished
-                  // response has been sent, so the server recompute sees finished=true.
-                  refreshSegmentsAfterInteraction(
-                    appConfig.get().user.data.userId,
-                    props.survey,
-                    "onFinished",
-                  );
-                }
-                if (onOpenExternalURL && onOpenExternalURLParams?.url) {
-                  void openExternalUrl(onOpenExternalURLParams.url);
-                }
-                if (onClose) {
-                  onCloseSurvey();
-                }
-              } catch (error) {
-                logger.error(
-                  `Error handling WebView message: ${error as string}`,
-                );
-              }
-            }}
-          />
-        </KeyboardAvoidingView>
-      </View>
-    </Modal>
+            appConfig.update({
+              ...appConfig.get(),
+              workspace: appConfig.get().workspace,
+              user: newPersonState,
+              filteredSurveys,
+            });
+
+            // A created response flips "have started responding to X" segments. The
+            // "completed X" case is handled by onFinished below.
+            refreshSegmentsAfterInteraction(
+              appConfig.get().user.data.userId,
+              props.survey,
+              "onResponse",
+            );
+          }
+          if (onFinished) {
+            // Survey completion flips "have completed X" (and clears "have not completed
+            // X") segments. The surveys library only fires this after the finished
+            // response has been sent, so the server recompute sees finished=true.
+            refreshSegmentsAfterInteraction(
+              appConfig.get().user.data.userId,
+              props.survey,
+              "onFinished",
+            );
+          }
+          if (onOpenExternalURL && onOpenExternalURLParams?.url) {
+            void openExternalUrl(onOpenExternalURLParams.url);
+          }
+          if (onClose) {
+            onCloseSurvey();
+          }
+        } catch (error) {
+          logger.error(`Error handling WebView message: ${error as string}`);
+        }
+      }}
+    />
   );
+
+  if (!isPassThrough) {
+    return (
+      <Modal
+        animationType="slide"
+        visible={showSurvey}
+        transparent
+        onRequestClose={() => {
+          setShowSurvey(false);
+          setIsSurveyRunning(false);
+        }}
+      >
+        <View style={styles.modalContainer}>
+          <KeyboardAvoidingView
+            behavior="padding"
+            style={styles.keyboardAvoidingView}
+          >
+            {webView}
+          </KeyboardAvoidingView>
+        </View>
+      </Modal>
+    );
+  }
+
+  // `overlay: none` renders in the host's own view tree instead of a <Modal>. A Modal is its own
+  // native container and takes every touch however transparent it is, so it cannot let any
+  // through. Here the WebView sits in a view clipped to the card (see `getPassthroughFrames`), and
+  // a touch outside that clip reaches the host app.
+  if (!showSurvey) {
+    return null;
+  }
+
+  // The tree shape below never changes between states — only styles do. A different shape would
+  // remount the WebView, reload the survey and fire onDisplayCreated a second time.
+  const frames = getPassthroughFrames(cardState, hostSize);
+
+  // The bottom padding shrinks the measured host area, so the WebView shrinks with it and the
+  // renderer re-lays out the card above the keyboard — and reports the new rect, which moves the
+  // window with it. KeyboardAvoidingView supplies it on iOS; Android uses its own keyboard height.
+  // Android gets no `behavior`: "padding" always writes its own paddingBottom over ours.
+  return (
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      style={[
+        StyleSheet.absoluteFill,
+        { paddingBottom: androidKeyboardHeight },
+      ]}
+      pointerEvents="box-none"
+    >
+      <CloseOnBack onBack={onCloseSurvey} />
+      <View
+        style={styles.keyboardAvoidingView}
+        pointerEvents="box-none"
+        onLayout={(event) => {
+          const { width, height } = event.nativeEvent.layout;
+          setHostSize({ width, height });
+        }}
+      >
+        <View style={frames.window}>
+          <View style={frames.webViewFrame}>{webView}</View>
+        </View>
+      </View>
+    </KeyboardAvoidingView>
+  );
+}
+
+/**
+ * Back closes a no-overlay survey, as the Modal's `onRequestClose` does on the overlay path.
+ * Letting it reach the host instead could navigate away and leave the survey over another screen.
+ */
+function CloseOnBack({ onBack }: Readonly<{ onBack: () => void }>): null {
+  useEffect(() => {
+    const subscription = BackHandler.addEventListener(
+      "hardwareBackPress",
+      () => {
+        onBack();
+        return true;
+      },
+    );
+    return () => subscription.remove();
+  }, [onBack]);
+  return null;
 }
 
 const isAllowedWebViewNavigation = (
@@ -445,6 +556,13 @@ export const renderHtml = (
         window.ReactNativeWebView.postMessage(JSON.stringify({ onFinished: true }));
       };
 
+      // Where the survey card is, so a no-overlay survey can let touches outside it through.
+      // Only newer renderers call this; against an older server it never fires and the survey
+      // keeps blocking the host as before.
+      function onCardRectChange(rect) {
+        window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'CardRect', data: rect }));
+      };
+
       function getSetIsResponseSendingFinished() { /* noop — presence flips initial state to false so loading spinner renders until ResponseQueue resolves */ };
       function getSetIsError() { /* noop */ };
 
@@ -456,6 +574,7 @@ export const renderHtml = (
           onResponseCreated,
           onFinished,
           onClose,
+          onCardRectChange,
           getSetIsResponseSendingFinished,
           getSetIsError,
         };

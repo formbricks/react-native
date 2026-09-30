@@ -1,6 +1,6 @@
 import type React from "react";
 import { useCallback, useEffect, useSyncExternalStore } from "react";
-import { View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { SurveyWebView } from "@/components/survey-web-view";
 import { Logger } from "@/lib/common/logger";
 import { setup } from "@/lib/common/setup";
@@ -55,7 +55,9 @@ export function Formbricks({
 
   // Wrap in View with pointerEvents="box-none" to fix Android touch event handling.
   return survey ? (
-    <View pointerEvents="box-none">
+    // Fills the parent: a no-overlay survey renders in the host's view tree (not a Modal) and
+    // positions itself against this wrapper, which would otherwise be 0x0.
+    <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
       <SurveyWebView survey={survey} />
     </View>
   ) : null;

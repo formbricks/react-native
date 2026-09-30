@@ -44,6 +44,21 @@ describe("WebView harness", () => {
     expect(propsBlock).toContain("onClose,");
   });
 
+  /** The card rect is how a no-overlay survey lets touches through; unwired, it silently blocks. */
+  test("wires onCardRectChange into renderSurvey's props and posts it back", () => {
+    const html = harness();
+    const propsBlock = html.slice(
+      html.indexOf("const surveyProps = {"),
+      html.indexOf("window.formbricksSurveys.renderSurvey"),
+    );
+
+    expect(html).toContain("function onCardRectChange(rect)");
+    expect(html).toContain(
+      "window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'CardRect', data: rect }))",
+    );
+    expect(propsBlock).toContain("onCardRectChange,");
+  });
+
   /**
    * The Embedded Data bag (ENG-1844/2472) rides the props blob that already exists — no new bridge
    * message. The blob is JSON, so this pins that the key survives serialization under the name the
