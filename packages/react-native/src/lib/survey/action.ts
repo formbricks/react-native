@@ -20,6 +20,16 @@ export const triggerSurvey = (survey: TSurvey): void => {
   const surveyStore = SurveyStore.getInstance();
   const logger = Logger.getInstance();
 
+  // A no-overlay survey leaves the host usable, so it can track again mid-survey. Without this
+  // a different survey would replace the open one in place.
+  const showing = surveyStore.getSurvey();
+  if (showing) {
+    logger.debug(
+      `Survey display of "${survey.id}" skipped: survey "${showing.id}" is already showing.`,
+    );
+    return;
+  }
+
   // Check if the survey should be displayed based on displayPercentage
   if (survey.displayPercentage) {
     const shouldDisplaySurvey = shouldDisplayBasedOnPercentage(

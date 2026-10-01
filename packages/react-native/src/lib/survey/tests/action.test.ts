@@ -59,6 +59,7 @@ describe("survey/action.ts", () => {
 
   const mockSurveyStore = {
     setSurvey: vi.fn(),
+    getSurvey: vi.fn(),
   };
 
   const mockLogger = {
@@ -109,6 +110,19 @@ describe("survey/action.ts", () => {
 
       // Ensure survey is set
       expect(mockSurveyStore.setSurvey).toHaveBeenCalledWith(mockSurvey);
+    });
+
+    // The host stays usable under a no-overlay survey, so it can track again mid-survey.
+    test("does not replace a survey that is already showing", () => {
+      vi.mocked(shouldDisplayBasedOnPercentage).mockReturnValueOnce(true);
+      mockSurveyStore.getSurvey.mockReturnValueOnce({ id: "survey_open" });
+
+      triggerSurvey(mockSurvey as unknown as TSurvey);
+
+      expect(mockSurveyStore.setSurvey).not.toHaveBeenCalled();
+      expect(mockLogger.debug).toHaveBeenCalledWith(
+        'Survey display of "survey_001" skipped: survey "survey_open" is already showing.',
+      );
     });
   });
 
