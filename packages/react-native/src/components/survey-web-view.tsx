@@ -1,7 +1,6 @@
 import { type JSX, useEffect, useRef, useState } from "react";
 import {
   BackHandler,
-  Dimensions,
   Keyboard,
   KeyboardAvoidingView,
   Linking,
@@ -39,6 +38,8 @@ interface SurveyWebViewProps {
 
 export function SurveyWebView(props: SurveyWebViewProps): JSX.Element | null {
   const webViewRef = useRef<WebView>(null);
+  /** The no-overlay host area, measured for the Android keyboard padding; never padded itself. */
+  const hostRef = useRef<View>(null);
   const [isSurveyRunning, setIsSurveyRunning] = useState(false);
   const [showSurvey, setShowSurvey] = useState(false);
   const [appConfig, setAppConfig] = useState<RNConfig | null>(null);
@@ -66,12 +67,12 @@ export function SurveyWebView(props: SurveyWebViewProps): JSX.Element | null {
     if (Platform.OS !== "android") return;
     const subscriptions = [
       Keyboard.addListener("keyboardDidShow", (event) => {
-        setAndroidKeyboardHeight(
-          androidKeyboardPadding(
-            Dimensions.get("window").height,
-            event.endCoordinates.screenY,
-          ),
-        );
+        const keyboardTop = event.endCoordinates.screenY;
+        hostRef.current?.measureInWindow((_x, y, _width, height) => {
+          setAndroidKeyboardHeight(
+            androidKeyboardPadding(y + height, keyboardTop),
+          );
+        });
       }),
       Keyboard.addListener("keyboardDidHide", () => {
         setAndroidKeyboardHeight(0);
@@ -367,8 +368,11 @@ export function SurveyWebView(props: SurveyWebViewProps): JSX.Element | null {
         visible={showSurvey}
         transparent
         onRequestClose={() => {
-          setShowSurvey(false);
           setIsSurveyRunning(false);
+          // The same close as the survey's own X: it also clears the store, which the
+          // "already showing" guard in `triggerSurvey` reads. Leaving the survey there
+          // would block every later one until the app restarts.
+          onCloseSurvey();
         }}
       >
         <View style={styles.modalContainer}>
@@ -399,29 +403,40 @@ export function SurveyWebView(props: SurveyWebViewProps): JSX.Element | null {
   // renderer re-lays out the card above the keyboard — and reports the new rect, which moves the
   // window with it. KeyboardAvoidingView supplies it on iOS; Android uses its own keyboard height.
   // Android gets no `behavior`: "padding" always writes its own paddingBottom over ours.
+  //
+  // The outer view is what the Android padding is measured against, so it must never carry the
+  // padding itself; `collapsable={false}` stops Android flattening it away, which would leave
+  // `measureInWindow` nothing to measure.
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      style={[
-        StyleSheet.absoluteFill,
-        { paddingBottom: androidKeyboardHeight },
-      ]}
+    <View
+      ref={hostRef}
+      collapsable={false}
+      style={StyleSheet.absoluteFill}
       pointerEvents="box-none"
     >
-      <CloseOnBack onBack={onCloseSurvey} />
-      <View
-        style={styles.keyboardAvoidingView}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        style={[
+          StyleSheet.absoluteFill,
+          { paddingBottom: androidKeyboardHeight },
+        ]}
         pointerEvents="box-none"
-        onLayout={(event) => {
-          const { width, height } = event.nativeEvent.layout;
-          setHostSize({ width, height });
-        }}
       >
-        <View style={frames.window}>
-          <View style={frames.webViewFrame}>{webView}</View>
+        <CloseOnBack onBack={onCloseSurvey} />
+        <View
+          style={styles.keyboardAvoidingView}
+          pointerEvents="box-none"
+          onLayout={(event) => {
+            const { width, height } = event.nativeEvent.layout;
+            setHostSize({ width, height });
+          }}
+        >
+          <View style={frames.window}>
+            <View style={frames.webViewFrame}>{webView}</View>
+          </View>
         </View>
-      </View>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 

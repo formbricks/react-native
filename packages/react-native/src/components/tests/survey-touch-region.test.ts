@@ -79,12 +79,22 @@ describe("parseCardRectMessage", () => {
 });
 
 describe("androidKeyboardPadding", () => {
-  test("leaves room from the keyboard's top edge to the bottom of the window", () => {
+  test("an edge-to-edge host makes room for the whole keyboard", () => {
+    // The host still reaches the bottom of the screen, under the keyboard.
     expect(androidKeyboardPadding(914, 578)).toBe(336);
   });
 
+  test("a host whose window already shrank for the keyboard needs nothing more", () => {
+    // adjustResize without edge-to-edge: the host ends at the keyboard's top. Padding on top of
+    // that would push the card a whole keyboard height too far.
+    expect(androidKeyboardPadding(578, 578)).toBe(0);
+  });
+
+  test("only makes up the part of the host the keyboard covers", () => {
+    expect(androidKeyboardPadding(700, 578)).toBe(122);
+  });
+
   test("is never negative", () => {
-    expect(androidKeyboardPadding(914, 914)).toBe(0);
     expect(androidKeyboardPadding(800, 914)).toBe(0);
   });
 });

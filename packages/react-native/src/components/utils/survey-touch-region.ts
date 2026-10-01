@@ -92,14 +92,17 @@ export const getPassthroughFrames = (
 };
 
 /**
- * Android only: how much room to leave for the keyboard, from its top edge.
+ * Android only: how far the keyboard reaches up into the survey's host area, both edges in
+ * window coordinates.
  *
- * Expo apps draw edge-to-edge, so the window does not shrink for the keyboard. The keyboard's
- * reported `height` also leaves out the gesture bar under it, so it is measured from `screenY`.
- * KeyboardAvoidingView is no help here: it recomputes from the hide event too, whose `screenY`
- * sits above the navigation bar, and leaves a nav-bar-sized gap under the card.
+ * Measured against the host's own bottom edge, not the window's: an edge-to-edge app (Expo's
+ * default) does not shrink for the keyboard, so the host reaches the bottom and needs the whole
+ * keyboard; an app whose window still resizes (`adjustResize` without edge-to-edge) has already
+ * lost that height and needs nothing more. The keyboard's reported `height` leaves out the gesture
+ * bar under it, so its top comes from `screenY`. KeyboardAvoidingView is no help: it recomputes
+ * from the hide event too, whose `screenY` sits above the navigation bar, and leaves a gap.
  */
 export const androidKeyboardPadding = (
-  windowHeight: number,
+  hostBottom: number,
   keyboardTop: number,
-): number => Math.max(0, windowHeight - keyboardTop);
+): number => Math.max(0, hostBottom - keyboardTop);
