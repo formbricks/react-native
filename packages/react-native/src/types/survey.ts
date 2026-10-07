@@ -5,7 +5,7 @@ import type {
 } from "@/types/response";
 import type { TFileUploadParams, TUploadFileConfig } from "@/types/storage";
 import type { TOverlay } from "./common";
-import type { TWorkspaceStyling } from "./workspace";
+import type { TCustomCss, TWorkspaceStyling } from "./workspace";
 
 export interface TJsFileUploadParams {
   file: {
@@ -85,10 +85,16 @@ export interface SurveyContainerProps
   singleUseId?: string;
   singleUseResponseId?: string;
   isWebEnvironment?: boolean;
+  appearance?: "light" | "dark";
+  customCss?: {
+    workspace?: TCustomCss;
+    survey?: TCustomCss;
+  };
 }
 
 export interface TSurvey {
   id: string;
+  customCss?: TCustomCss;
   welcomeCard: {
     enabled: boolean;
     headline?: Record<string, string>;

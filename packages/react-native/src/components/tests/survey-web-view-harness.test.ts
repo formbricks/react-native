@@ -89,4 +89,21 @@ describe("WebView harness", () => {
     // Each "<" is emitted as the literal six-character sequence \u003c.
     expect(html).toContain("\\u003c/script>");
   });
+
+  test("hands appearance and customCss to renderSurvey as plain options", () => {
+    const html = renderHtml({
+      appUrl: "https://app.formbricks.com",
+      workspaceId: "ws-1",
+      appearance: "dark",
+      customCss: { workspace: { dark: ".a{color:red}" } },
+    });
+    expect(html).toContain('"appearance":"dark"');
+    expect(html).toContain(
+      '"customCss":{"workspace":{"dark":".a{color:red}"}}',
+    );
+  });
+
+  test("sends no customCss key when there is none", () => {
+    expect(harness()).not.toContain("customCss");
+  });
 });

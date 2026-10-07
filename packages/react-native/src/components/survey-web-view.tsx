@@ -17,9 +17,20 @@ import {
   parseCardRectMessage,
   type TCardState,
 } from "@/components/utils/survey-touch-region";
+import {
+  getAppearance,
+  resolveAppearance,
+  type TResolvedAppearance,
+  watchResolvedAppearance,
+} from "@/lib/common/appearance";
 import { RNConfig } from "@/lib/common/config";
 import { Logger } from "@/lib/common/logger";
-import { filterSurveys, getLanguageCode, getStyling } from "@/lib/common/utils";
+import {
+  filterSurveys,
+  getCustomCss,
+  getLanguageCode,
+  getStyling,
+} from "@/lib/common/utils";
 import { EmbeddedDataStore } from "@/lib/survey/embedded-data";
 import { SurveyStore } from "@/lib/survey/store";
 import { refreshSegmentsAfterInteraction } from "@/lib/user/interaction-refresh";
@@ -56,6 +67,13 @@ export function SurveyWebView(props: SurveyWebViewProps): JSX.Element | null {
    */
   const [embeddedDataSnapshot, setEmbeddedDataSnapshot] =
     useState<TIngestedFieldsRecord>({});
+  /**
+   * The appearance the survey opens with, frozen at display like the Embedded Data bag: it feeds
+   * `source`, and a change to `source` reloads the WebView and loses the respondent's answers. Later
+   * changes reach the open survey through `injectJavaScript` below instead.
+   */
+  const [initialAppearance, setInitialAppearance] =
+    useState<TResolvedAppearance>("light");
   /** The card's state as the renderer reports it; see `TCardState` for why it has three values. */
   const [cardState, setCardState] = useState<TCardState>(undefined);
   /** The area a no-overlay survey renders over, so the WebView keeps exactly that size. */
@@ -82,6 +100,21 @@ export function SurveyWebView(props: SurveyWebViewProps): JSX.Element | null {
       for (const subscription of subscriptions) subscription.remove();
     };
   }, []);
+
+  // Switches an open survey in place. The listeners live only while a survey is shown, so a closed
+  // survey holds none. The first callback repeats the value the survey opened with; skipped.
+  useEffect(() => {
+    if (!showSurvey) return;
+    let applied = initialAppearance;
+    return watchResolvedAppearance((resolved) => {
+      if (resolved === applied) return;
+      applied = resolved;
+      // Optional chaining: an older server's renderer has no setAppearance and stays light.
+      webViewRef.current?.injectJavaScript(
+        `window.formbricksSurveys?.setAppearance?.(${JSON.stringify(resolved)}); true;`,
+      );
+    });
+  }, [showSurvey, initialAppearance]);
 
   useEffect(() => {
     const fetchConfig = async (): Promise<void> => {
@@ -135,6 +168,7 @@ export function SurveyWebView(props: SurveyWebViewProps): JSX.Element | null {
      */
     const display = (): void => {
       setEmbeddedDataSnapshot(EmbeddedDataStore.getInstance().getSnapshot());
+      setInitialAppearance(resolveAppearance(getAppearance()));
       setShowSurvey(true);
     };
 
@@ -202,6 +236,8 @@ export function SurveyWebView(props: SurveyWebViewProps): JSX.Element | null {
           clickOutside,
           overlay,
           isWebEnvironment: false,
+          appearance: initialAppearance,
+          customCss: getCustomCss(settings, props.survey),
           // Passed straight through, unfiltered: the Embedded Data ingest contract lives in
           // the renderer (ENG-1845/2472), so all four mobile SDKs inherit the same allow-list,
           // coercion and size rules without each shipping a copy. The renderer drops unknown

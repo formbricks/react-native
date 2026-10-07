@@ -1,9 +1,10 @@
 import { z } from "zod";
+import type { TAppearance } from "@/lib/common/appearance";
 import type { TResponseUpdate } from "@/types/response";
 import type { TFileUploadParams } from "@/types/storage";
 import type { TActionClass } from "./action-class";
 import type { TSurvey } from "./survey";
-import type { TWorkspace, TWorkspaceStyling } from "./workspace";
+import type { TCustomCss, TWorkspace, TWorkspaceStyling } from "./workspace";
 
 export type TWorkspaceStateSettings = Pick<
   TWorkspace,
@@ -14,6 +15,7 @@ export type TWorkspaceStateSettings = Pick<
   | "inAppSurveyBranding"
 > & {
   styling: TWorkspaceStyling;
+  customCss?: TCustomCss;
 };
 
 export type TWorkspaceStateActionClass = Pick<
@@ -69,6 +71,8 @@ export interface TConfigInput {
   environmentId?: string;
   workspaceId?: string;
   appUrl: string;
+  /** How surveys render: "light" (default), "dark", or "system" to follow the app's theme. */
+  appearance?: TAppearance;
 }
 
 /**
