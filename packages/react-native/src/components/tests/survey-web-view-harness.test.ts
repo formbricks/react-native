@@ -44,6 +44,20 @@ describe("WebView harness", () => {
     expect(propsBlock).toContain("onClose,");
   });
 
+  /** The host holds appearance changes until this message; without it they never reach the survey. */
+  test("posts onSurveyRendered right after renderSurvey", () => {
+    const html = harness();
+    const renderAt = html.indexOf(
+      "window.formbricksSurveys.renderSurvey(surveyProps);",
+    );
+    const postAt = html.indexOf(
+      "window.ReactNativeWebView.postMessage(JSON.stringify({ onSurveyRendered: true }))",
+    );
+
+    expect(renderAt).toBeGreaterThan(-1);
+    expect(postAt).toBeGreaterThan(renderAt);
+  });
+
   /** The card rect is how a no-overlay survey lets touches through; unwired, it silently blocks. */
   test("wires onCardRectChange into renderSurvey's props and posts it back", () => {
     const html = harness();

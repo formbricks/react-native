@@ -10,6 +10,7 @@ import {
   View,
 } from "react-native";
 import { WebView, type WebViewMessageEvent } from "react-native-webview";
+import { createAppearanceSync } from "@/components/utils/appearance-sync";
 import { getSurveyScriptUrl } from "@/components/utils/survey-script-url";
 import {
   androidKeyboardPadding,
@@ -42,6 +43,18 @@ const logger = Logger.getInstance();
 logger.configure({ logLevel: __DEV__ ? "debug" : "error" });
 
 const surveyStore = SurveyStore.getInstance();
+
+/** Switches the open survey's appearance; `undefined` means there is nothing to send. */
+const injectAppearance = (
+  webView: WebView | null,
+  resolved: TResolvedAppearance | undefined,
+): void => {
+  if (resolved === undefined) return;
+  // Optional chaining: an older server's renderer has no setAppearance and stays light.
+  webView?.injectJavaScript(
+    `window.formbricksSurveys?.setAppearance?.(${JSON.stringify(resolved)}); true;`,
+  );
+};
 
 interface SurveyWebViewProps {
   readonly survey: TSurvey;
@@ -103,16 +116,16 @@ export function SurveyWebView(props: SurveyWebViewProps): JSX.Element | null {
 
   // Switches an open survey in place. The listeners live only while a survey is shown, so a closed
   // survey holds none. The first callback repeats the value the survey opened with; skipped.
+  // Changes made before the renderer exists wait for its `onSurveyRendered` message (see
+  // `createAppearanceSync`), or they would be dropped and then deduplicated forever.
+  const appearanceSyncRef = useRef(createAppearanceSync());
+
   useEffect(() => {
     if (!showSurvey) return;
-    let applied = initialAppearance;
+    const appearanceSync = appearanceSyncRef.current;
+    appearanceSync.reset(initialAppearance); // the value baked into the HTML
     return watchResolvedAppearance((resolved) => {
-      if (resolved === applied) return;
-      applied = resolved;
-      // Optional chaining: an older server's renderer has no setAppearance and stays light.
-      webViewRef.current?.injectJavaScript(
-        `window.formbricksSurveys?.setAppearance?.(${JSON.stringify(resolved)}); true;`,
-      );
+      injectAppearance(webViewRef.current, appearanceSync.onChange(resolved));
     });
   }, [showSurvey, initialAppearance]);
 
@@ -267,6 +280,20 @@ export function SurveyWebView(props: SurveyWebViewProps): JSX.Element | null {
             type: string;
             data: unknown;
           };
+
+          // Handled before the strict schema below, which would reject this message.
+          if (
+            (unvalidatedMessage as { onSurveyRendered?: unknown })
+              .onSurveyRendered === true
+          ) {
+            injectAppearance(
+              webViewRef.current,
+              appearanceSyncRef.current.onRendered(
+                resolveAppearance(getAppearance()),
+              ),
+            );
+            return;
+          }
 
           if (unvalidatedMessage.type === "CardRect") {
             const card = parseCardRectMessage(unvalidatedMessage.data);
@@ -631,6 +658,7 @@ export const renderHtml = (
         };
 
         window.formbricksSurveys.renderSurvey(surveyProps);
+        window.ReactNativeWebView.postMessage(JSON.stringify({ onSurveyRendered: true }));
       }
 
       const script = document.createElement("script");
