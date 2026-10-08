@@ -262,7 +262,8 @@ export function SurveyWebView(props: SurveyWebViewProps): JSX.Element | null {
       contentMode="mobile"
       javaScriptEnabled
       domStorageEnabled
-      startInLoadingState
+      // No `startInLoadingState`: its default loader is an opaque white full-screen view, which
+      // flashes over dark apps. The transparent WebView shows nothing until the card paints.
       scrollEnabled={false}
       setSupportMultipleWindows={false}
       onShouldStartLoadWithRequest={(event) => {
