@@ -5,6 +5,7 @@ import {
   delayedResult,
   diffInDays,
   filterSurveys,
+  getCustomCss,
   getDefaultLanguageCode,
   getLanguageCode,
   getStyling,
@@ -17,6 +18,7 @@ import type {
   TWorkspaceStateSettings,
 } from "@/types/config";
 import type { TSurvey } from "@/types/survey";
+import type { TCustomCss } from "@/types/workspace";
 
 const mockSurveyId1 = "e3kxlpnzmdp84op9qzxl9olj";
 const mockSurveyId2 = "qo9rwjmms42hoy3k85fp8vgu";
@@ -495,5 +497,38 @@ describe("utils.ts", () => {
       const result2 = await delayedResult(20, 20);
       expect(result2).toBe(20);
     });
+  });
+});
+
+describe("getCustomCss", () => {
+  const settings = (customCss?: TCustomCss): TWorkspaceStateSettings =>
+    ({ customCss }) as TWorkspaceStateSettings;
+  const survey = (customCss?: TCustomCss): TSurvey =>
+    ({ customCss }) as TSurvey;
+
+  test("sends no prop when neither scope has CSS", () => {
+    expect(getCustomCss(settings(), survey())).toBeUndefined();
+    expect(getCustomCss(settings({}), survey({ light: "" }))).toBeUndefined();
+  });
+
+  test("passes workspace and survey CSS through untouched", () => {
+    expect(
+      getCustomCss(
+        settings({ light: ".a{color:red}", dark: ".a{color:blue}" }),
+        survey({ dark: ".b{margin:0}" }),
+      ),
+    ).toEqual({
+      workspace: { light: ".a{color:red}", dark: ".a{color:blue}" },
+      survey: { dark: ".b{margin:0}" },
+    });
+  });
+
+  test("omits an empty scope and empty modes instead of sending null", () => {
+    const result = getCustomCss(
+      settings({ light: ".a{}", dark: undefined }),
+      survey(),
+    );
+    expect(result).toEqual({ workspace: { light: ".a{}" } });
+    expect(result).not.toHaveProperty("survey");
   });
 });

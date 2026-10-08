@@ -1,3 +1,4 @@
+import { setAppearance } from "@/lib/common/appearance";
 import { RN_ASYNC_STORAGE_KEY, RNConfig } from "@/lib/common/config";
 import {
   addCleanupEventListeners,
@@ -265,6 +266,12 @@ export const setup = async (
 ): Promise<
   Result<void, MissingFieldError | NetworkError | MissingPersonError>
 > => {
+  // Appearance is local state, not part of the persisted config, and must be in place before the
+  // first survey renders, so it is applied here ahead of everything else, even a repeat setup.
+  if (configInput.appearance !== undefined) {
+    setAppearance(configInput.appearance);
+  }
+
   const appConfig = await RNConfig.getInstance();
 
   const logger = Logger.getInstance();
