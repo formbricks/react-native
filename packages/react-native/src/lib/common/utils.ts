@@ -4,8 +4,8 @@ import type {
   TWorkspaceStateSettings,
 } from "@/types/config";
 import type { Result } from "@/types/error";
-import type { TSurvey } from "@/types/survey";
-import type { TWorkspaceStyling } from "@/types/workspace";
+import type { SurveyContainerProps, TSurvey } from "@/types/survey";
+import type { TCustomCss, TWorkspaceStyling } from "@/types/workspace";
 
 // Helper function to calculate difference in days between two dates
 export const diffInDays = (date1: Date, date2: Date): number => {
@@ -159,6 +159,33 @@ export const getStyling = (
 
   // allow style overwrite is disabled from the workspace
   return settings.styling;
+};
+
+/**
+ * Builds the renderer's `customCss` prop from the workspace and survey CSS, passing the compiled
+ * strings through untouched. Empty fields are omitted rather than sent as `null`: the renderer
+ * rejects the whole prop on a null inside a scope. Returns `undefined` when there is no CSS at all,
+ * so the prop is never sent.
+ */
+export const getCustomCss = (
+  settings: TWorkspaceStateSettings,
+  survey: TSurvey,
+): SurveyContainerProps["customCss"] => {
+  const pick = (css: TCustomCss | undefined): TCustomCss | undefined => {
+    const picked: TCustomCss = {};
+    if (css?.light) picked.light = css.light;
+    if (css?.dark) picked.dark = css.dark;
+    return picked.light || picked.dark ? picked : undefined;
+  };
+
+  const workspace = pick(settings.customCss);
+  const surveyCss = pick(survey.customCss);
+  if (!workspace && !surveyCss) return undefined;
+
+  return {
+    ...(workspace && { workspace }),
+    ...(surveyCss && { survey: surveyCss }),
+  };
 };
 
 export const getDefaultLanguageCode = (survey: TSurvey): string | undefined => {

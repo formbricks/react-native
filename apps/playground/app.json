@@ -21,7 +21,7 @@
       "image": "./assets/splash.png",
       "resizeMode": "contain"
     },
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "version": "1.0.0",
     "web": {
       "favicon": "./assets/favicon.png"

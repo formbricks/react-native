@@ -1,5 +1,6 @@
 import Formbricks, {
   logout,
+  setAppearance,
   setAttribute,
   setAttributes,
   setLanguage,
@@ -8,11 +9,20 @@ import Formbricks, {
 } from "@formbricks/react-native";
 import { StatusBar } from "expo-status-bar";
 import type { JSX } from "react";
-import { Button, LogBox, StyleSheet, Text, View } from "react-native";
+import {
+  Appearance,
+  Button,
+  LogBox,
+  StyleSheet,
+  Text,
+  useColorScheme,
+  View,
+} from "react-native";
 
 LogBox.ignoreAllLogs();
 
 export default function App(): JSX.Element {
+  const appTheme = useColorScheme();
   if (!process.env.EXPO_PUBLIC_FORMBRICKS_WORKSPACE_ID) {
     throw new Error("EXPO_PUBLIC_FORMBRICKS_WORKSPACE_ID is required");
   }
@@ -22,8 +32,15 @@ export default function App(): JSX.Element {
   }
 
   return (
-    <View style={styles.container}>
-      <Text>Formbricks React Native SDK Demo</Text>
+    <View
+      style={[
+        styles.container,
+        { backgroundColor: appTheme === "dark" ? "#000" : "#fff" },
+      ]}
+    >
+      <Text style={{ color: appTheme === "dark" ? "#fff" : "#000" }}>
+        Formbricks React Native SDK Demo
+      </Text>
 
       <View
         style={{
@@ -79,6 +96,23 @@ export default function App(): JSX.Element {
           }}
         />
 
+        <View style={styles.row}>
+          <Button title="Light" onPress={() => setAppearance("light")} />
+          <Button title="Dark" onPress={() => setAppearance("dark")} />
+          <Button title="System" onPress={() => setAppearance("system")} />
+        </View>
+
+        <View style={styles.row}>
+          <Button
+            title="App light"
+            onPress={() => Appearance.setColorScheme("light")}
+          />
+          <Button
+            title="App dark"
+            onPress={() => Appearance.setColorScheme("dark")}
+          />
+        </View>
+
         <Button
           title="Logout"
           onPress={() => {
@@ -111,6 +145,11 @@ export default function App(): JSX.Element {
 }
 
 const styles = StyleSheet.create({
+  row: {
+    flexDirection: "row",
+    gap: 10,
+    justifyContent: "center",
+  },
   container: {
     flex: 1,
     backgroundColor: "#fff",

@@ -1,6 +1,12 @@
 import type { TOverlay } from "./common";
 import type { TBaseStyling } from "./styling";
 
+/** Compiled custom CSS for one scope; either mode may be absent. Passed to the renderer untouched. */
+export interface TCustomCss {
+  light?: string;
+  dark?: string;
+}
+
 export interface TWorkspace {
   id: string;
   createdAt: Date;

@@ -1,3 +1,7 @@
+import {
+  setAppearance as setAppearanceState,
+  type TAppearance,
+} from "@/lib/common/appearance";
 import { CommandQueue } from "@/lib/common/command-queue";
 import { Logger } from "@/lib/common/logger";
 import * as Actions from "@/lib/survey/action";
@@ -42,6 +46,19 @@ export const setLanguage = async (language: string): Promise<void> => {
   await queue.wait();
 };
 
+/**
+ * Set how surveys render: "light" (default), "dark", or "system" to follow the app's own theme
+ * (`Appearance.getColorScheme()`), not the phone's. Apps that keep their theme only in JS must pass
+ * "light" or "dark" themselves.
+ *
+ * Synchronous and never queued, so it works before `setup()`; an open survey switches in place and
+ * keeps its answers. Kept across `logout()`, forgotten on app restart, and never sent to the server.
+ * An unknown value logs an error and falls back to light.
+ */
+export const setAppearance = (appearance: TAppearance): void => {
+  setAppearanceState(appearance);
+};
+
 export const logout = async (): Promise<void> => {
   queue.add(User.logout, true);
   await queue.wait();
@@ -76,3 +93,4 @@ export const clearEmbeddedData = (...args: [] | [key: string]): void => {
 };
 
 export { Formbricks, Formbricks as default } from "@/components/formbricks";
+export type { TAppearance } from "@/lib/common/appearance";
