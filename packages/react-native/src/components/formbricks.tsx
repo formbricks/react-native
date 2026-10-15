@@ -57,8 +57,19 @@ export function Formbricks({
   return survey ? (
     // Fills the parent: a no-overlay survey renders in the host's view tree (not a Modal) and
     // positions itself against this wrapper, which would otherwise be 0x0.
-    <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
+    <View pointerEvents="box-none" style={styles.layer}>
       <SurveyWebView survey={survey} />
     </View>
   ) : null;
 }
+
+const styles = StyleSheet.create({
+  // Android draws elevated siblings (Buttons, cards, tab bars) above views without elevation,
+  // whatever their order in the tree, so a no-overlay card would sit under them. The layer is
+  // transparent, so the elevation casts no shadow. `zIndex` keeps it last on iOS too.
+  layer: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 9999,
+    elevation: 9999,
+  },
+});
