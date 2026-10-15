@@ -68,7 +68,11 @@ const styles = StyleSheet.create({
   // whatever their order in the tree, so a no-overlay card would sit under them. The layer is
   // transparent, so the elevation casts no shadow. `zIndex` keeps it last on iOS too.
   layer: {
-    ...StyleSheet.absoluteFillObject,
+    position: "absolute",
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
     zIndex: 9999,
     elevation: 9999,
   },
