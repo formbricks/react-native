@@ -82,10 +82,12 @@ const surveyIsOpen = () => expect(webElement(by.web.xpath(NPS_9))).toExist();
 const identifyAndTrackUntilTheSurveyOpens = () =>
   poll(
     async () => {
-      await tap("set-user-id-button");
-      await expectStatus(`setUserId(${userId}) done`);
-      await tap("set-attribute-button");
-      await expectStatus("setAttribute(plan=pro) done");
+      if (!process.env.E2E_EXPERIMENT_ANON) {
+        await tap("set-user-id-button");
+        await expectStatus(`setUserId(${userId}) done`);
+        await tap("set-attribute-button");
+        await expectStatus("setAttribute(plan=pro) done");
+      }
       await tap("track-action-button");
       await expectStatus("track(qa-action) done");
       await poll(surveyIsOpen, {
