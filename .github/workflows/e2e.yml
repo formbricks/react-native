@@ -302,6 +302,7 @@ jobs:
       - name: Install applesimutils
         run: |
           brew tap wix/brew
+          brew trust --formula wix/brew/applesimutils
           brew install applesimutils
 
       # Before waiting for the server: the build overlaps the server's boot.
