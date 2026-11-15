@@ -4,11 +4,15 @@
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
-    "lint": "node scripts/check-exact-deps.mjs && biome check .",
+    "lint": "node scripts/check-exact-deps.mjs && biome check --formatter-enabled=false --error-on-warnings .",
     "format": "biome format --write .",
+    "format:check": "biome format .",
     "check-types": "turbo run check-types",
     "test": "turbo run test --no-cache",
-    "test:coverage": "turbo run test:coverage --no-cache"
+    "test:coverage": "turbo run test:coverage --no-cache",
+    "test:scripts": "node --test \"scripts/**/*.test.mjs\"",
+    "api:update": "pnpm --filter @formbricks/react-native build",
+    "package-check": "pnpm --filter @formbricks/react-native package-check && ./scripts/consumer-check.sh"
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.9",
