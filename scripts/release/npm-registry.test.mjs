@@ -49,6 +49,37 @@ describe("isVersionPublished", () => {
     ]);
   });
 
+  it("requests an unscoped package by its bare name", async () => {
+    const registry = fakeRegistry([{ "dist-tags": {}, versions: {} }]);
+
+    await isVersionPublished({
+      name: "left-pad",
+      version: "1.0.0",
+      fetch: registry.fetch,
+    });
+
+    assert.deepEqual(registry.requests, [
+      "https://registry.npmjs.org/left-pad",
+    ]);
+  });
+
+  it("rejects a name that is not a valid npm package name, without a request", async () => {
+    for (const name of [
+      "@formbricks/react-native/extra",
+      "../../-/user",
+      "@scope/",
+      "a b",
+    ]) {
+      const registry = fakeRegistry([{ "dist-tags": {}, versions: {} }]);
+
+      await assert.rejects(
+        isVersionPublished({ name, version: "1.0.0", fetch: registry.fetch }),
+        /not a valid npm package name/,
+      );
+      assert.deepEqual(registry.requests, []);
+    }
+  });
+
   it("is false when the registry does not have the version yet", async () => {
     const registry = fakeRegistry([
       { "dist-tags": { latest: "3.3.1" }, versions: { "3.3.1": {} } },
