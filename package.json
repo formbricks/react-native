@@ -10,7 +10,7 @@
     "check-types": "turbo run check-types",
     "test": "turbo run test --no-cache",
     "test:coverage": "turbo run test:coverage --no-cache",
-    "test:scripts": "node --test scripts/*.test.mjs",
+    "test:scripts": "node --test \"scripts/**/*.test.mjs\"",
     "api:update": "pnpm --filter @formbricks/react-native build",
     "package-check": "pnpm --filter @formbricks/react-native package-check && ./scripts/consumer-check.sh"
   },
