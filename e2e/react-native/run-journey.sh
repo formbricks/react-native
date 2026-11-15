@@ -31,6 +31,9 @@ export DETOX_ARTIFACTS_DIR="${root}/e2e/react-native/artifacts"
 
 case "${command}" in
   build)
+    # The playground consumes the SDK's build output (dist/), not its sources.
+    echo "==> Building @formbricks/react-native" >&2
+    pnpm --dir "${root}" --filter @formbricks/react-native build
     echo "==> Generating the ${platform} project (expo prebuild)" >&2
     pnpm exec expo prebuild --platform "${platform}" --no-install --clean
     if [[ "${platform}" == ios ]]; then

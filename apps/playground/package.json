@@ -12,6 +12,7 @@
     "test": "node --test \"plugins/*.test.js\" \"e2e/support/*.test.js\""
   },
   "dependencies": {
+    "@expo/dom-webview": "55.0.6",
     "@formbricks/react-native": "workspace:*",
     "@react-native-async-storage/async-storage": "2.2.0",
     "expo": "55.0.32",

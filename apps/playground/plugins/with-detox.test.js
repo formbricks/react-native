@@ -24,9 +24,10 @@ describe("addDetoxMavenRepo", () => {
         `def detoxMavenPath = new File(["node", "--print", "require.resolve('detox/package.json')"].execute(null, rootDir).text.trim(), "../Detox-android")`,
       ),
     );
+    // Exclusive: other repos (jitpack) answer com.wix lookups with HTML and break the build.
     assert.ok(
       result.includes(
-        "allprojects { repositories { maven { url(detoxMavenPath) } } }",
+        'allprojects { repositories { exclusiveContent { forRepository { maven { url(detoxMavenPath) } }; filter { includeGroup("com.wix") } } } }',
       ),
     );
   });

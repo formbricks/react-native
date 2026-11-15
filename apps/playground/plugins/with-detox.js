@@ -22,7 +22,8 @@ const addDetoxMavenRepo = (projectGradle) =>
     projectGradle,
     [
       `def detoxMavenPath = new File(["node", "--print", "require.resolve('detox/package.json')"].execute(null, rootDir).text.trim(), "../Detox-android")`,
-      "allprojects { repositories { maven { url(detoxMavenPath) } } }",
+      // Exclusive: other repos (jitpack) answer com.wix lookups with HTML and break the build.
+      'allprojects { repositories { exclusiveContent { forRepository { maven { url(detoxMavenPath) } }; filter { includeGroup("com.wix") } } } }',
     ].join("\n"),
   );
 
