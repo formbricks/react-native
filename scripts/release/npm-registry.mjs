@@ -4,8 +4,20 @@ import { pathToFileURL } from "node:url";
 
 const REGISTRY = "https://registry.npmjs.org";
 
+// An npm package name is `name` or `@scope/name`, each part lowercase and URL-safe.
+const PACKAGE_NAME = /^(?:@([a-z0-9][a-z0-9._~-]*)\/)?([a-z0-9][a-z0-9._~-]*)$/;
+
+// The registry path for a package: a scoped name keeps its `@` and encodes the
+// separating slash as %2f. The name is validated first, so nothing else needs escaping.
+function packumentUrl(name) {
+  const match = PACKAGE_NAME.exec(name);
+  if (!match) throw new Error(`"${name}" is not a valid npm package name.`);
+  const [, scope, pkg] = match;
+  return `${REGISTRY}/${scope ? `@${scope}%2f${pkg}` : pkg}`;
+}
+
 async function fetchPackument(name, fetch) {
-  const url = `${REGISTRY}/${name.replace("/", "%2f")}`;
+  const url = packumentUrl(name);
   const response = await fetch(url);
   if (response.status === 404) return { "dist-tags": {}, versions: {} };
   if (!response.ok) {
