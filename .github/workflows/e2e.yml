@@ -22,6 +22,10 @@ on:
       FORMBRICKS_QA_LICENSE_KEY:
         description: QA Enterprise license with the Contacts feature
         required: false
+  # TEMPORARY: proves the workflow before it is on main; removed before merge.
+  push:
+    branches:
+      - dhruwang/eng-7216-react-native-detox-golden-journey-android
   workflow_dispatch:
     inputs:
       server_version:
