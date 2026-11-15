@@ -6,7 +6,7 @@ import { Logger } from "@/lib/common/logger";
 import { setup } from "@/lib/common/setup";
 import { SurveyStore } from "@/lib/survey/store";
 
-type FormbricksProps = { appUrl: string } & (
+export type FormbricksProps = { appUrl: string } & (
   | {
       workspaceId: string;
       environmentId?: never;

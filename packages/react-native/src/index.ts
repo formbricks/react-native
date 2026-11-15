@@ -92,5 +92,10 @@ export const clearEmbeddedData = (...args: [] | [key: string]): void => {
   EmbeddedDataStore.getInstance().clearEmbeddedData(...args);
 };
 
-export { Formbricks, Formbricks as default } from "@/components/formbricks";
+export {
+  Formbricks,
+  Formbricks as default,
+  type FormbricksProps,
+} from "@/components/formbricks";
 export type { TAppearance } from "@/lib/common/appearance";
+export type { TEmbeddedDataInput } from "@/lib/survey/embedded-data";
