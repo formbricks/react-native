@@ -6,7 +6,7 @@ This repository is a `pnpm` workspace with two main packages:
 - `packages/react-native`: the published SDK (`@formbricks/react-native`). Source lives in `src/`, grouped by domain under `src/lib/`, with React components in `src/components/` and shared types in `src/types/`.
 - `apps/playground`: an Expo app for manual testing and integration checks. App code is in `src/`, with static assets in `assets/`.
 
-GitHub Actions under `.github/workflows/` enforce build, lint, type-check, test, and release steps.
+GitHub Actions run every check from `.github/workflows/ci.yml`; its `PR Check Summary` job is the only required check. `release.yml` publishes.
 
 ## Build, Test, and Development Commands
 Run commands from the repository root unless package-scoped work is needed.
@@ -14,10 +14,14 @@ Run commands from the repository root unless package-scoped work is needed.
 - `pnpm install --frozen-lockfile`: install workspace dependencies.
 - `pnpm dev`: run Turbo watchers across packages.
 - `pnpm build`: build the SDK and playground.
-- `pnpm lint`: enforce exact dependency versions, then run Biome checks.
+- `pnpm lint`: enforce exact dependency versions, then run Biome lint (warnings fail).
+- `pnpm format` / `pnpm format:check`: format with Biome, or only check formatting.
 - `pnpm check-types`: run TypeScript checks across the workspace.
 - `pnpm test`: run unit tests with Vitest.
-- `pnpm test:coverage`: generate coverage reports used in release validation.
+- `pnpm test:coverage`: generate coverage reports for SonarQube.
+- `pnpm test:scripts`: test the CI helper scripts in `scripts/`.
+- `pnpm api:update`: rebuild the SDK and regenerate `packages/react-native/api/react-native.api.md`. Commit it whenever the public API changes; CI's `api-check` fails on a stale report.
+- `pnpm package-check`: after a build, run publint, attw, and install the `npm pack` tarball into a scratch consumer.
 - `pnpm --filter playground ios` / `pnpm --filter playground android`: launch the Expo playground on a device target.
 
 ## Coding Style & Naming Conventions
