@@ -8,20 +8,23 @@
     "ios": "expo start --ios",
     "clean": "rimraf .turbo node_modules .expo",
     "build": "expo export --no-bytecode",
-    "check-types": "tsc --noEmit"
+    "check-types": "tsc --noEmit",
+    "test": "node --test \"plugins/*.test.js\" \"e2e/support/*.test.js\""
   },
   "dependencies": {
     "@formbricks/react-native": "workspace:*",
-    "@react-native-async-storage/async-storage": "3.0.2",
-    "expo": "55.0.9",
-    "expo-status-bar": "55.0.4",
-    "react": "19.2.4",
-    "react-native": "0.84.1",
-    "react-native-webview": "13.16.1"
+    "@react-native-async-storage/async-storage": "2.2.0",
+    "expo": "55.0.32",
+    "expo-status-bar": "55.0.6",
+    "react": "19.2.0",
+    "react-native": "0.83.10",
+    "react-native-webview": "13.16.0"
   },
   "devDependencies": {
     "@babel/core": "7.29.6",
     "@types/react": "19.2.14",
+    "detox": "20.51.4",
+    "jest": "30.5.2",
     "typescript": "6.0.2"
   },
   "private": true
