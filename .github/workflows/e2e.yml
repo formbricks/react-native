@@ -1,0 +1,341 @@
+name: E2E
+
+# The SDK golden journey against a published Formbricks image, with Detox driving the Expo
+# playground (apps/playground) on both platforms. ci.yml calls it on every PR (fork PRs skip it: no
+# secrets) with the latest release; run it by hand with `server_version` (for example 6.3.0-rc.1)
+# as the pre-release QA. The server harness lives in e2e/server (shared with the other SDKs).
+#
+# - `android`: one Linux runner holds the server and the emulator, which reaches it at
+#   http://10.0.2.2:3000 (the RN SDK accepts http://).
+# - `server` + `ios`: GitHub's macOS runners cannot run Docker, so the server runs on Linux behind a
+#   Cloudflare quick tunnel (e2e/tunnel) and the two jobs, side by side with no `needs`, swap run
+#   artifacts: the tunnel URL one way, the journey result the other. A job's outputs only publish
+#   when it ends, which is why the hand-off uses artifacts.
+on:
+  workflow_call:
+    inputs:
+      server_version:
+        description: Formbricks image tag (ghcr.io/formbricks/formbricks) to test against
+        type: string
+        default: latest
+    secrets:
+      FORMBRICKS_QA_LICENSE_KEY:
+        description: QA Enterprise license with the Contacts feature
+        required: false
+  workflow_dispatch:
+    inputs:
+      server_version:
+        description: Formbricks image tag (ghcr.io/formbricks/formbricks) to test against, for example 6.3.0-rc.1
+        type: string
+        default: latest
+
+permissions:
+  contents: read
+  actions: read # the iOS jobs poll the run's artifacts for each other's hand-off
+
+env:
+  FORMBRICKS_VERSION: ${{ inputs.server_version || 'latest' }}
+  # Unique per attempt; the Detox retry inside the journey step reuses it, which the survey allows.
+  E2E_USER_ID: qa-user-${{ github.run_id }}-${{ github.run_attempt }}
+  E2E_FEEDBACK: Golden journey feedback ${{ github.run_id }}
+  SERVER_ARTIFACT: e2e-server-attempt-${{ github.run_attempt }}
+  DONE_ARTIFACT: e2e-journey-done-attempt-${{ github.run_attempt }}
+
+jobs:
+  android:
+    name: Golden journey (Detox, Android)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+
+      - name: Check out the code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Check the server version
+        run: |
+          if [[ ! "${FORMBRICKS_VERSION}" =~ ^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$ ]]; then
+            echo "::error::server_version '${FORMBRICKS_VERSION}' is not a valid image tag"
+            exit 1
+          fi
+          echo "Testing against ghcr.io/formbricks/formbricks:${FORMBRICKS_VERSION}"
+
+      - name: Test the harness scripts
+        run: e2e/server/test/lib.test.sh
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # React Native's Gradle plugin asks for a Java 17 toolchain.
+      - name: Set up JDK 17
+        uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
+        with:
+          java-version: "17"
+          distribution: "temurin"
+
+      # Before the server: it is up about a minute after the image pull, so build first.
+      - name: Build the playground and the Detox runner
+        run: e2e/react-native/run-journey.sh android build
+
+      - name: Start the Formbricks server and bootstrap the tenant
+        env:
+          FORMBRICKS_QA_LICENSE_KEY: ${{ secrets.FORMBRICKS_QA_LICENSE_KEY }}
+        run: e2e/server/up.sh
+
+      # Stops with a clear error at the license gate when FORMBRICKS_QA_LICENSE_KEY is missing.
+      - name: Seed the survey through the V1 API
+        env:
+          FORMBRICKS_QA_LICENSE_KEY: ${{ secrets.FORMBRICKS_QA_LICENSE_KEY }}
+        run: e2e/server/seed.sh
+
+      # Hosted runners already expose /dev/kvm; the emulator only needs permission to use it.
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      # run-journey.sh retries a failed journey once inside this step.
+      - name: Run the golden journey
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
+        with:
+          api-level: 33
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          force-avd-creation: true
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -accel on -no-snapshot
+          disable-animations: true
+          script: e2e/react-native/run-journey.sh android test
+
+      - name: Assert the response through the V1 API
+        run: e2e/server/assert-response.sh
+
+      - name: Delete the seeded data through the V1 API
+        run: e2e/server/cleanup.sh
+
+      - name: Stop the server and collect its logs
+        if: always()
+        run: e2e/server/down.sh e2e/server/logs
+
+      - name: Upload the server logs and Detox artifacts
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: e2e-golden-journey-android-attempt-${{ github.run_attempt }}
+          path: |
+            e2e/server/logs
+            e2e/react-native/artifacts
+          if-no-files-found: ignore
+          retention-days: 7
+
+  server:
+    name: Server and tunnel for iOS (Linux)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      CLOUDFLARED_VERSION: 2026.10.7
+      CLOUDFLARED_SHA256: 1f99fb518b83dec2ba8d870a7cc991d82a77e6196295a3d2754ba17ab9f91872
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+
+      - name: Check out the code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Check the server version
+        run: |
+          if [[ ! "${FORMBRICKS_VERSION}" =~ ^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$ ]]; then
+            echo "::error::server_version '${FORMBRICKS_VERSION}' is not a valid image tag"
+            exit 1
+          fi
+          echo "Testing against ghcr.io/formbricks/formbricks:${FORMBRICKS_VERSION}"
+
+      - name: Test the harness scripts
+        run: |
+          e2e/server/test/lib.test.sh
+          e2e/tunnel/test/lib.test.sh
+
+      - name: Install cloudflared
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/cloudflared" \
+            "https://github.com/cloudflare/cloudflared/releases/download/${CLOUDFLARED_VERSION}/cloudflared-linux-amd64"
+          echo "${CLOUDFLARED_SHA256}  $RUNNER_TEMP/cloudflared" | sha256sum -c -
+          chmod +x "$RUNNER_TEMP/cloudflared"
+          echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
+
+      - name: Start the Formbricks server and bootstrap the tenant
+        env:
+          FORMBRICKS_QA_LICENSE_KEY: ${{ secrets.FORMBRICKS_QA_LICENSE_KEY }}
+        run: e2e/server/up.sh
+
+      # Stops with a clear error at the license gate when FORMBRICKS_QA_LICENSE_KEY is missing.
+      - name: Seed the survey through the V1 API
+        env:
+          FORMBRICKS_QA_LICENSE_KEY: ${{ secrets.FORMBRICKS_QA_LICENSE_KEY }}
+        run: e2e/server/seed.sh
+
+      - name: Open a tunnel to the server
+        run: e2e/tunnel/start.sh
+
+      - name: Hand the tunnel URL to the macOS job
+        id: publish
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ${{ env.SERVER_ARTIFACT }}
+          path: e2e/tunnel/.state/server.env
+          if-no-files-found: error
+          retention-days: 1
+
+      # Without this the macOS job would wait for a URL that never comes.
+      - name: Tell the macOS job the server failed
+        if: failure() && steps.publish.outcome != 'success'
+        run: |
+          mkdir -p e2e/tunnel/.state
+          echo "E2E_SERVER_FAILED=1" > e2e/tunnel/.state/server.env
+
+      - name: Hand the failure to the macOS job
+        if: failure() && steps.publish.outcome != 'success'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ${{ env.SERVER_ARTIFACT }}
+          path: e2e/tunnel/.state/server.env
+          retention-days: 1
+
+      - name: Keep the server up until the macOS journey is done
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          e2e/tunnel/await-artifact.sh "${DONE_ARTIFACT}" e2e/tunnel/.state/done 3000
+          if ! grep -qx 'E2E_JOURNEY_RESULT=success' e2e/tunnel/.state/done/journey.env; then
+            echo "::error::the macOS journey did not pass ($(cat e2e/tunnel/.state/done/journey.env)); see the Golden journey (Detox, iOS) job"
+            exit 1
+          fi
+
+      - name: Assert the response through the V1 API
+        run: e2e/server/assert-response.sh
+
+      - name: Delete the seeded data through the V1 API
+        run: e2e/server/cleanup.sh
+
+      - name: Close the tunnel
+        if: always()
+        run: e2e/tunnel/stop.sh e2e/server/logs
+
+      - name: Stop the server and collect its logs
+        if: always()
+        run: e2e/server/down.sh e2e/server/logs
+
+      - name: Upload the server logs
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: e2e-golden-journey-ios-server-attempt-${{ github.run_attempt }}
+          path: e2e/server/logs
+          if-no-files-found: ignore
+          retention-days: 7
+
+  ios:
+    name: Golden journey (Detox, iOS)
+    runs-on: macos-26
+    timeout-minutes: 60
+    env:
+      XCODE_VERSION: "26.3"
+      HOMEBREW_NO_AUTO_UPDATE: "1"
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+
+      - name: Check out the code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Select Xcode
+        # xcode-select, not DEVELOPER_DIR, so the simulator service follows it too.
+        run: sudo xcode-select --switch "/Applications/Xcode_${XCODE_VERSION}.app"
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Detox lists and picks simulators with applesimutils.
+      - name: Install applesimutils
+        run: |
+          brew tap wix/brew
+          brew install applesimutils
+
+      # Before waiting for the server: the build overlaps the server's boot.
+      - name: Build the playground and the Detox framework
+        run: e2e/react-native/run-journey.sh ios build
+
+      - name: Wait for the server's tunnel URL
+        id: server
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          e2e/tunnel/await-artifact.sh "${SERVER_ARTIFACT}" "$RUNNER_TEMP/server" 2400
+          # Assigned first: a failing command substitution inside `echo` would not fail the step.
+          url="$(e2e/tunnel/server-url.sh "$RUNNER_TEMP/server/server.env")"
+          echo "url=${url}" >> "$GITHUB_OUTPUT"
+
+      # run-journey.sh retries a failed journey once inside this step.
+      - name: Run the golden journey
+        id: journey
+        env:
+          E2E_APP_URL: ${{ steps.server.outputs.url }}
+        run: e2e/react-native/run-journey.sh ios test
+
+      # Always, so the server job stops waiting even when this job failed earlier.
+      - name: Tell the server job the journey is done
+        if: always()
+        env:
+          RESULT: ${{ steps.journey.outcome }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/done"
+          printf 'E2E_JOURNEY_RESULT=%s\n' "${RESULT:-skipped}" > "$RUNNER_TEMP/done/journey.env"
+
+      - name: Hand the result to the server job
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ${{ env.DONE_ARTIFACT }}
+          path: ${{ runner.temp }}/done/journey.env
+          retention-days: 1
+
+      - name: Upload the Detox artifacts
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: e2e-golden-journey-ios-attempt-${{ github.run_attempt }}
+          path: e2e/react-native/artifacts
+          if-no-files-found: ignore
+          retention-days: 7
