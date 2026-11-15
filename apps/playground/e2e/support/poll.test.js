@@ -55,4 +55,26 @@ describe("poll", () => {
     );
     assert.equal(calls, 5);
   });
+
+  it("stops at once on an error that waiting cannot fix", async () => {
+    const clock = fakeClock();
+    let calls = 0;
+    const lost = new Error("Detox can't seem to connect to the test app(s)!");
+    await assert.rejects(
+      poll(
+        async () => {
+          calls += 1;
+          throw lost;
+        },
+        {
+          what: "the survey",
+          timeoutMs: 10_000,
+          isFatal: (error) => error.message.includes("can't seem to connect"),
+          ...clock,
+        },
+      ),
+      (error) => error === lost,
+    );
+    assert.equal(calls, 1);
+  });
 });

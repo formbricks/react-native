@@ -47,6 +47,8 @@ case "${command}" in
   test)
     if [[ "${platform}" == android ]]; then
       export E2E_APP_URL="${E2E_APP_URL:-http://10.0.2.2:3000}"
+      # Detox keeps only the app's own log; the full logcat shows crashes and WebView errors.
+      trap 'mkdir -p "${DETOX_ARTIFACTS_DIR}" && adb logcat -d -v threadtime >"${DETOX_ARTIFACTS_DIR}/logcat.txt" 2>&1 || true' EXIT
     fi
     : "${E2E_APP_URL:?set E2E_APP_URL to the server URL the app can reach}"
     : "${E2E_USER_ID:?set E2E_USER_ID to the userId the journey identifies as}"

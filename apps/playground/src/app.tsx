@@ -37,6 +37,9 @@ export default function App(): JSX.Element {
     process.env.EXPO_PUBLIC_FORMBRICKS_WORKSPACE_ID ?? "",
   );
   const [sdkConfig, setSdkConfig] = useState<SdkConfig | null>(null);
+  // Remounts <Formbricks> on every "Set up", so a setup that failed (say, a network error) can be
+  // retried; a completed setup ignores the repeat.
+  const [setupCount, setSetupCount] = useState(0);
   const [userId, setUserIdInput] = useState("");
   const [attributeKey, setAttributeKey] = useState("plan");
   const [attributeValue, setAttributeValue] = useState("pro");
@@ -105,6 +108,7 @@ export default function App(): JSX.Element {
               workspaceId: workspaceId.trim(),
             };
             setSdkConfig(config);
+            setSetupCount((count) => count + 1);
             setStatus(`Set up with ${config.appUrl} ${config.workspaceId}`);
           }}
         />
@@ -222,6 +226,7 @@ export default function App(): JSX.Element {
 
       {sdkConfig ? (
         <Formbricks
+          key={setupCount}
           appUrl={sdkConfig.appUrl}
           workspaceId={sdkConfig.workspaceId}
         />
