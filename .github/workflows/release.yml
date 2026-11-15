@@ -1,55 +1,159 @@
 name: Release React Native SDK
 
-permissions:
-  id-token: write # Required for OIDC
-  contents: read
+# Publishing a GitHub release (stable or pre-release) ships the tag's version to
+# npm. See RELEASING.md. The job only builds, publishes and verifies: CI already
+# ran on main, and the manual E2E run against the target server is the QA gate.
 
 on:
   release:
-    types: [released]
+    types: [published]
+
+permissions: {}
+
+concurrency:
+  group: release-${{ github.event.release.tag_name }}
+  cancel-in-progress: false
+
+env:
+  PACKAGE_NAME: "@formbricks/react-native"
 
 jobs:
-  release:
-    name: "Release React Native Package"
+  build:
+    name: Build
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.release.outputs.version }}
+      dist_tag: ${{ steps.release.outputs.dist_tag }}
 
     steps:
       - name: Harden the runner
-        uses: step-security/harden-runner@ec9f2d5744a09debf3a187a3f4f675c53b671911 # v2.13.0
+        uses: step-security/harden-runner@dc2769abcc0fcfbadfc1df54081c1608579ef6b2 # v2.22.2
         with:
           egress-policy: audit
 
-      - name: Checkout code
+      - name: Checkout the release tag
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-
-      - name: Setup Node.js
-        uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
         with:
-          node-version: 24.x
-          registry-url: "https://registry.npmjs.org"
+          ref: ${{ github.event.release.tag_name }}
+          persist-credentials: false
 
       - name: Install pnpm
         uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda # v4.1.0
 
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24.x
+          package-manager-cache: false # never restore a cache into a release
+
+      - name: Take the version from the tag
+        id: release
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          RELEASE_PRERELEASE: ${{ github.event.release.prerelease }}
+          PACKAGE_JSON: packages/react-native/package.json
+        run: node scripts/release/resolve-release.mjs
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Lint
-        run: pnpm lint
+      - name: Build
+        run: pnpm --filter "$PACKAGE_NAME" build
 
-      - name: Check types
-        run: pnpm check-types
-
-      - name: Build package
+      - name: Pack
+        working-directory: packages/react-native
         run: |
-          cd packages/react-native
-          pnpm build
+          pnpm pack --pack-destination "$RUNNER_TEMP/package"
+          mv "$RUNNER_TEMP"/package/*.tgz "$RUNNER_TEMP/package/package.tgz"
 
-      - name: Run tests
-        run: pnpm test:coverage
+      - name: Upload the package
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: npm-package
+          path: ${{ runner.temp }}/package/package.tgz
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    name: Publish
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write # npm trusted publishing (OIDC) and provenance
+
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@dc2769abcc0fcfbadfc1df54081c1608579ef6b2 # v2.22.2
+        with:
+          egress-policy: audit
+
+      - name: Checkout the release scripts
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ github.event.release.tag_name }}
+          persist-credentials: false
+          sparse-checkout: scripts/release
+
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24.x
+          package-manager-cache: false # never restore a cache into a release
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Download the package
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: npm-package
+          path: ${{ runner.temp }}/package
+
+      - name: Check whether the version is already on npm
+        id: registry
+        env:
+          VERSION: ${{ needs.build.outputs.version }}
+        run: node scripts/release/npm-registry.mjs published
 
       - name: Publish to npm
-        run: |
-          cd packages/react-native
-          npm publish --access public
+        if: steps.registry.outputs.published == 'false'
+        env:
+          DIST_TAG: ${{ needs.build.outputs.dist_tag }}
+        run: npm publish "$RUNNER_TEMP/package/package.tgz" --access public --tag "$DIST_TAG"
+
+  verify:
+    name: Verify
+    needs: [build, publish]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@dc2769abcc0fcfbadfc1df54081c1608579ef6b2 # v2.22.2
+        with:
+          egress-policy: audit
+
+      - name: Checkout the release scripts
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ github.event.release.tag_name }}
+          persist-credentials: false
+          sparse-checkout: scripts/release
+
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24.x
+          package-manager-cache: false # never restore a cache into a release
+
+      - name: Wait for the version on its dist-tag
+        env:
+          VERSION: ${{ needs.build.outputs.version }}
+          DIST_TAG: ${{ needs.build.outputs.dist_tag }}
+          TIMEOUT_SECONDS: "600"
+        run: node scripts/release/npm-registry.mjs verify
