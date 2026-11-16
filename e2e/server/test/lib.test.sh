@@ -161,6 +161,68 @@ else
   pass
 fi
 
+# --- outbox drain retry ---------------------------------------------------------------------------
+
+STUB_DIR="$(mktemp -d)"
+trap 'rm -rf "${STUB_DIR}"' EXIT
+
+# stub_authzed <line>...: the Nth `authzed` call prints the Nth line; calls past the end repeat the last.
+stub_authzed() {
+  printf '%s\n' "$@" >"${STUB_DIR}/responses"
+  : >"${STUB_DIR}/calls"
+}
+authzed() {
+  printf '%s\n' "$*" >>"${STUB_DIR}/calls"
+  local n total
+  n="$(wc -l <"${STUB_DIR}/calls")"
+  total="$(wc -l <"${STUB_DIR}/responses")"
+  ((n > total)) && n="${total}"
+  sed -n "${n}p" "${STUB_DIR}/responses"
+}
+calls() { wc -l <"${STUB_DIR}/calls" | tr -d ' '; }
+
+# drain <deadlineSeconds>: runs the helper in a subshell (die exits), pausing 0s between tries.
+# Prints "ok" or "died: <stderr>".
+drain() {
+  local err
+  if err="$(authzed_drain_outbox "$1" 0 2>&1 >/dev/null)"; then echo "ok"; else echo "died: ${err}"; fi
+}
+
+drained='{"claimed":4,"deadLettered":0,"delivered":4,"failed":0,"remaining":0,"status":"drained"}'
+
+stub_authzed "${drained}"
+assert_eq "outbox drain succeeds when the first drain reports drained" "$(drain 90)" "ok"
+assert_eq "outbox drain runs the drain once when it is drained" "$(calls)" "1"
+assert_eq "outbox drain calls formbricks-authzed outbox drain" "$(head -n 1 "${STUB_DIR}/calls")" "outbox drain"
+
+# The race seen in CI: the server's own delivery job holds the lease on the new rows, so the CLI claims
+# none and reports them as remaining.
+leased='{"claimed":0,"deadLettered":0,"delivered":0,"failed":0,"remaining":4,"status":"partial"}'
+
+stub_authzed "${leased}" "${leased}" "${drained}"
+assert_eq "outbox drain retries a partial result until it reports drained" "$(drain 90)" "ok"
+assert_eq "outbox drain stops retrying once it is drained" "$(calls)" "3"
+
+stub_authzed '{"claimed":4,"deadLettered":0,"delivered":3,"failed":1,"remaining":1,"status":"partial"}' "${drained}"
+assert_eq "outbox drain dies on a failed delivery instead of retrying it" \
+  "$(drain 90 | grep -c "1 failed, 0 dead-lettered")" "1"
+assert_eq "outbox drain does not retry a failed delivery" "$(calls)" "1"
+
+# Dead letters leave the pending count, so the CLI can report drained with dead letters behind it.
+stub_authzed '{"claimed":4,"deadLettered":1,"delivered":3,"failed":1,"remaining":0,"status":"drained"}'
+assert_eq "outbox drain dies on a dead-lettered row even when the status is drained" \
+  "$(drain 90 | grep -c "1 failed, 1 dead-lettered")" "1"
+
+stub_authzed "${leased}"
+assert_eq "outbox drain gives up on a partial result at the deadline" \
+  "$(drain 0 | grep -c "reported 'partial', expected 'drained'")" "1"
+assert_eq "outbox drain with a deadline of 0 tries once" "$(calls)" "1"
+
+stub_authzed 'Error: connect ECONNREFUSED' "${drained}"
+assert_eq "outbox drain dies when the CLI printed no result" \
+  "$(drain 90 | grep -c "reported 'no result', expected 'drained'")" "1"
+assert_eq "outbox drain does not retry a CLI that printed no result" "$(calls)" "1"
+
 # --- license gate hint ----------------------------------------------------------------------------
 
 if is_license_gate_failure 403 '{"code":"forbidden","message":"Contacts are only enabled for Enterprise Edition, please upgrade."}'; then

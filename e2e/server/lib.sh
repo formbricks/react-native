@@ -158,6 +158,35 @@ authzed_expect() {
   log "formbricks-authzed $*: ${status}"
 }
 
+# authzed_drain_outbox [deadlineSeconds=90] [pauseSeconds=2]: runs `outbox drain` until it reports
+# drained. The server's own delivery job claims the outbox every 5s and leases what it claims for up to
+# 60s. The CLI cannot claim a leased row but still counts it as remaining, so a drain right after an
+# insert can report partial with nothing wrong. A partial result is retried until the deadline. Failed
+# or dead-lettered rows, or a missing result, are real errors and die at once.
+authzed_drain_outbox() {
+  local deadline="${1:-90}" pause="${2:-2}" started="${SECONDS}" out status failures
+  while true; do
+    out="$(authzed outbox drain 2>&1)" || true
+    status="$(authzed_status <<<"${out}")" || status=""
+    failures="$(jq -Rr 'fromjson? | objects | select(.status | strings) | "\(.failed // 0) failed, \(.deadLettered // 0) dead-lettered"' <<<"${out}" | tail -n 1)"
+    if [[ -n "${failures}" && "${failures}" != "0 failed, 0 dead-lettered" ]]; then
+      printf '%s\n' "${out}" >&2
+      die "formbricks-authzed outbox drain reported ${failures}"
+    fi
+    if [[ "${status}" == "drained" ]]; then
+      log "formbricks-authzed outbox drain: drained"
+      return 0
+    fi
+    if [[ "${status}" != "partial" ]] || ((SECONDS - started >= deadline)); then
+      break
+    fi
+    log "formbricks-authzed outbox drain: partial, retrying in ${pause}s"
+    sleep "${pause}"
+  done
+  printf '%s\n' "${out}" >&2
+  die "formbricks-authzed outbox drain reported '${status:-no result}', expected 'drained' (after $((SECONDS - started))s)"
+}
+
 # api <method> <path> [jsonBody]: calls the management API with the test key.
 # Sets API_STATUS (000 on a network error) and API_BODY.
 api() {

@@ -31,7 +31,7 @@ log "Inserting the E2E tenant"
 psql_exec -f - <"${E2E_SERVER_DIR}/bootstrap.sql"
 
 log "Projecting the tenant into SpiceDB"
-authzed_expect drained outbox drain
+authzed_drain_outbox
 authzed_expect healthy outbox status
 
 log "Checking the API key"
