@@ -82,12 +82,36 @@ const press = (matcher) =>
     : webElement(matcher).tap();
 
 /**
- * Runs `fn` (a function source taking the element) in the WebView and returns its result as a
- * string. Detox for iOS passes a runScript result back only when it is a string; a boolean comes
- * back undefined. Android returns any value; a string works on both.
+ * Runs `fn` (a function source taking the element and `args`) in the WebView and returns its
+ * result as a string. Detox for iOS passes a runScript result back only when it is a string (a
+ * boolean comes back undefined), and hands an empty string over as `{ result: "" }`.
  */
-const read = (matcher, fn) =>
-  webElement(matcher).runScript(`(el) => String((${fn})(el))`);
+const read = async (matcher, fn, args = []) => {
+  const result = await webElement(matcher).runScript(
+    `(el, ...args) => String((${fn})(el, ...args))`,
+    args,
+  );
+  return typeof result === "string" ? result : (result?.result ?? "");
+};
+
+/**
+ * Types into a survey text field. Android: Espresso-Web's key events. iOS: Detox's web typing left
+ * the field empty, so the value is set the way the browser does it and an input event follows,
+ * which is what the renderer listens to.
+ */
+const typeInto = (matcher, text) =>
+  device.getPlatform() === "ios"
+    ? read(
+        matcher,
+        `(el, text) => {
+          const proto = Object.getPrototypeOf(el);
+          Object.getOwnPropertyDescriptor(proto, "value").set.call(el, text);
+          el.dispatchEvent(new Event("input", { bubbles: true }));
+          return el.value;
+        }`,
+        [text],
+      )
+    : webElement(matcher).replaceText(text);
 
 /** Whether any WebView is on screen: the survey's is the only one. */
 const webViewExists = async () => {
@@ -192,8 +216,7 @@ describe("golden journey", () => {
 
     await until(
       async () => {
-        const input = webElement(by.web.cssSelector(FEEDBACK_INPUT));
-        await input.replaceText(feedback);
+        await typeInto(by.web.cssSelector(FEEDBACK_INPUT), feedback);
         const typed = await read(
           by.web.cssSelector(FEEDBACK_INPUT),
           "(input) => input.value",
