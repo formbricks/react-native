@@ -11,7 +11,7 @@ permissions: {}
 
 # PR runs cancel superseded runs; runs on main and in the merge queue are never cancelled.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
@@ -289,6 +289,7 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
   dependency-review:
+    # It compares a base and a head, which only PRs and merge groups have.
     if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -303,9 +304,8 @@ jobs:
       - name: Review dependency changes
         uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
         with:
-          # pull_request events carry their own refs; merge_group events need them passed in.
-          base-ref: ${{ github.event.merge_group.base_sha || github.event.pull_request.base.sha }}
-          head-ref: ${{ github.event.merge_group.head_sha || github.event.pull_request.head.sha }}
+          base-ref: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+          head-ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha }}
 
   workflow-lint:
     runs-on: ubuntu-latest
