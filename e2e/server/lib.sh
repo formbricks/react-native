@@ -183,7 +183,7 @@ api_ok() {
       return 0
     fi
     if is_license_gate_failure "${API_STATUS}" "${API_BODY}"; then
-      die "$1 $2 hit the Enterprise license gate (HTTP 403: ${API_BODY}). The server needs ENTERPRISE_LICENSE_KEY from the ENTERPRISE_LICENSE_KEY secret, a QA license with the Contacts feature."
+      die "$1 $2 hit the Enterprise license gate (HTTP 403: ${API_BODY}). The server needs the ENTERPRISE_LICENSE_KEY secret: an Enterprise license with the Contacts feature."
     fi
     if [[ "${API_STATUS}" != "401" && "${API_STATUS}" != "403" ]]; then
       break

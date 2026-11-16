@@ -1,6 +1,6 @@
 # Formbricks server under test for the SDK E2E golden journey.
 # Usage: e2e/server/up.sh (reads FORMBRICKS_VERSION and ENTERPRISE_LICENSE_KEY from the env).
-# Every secret below is a fixed test-only value. The only real secret is the QA license.
+# Every secret below is a fixed test-only value. The only real secret is the Enterprise license.
 name: formbricks-sdk-e2e
 
 services:

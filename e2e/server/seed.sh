@@ -31,7 +31,7 @@ updated="$(build_segment_filter_sql "${E2E_WORKSPACE_ID}" "${survey_id}" | psql_
 
 log "Creating the contact attribute key ${E2E_ATTRIBUTE_KEY} (needs the Contacts license)"
 if [[ -z "${ENTERPRISE_LICENSE_KEY:-}" ]]; then
-  die "ENTERPRISE_LICENSE_KEY is not set. Add the QA Enterprise license (with Contacts) as the ENTERPRISE_LICENSE_KEY secret; contacts, attributes and segment targeting need it."
+  die "ENTERPRISE_LICENSE_KEY is not set. Add an Enterprise license (with Contacts) as the ENTERPRISE_LICENSE_KEY secret; contacts, attributes and segment targeting need it."
 fi
 attribute_key_id="$(api_ok POST /api/v1/management/contact-attribute-keys "$(build_attribute_key_payload "${E2E_WORKSPACE_ID}")" | jq -r '.data.id')"
 save ATTRIBUTE_KEY_ID "${attribute_key_id}"

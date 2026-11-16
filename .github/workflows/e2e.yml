@@ -20,7 +20,7 @@ on:
         default: latest
     secrets:
       ENTERPRISE_LICENSE_KEY:
-        description: QA Enterprise license with the Contacts feature
+        description: Enterprise license with the Contacts feature
         required: false
   workflow_dispatch:
     inputs:
