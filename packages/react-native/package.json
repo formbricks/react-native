@@ -44,6 +44,8 @@
     "dev": "vite build --watch --mode dev",
     "clean": "rimraf .turbo node_modules dist build",
     "check-types": "tsc -p tsconfig.json --noEmit",
+    "api:check": "tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json && api-extractor run",
+    "api:update": "tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json && api-extractor run --local",
     "test": "vitest",
     "test:coverage": "vitest run --coverage",
     "package-check": "publint --strict && attw --pack ."

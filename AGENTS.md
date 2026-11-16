@@ -20,7 +20,8 @@ Run commands from the repository root unless package-scoped work is needed.
 - `pnpm test`: run unit tests with Vitest.
 - `pnpm test:coverage`: generate coverage reports for SonarQube.
 - `pnpm test:scripts`: test the CI and release helper scripts under `scripts/`.
-- `pnpm api:update`: rebuild the SDK and regenerate `packages/react-native/api/react-native.api.md`. Commit it whenever the public API changes; CI's `api-check` fails on a stale report.
+- `pnpm api:check`: compare the public API with `packages/react-native/etc/react-native.api.md` (api-extractor in check mode); CI's `api-check` runs it.
+- `pnpm api:update`: regenerate `packages/react-native/etc/react-native.api.md`. Commit it whenever the public API changes.
 - `pnpm package-check`: after a build, run publint, attw, and install the `npm pack` tarball into a scratch consumer.
 - `pnpm --filter playground ios` / `pnpm --filter playground android`: launch the Expo playground on a device target.
 

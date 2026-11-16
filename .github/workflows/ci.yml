@@ -218,18 +218,10 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Regenerate the public API report
-        run: pnpm api:update
-
-      - name: Fail if the committed API report is out of date
-        run: |
-          report=packages/react-native/api
-          if [ -n "$(git status --porcelain -- "$report")" ]; then
-            git --no-pager diff -- "$report"
-            git status --short -- "$report"
-            echo "::error::The public API changed. Run 'pnpm api:update' and commit $report/react-native.api.md."
-            exit 1
-          fi
+      # Fails when the public API differs from packages/react-native/etc/react-native.api.md.
+      # Regenerate it with `pnpm api:update` and commit the result.
+      - name: Compare the public API with the committed snapshot
+        run: pnpm api:check
 
   package-check:
     runs-on: ubuntu-latest

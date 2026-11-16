@@ -16,7 +16,7 @@
   },
   "apiReport": {
     "enabled": true,
-    "reportFolder": "<projectFolder>/api/",
+    "reportFolder": "<projectFolder>/etc/",
     "reportTempFolder": "<projectFolder>/build/api-report-temp/"
   },
   "docModel": { "enabled": false },
