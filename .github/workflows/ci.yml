@@ -338,6 +338,10 @@ jobs:
         with:
           version: 1.7.12
 
+      # actionlint only checks the scripts inside workflows. The runner image ships shellcheck.
+      - name: shellcheck the E2E harness and repo scripts
+        run: git ls-files -z 'e2e/*.sh' 'scripts/*.sh' | xargs -0 shellcheck
+
       - name: zizmor
         uses: zizmorcore/zizmor-action@45d7276c9ca790aabd705e31ca99c6185c3e76dd # v0.8.1
         with:
