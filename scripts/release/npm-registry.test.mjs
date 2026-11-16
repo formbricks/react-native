@@ -1,174 +1,295 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
-import { isVersionPublished, waitForDistTag } from "./npm-registry.mjs";
+import { execFile } from "node:child_process";
+import { createServer } from "node:http";
+import { after, before, describe, it } from "node:test";
+import { fileURLToPath } from "node:url";
 
-const NAME = "@formbricks/react-native";
+const script = fileURLToPath(new URL("./npm-registry.mjs", import.meta.url));
 
-// Stands in for the npm registry: answers the packument request for NAME with
-// whatever document the test sets, and records the URLs it was asked for.
-function fakeRegistry(documents) {
-  const queue = [...documents];
-  const requests = [];
-  const fetch = async (url) => {
-    requests.push(url);
-    const doc = queue.length > 1 ? queue.shift() : queue[0];
-    if (doc === 404) return new Response("Not found", { status: 404 });
-    if (doc === 503) return new Response("Unavailable", { status: 503 });
-    return Response.json(doc);
-  };
-  return { fetch, requests };
+// A fake npm registry. Each test sets `respond` to decide what GET /<package> returns.
+let respond;
+let requests = [];
+let registry;
+const server = createServer((req, res) => {
+  requests.push(req.url);
+  const { status, body } = respond(requests.length);
+  res.writeHead(status, { "content-type": "application/json" });
+  res.end(JSON.stringify(body));
+});
+
+before(async () => {
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  registry = `http://127.0.0.1:${server.address().port}`;
+});
+after(() => server.close());
+
+function run(args) {
+  requests = [];
+  return new Promise((resolve) => {
+    execFile(
+      process.execPath,
+      [script, ...args, "--registry", registry],
+      (error, stdout, stderr) =>
+        resolve({ status: error ? error.code : 0, stdout, stderr }),
+    );
+  });
 }
 
-// A clock that only moves when the code under test sleeps.
-function fakeClock() {
-  let time = 0;
-  return {
-    now: () => time,
-    sleep: async (ms) => {
-      time += ms;
-    },
-  };
-}
+const packument = (versions, distTags) => ({
+  status: 200,
+  body: {
+    name: "@formbricks/react-native",
+    "dist-tags": distTags,
+    versions: Object.fromEntries(versions.map((v) => [v, { version: v }])),
+  },
+});
 
-describe("isVersionPublished", () => {
-  it("is true when the registry already has the version", async () => {
-    const registry = fakeRegistry([
-      { "dist-tags": { latest: "3.3.1" }, versions: { "3.3.1": {} } },
-    ]);
-
-    assert.equal(
-      await isVersionPublished({
-        name: NAME,
-        version: "3.3.1",
-        fetch: registry.fetch,
-      }),
-      true,
-    );
-    assert.deepEqual(registry.requests, [
-      "https://registry.npmjs.org/@formbricks%2freact-native",
-    ]);
+describe("npm-registry exists", () => {
+  it("reports a version that is already published", async () => {
+    respond = () => packument(["5.3.0", "5.4.0"], { latest: "5.4.0" });
+    const result = await run(["exists", "@formbricks/react-native", "5.4.0"]);
+    assert.equal(result.status, 0);
+    assert.equal(result.stdout, "exists=true\n");
   });
 
-  it("requests an unscoped package by its bare name", async () => {
-    const registry = fakeRegistry([{ "dist-tags": {}, versions: {} }]);
-
-    await isVersionPublished({
-      name: "left-pad",
-      version: "1.0.0",
-      fetch: registry.fetch,
-    });
-
-    assert.deepEqual(registry.requests, [
-      "https://registry.npmjs.org/left-pad",
-    ]);
+  it("reports a version that is not published yet", async () => {
+    respond = () => packument(["5.3.0"], { latest: "5.3.0" });
+    const result = await run(["exists", "@formbricks/react-native", "5.4.0"]);
+    assert.equal(result.status, 0);
+    assert.equal(result.stdout, "exists=false\n");
   });
 
-  it("rejects a name that is not a valid npm package name, without a request", async () => {
-    for (const name of [
-      "@formbricks/react-native/extra",
-      "../../-/user",
-      "@scope/",
-      "a b",
-    ]) {
-      const registry = fakeRegistry([{ "dist-tags": {}, versions: {} }]);
-
-      await assert.rejects(
-        isVersionPublished({ name, version: "1.0.0", fetch: registry.fetch }),
-        /not a valid npm package name/,
-      );
-      assert.deepEqual(registry.requests, []);
-    }
+  it("treats a package the registry has never seen as not published", async () => {
+    respond = () => ({ status: 404, body: { error: "Not found" } });
+    const result = await run(["exists", "@formbricks/react-native", "5.4.0"]);
+    assert.equal(result.status, 0);
+    assert.equal(result.stdout, "exists=false\n");
   });
 
-  it("is false when the registry does not have the version yet", async () => {
-    const registry = fakeRegistry([
-      { "dist-tags": { latest: "3.3.1" }, versions: { "3.3.1": {} } },
-    ]);
-
-    assert.equal(
-      await isVersionPublished({
-        name: NAME,
-        version: "3.4.0",
-        fetch: registry.fetch,
-      }),
-      false,
-    );
+  it("requests the scoped package by its escaped name", async () => {
+    respond = () => packument(["5.4.0"], { latest: "5.4.0" });
+    await run(["exists", "@formbricks/react-native", "5.4.0"]);
+    assert.deepEqual(requests, ["/@formbricks%2Freact-native"]);
   });
 
-  it("is false when the package has never been published", async () => {
-    const registry = fakeRegistry([404]);
-
-    assert.equal(
-      await isVersionPublished({
-        name: NAME,
-        version: "3.4.0",
-        fetch: registry.fetch,
-      }),
-      false,
-    );
+  it("escapes every reserved character in the name, not just the first slash", async () => {
+    respond = () => ({ status: 404, body: { error: "Not found" } });
+    await run(["exists", "@scope/a/b?c", "1.0.0"]);
+    assert.deepEqual(requests, ["/@scope%2Fa%2Fb%3Fc"]);
   });
 
-  it("throws when the registry cannot be read", async () => {
-    const registry = fakeRegistry([503]);
-
-    await assert.rejects(
-      isVersionPublished({
-        name: NAME,
-        version: "3.4.0",
-        fetch: registry.fetch,
-      }),
-      /registry returned HTTP 503/,
-    );
+  it("fails instead of guessing when the registry errors", async () => {
+    respond = () => ({ status: 503, body: { error: "Service Unavailable" } });
+    const result = await run(["exists", "@formbricks/react-native", "5.4.0"]);
+    assert.equal(result.status, 1);
+    assert.equal(result.stdout, "");
+    assert.match(result.stderr, /^::error::.*HTTP 503/);
   });
 });
 
-describe("waitForDistTag", () => {
-  it("polls until the dist-tag points at the version", async () => {
-    const registry = fakeRegistry([
-      { "dist-tags": { latest: "3.3.1" }, versions: { "3.3.1": {} } },
-      {
-        "dist-tags": { latest: "3.3.1" },
-        versions: { "3.3.1": {}, "3.4.0": {} },
-      },
-      {
-        "dist-tags": { latest: "3.4.0" },
-        versions: { "3.3.1": {}, "3.4.0": {} },
-      },
-    ]);
+describe("npm-registry latest", () => {
+  it("prints the version the latest dist-tag points at", async () => {
+    respond = () =>
+      packument(["5.3.0", "5.4.0-rc.1"], {
+        latest: "5.3.0",
+        next: "5.4.0-rc.1",
+      });
+    const result = await run(["latest", "@formbricks/react-native"]);
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(result.stdout, "latest=5.3.0\n");
+  });
 
-    await waitForDistTag({
-      name: NAME,
-      version: "3.4.0",
-      distTag: "latest",
-      timeoutMs: 60_000,
-      intervalMs: 10_000,
-      fetch: registry.fetch,
-      ...fakeClock(),
+  it("prints an empty latest for a package the registry has never seen", async () => {
+    respond = () => ({ status: 404, body: { error: "Not found" } });
+    const result = await run(["latest", "@formbricks/react-native"]);
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(result.stdout, "latest=\n");
+  });
+
+  it("prints an empty latest when only prereleases were published", async () => {
+    respond = () => packument(["5.4.0-rc.1"], { next: "5.4.0-rc.1" });
+    const result = await run(["latest", "@formbricks/react-native"]);
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(result.stdout, "latest=\n");
+  });
+
+  it("fails instead of guessing when the registry errors", async () => {
+    respond = () => ({ status: 500, body: { error: "Internal" } });
+    const result = await run(["latest", "@formbricks/react-native"]);
+    assert.equal(result.status, 1);
+    assert.equal(result.stdout, "");
+    assert.match(result.stderr, /^::error::.*HTTP 500/);
+  });
+});
+
+describe("npm-registry verify", () => {
+  const fast = ["--interval-seconds", "0.05", "--timeout-seconds", "2"];
+  const failFast = ["--interval-seconds", "0.05", "--timeout-seconds", "0.2"];
+  const verify = (version, distTag, args = fast) =>
+    run(["verify", "@formbricks/react-native", version, distTag, ...args]);
+
+  // A re-run of an old release must stay green once a newer version took its dist-tag.
+  for (const [name, version, distTag, versions, distTags] of [
+    [
+      "next moved on to a newer prerelease",
+      "5.4.0-rc.1",
+      "next",
+      ["5.4.0-rc.1", "5.4.0-rc.2"],
+      { latest: "5.3.0", next: "5.4.0-rc.2" },
+    ],
+    [
+      "latest moved on to a newer stable version",
+      "5.4.0",
+      "latest",
+      ["5.4.0", "5.5.0"],
+      { latest: "5.5.0" },
+    ],
+    [
+      "the release line moved on to a newer backport",
+      "5.3.1",
+      "release-5.3",
+      ["5.3.1", "5.3.2", "5.4.0"],
+      { latest: "5.4.0", "release-5.3": "5.3.2" },
+    ],
+    [
+      "the version shipped on latest and a newer line has superseded it",
+      "5.3.1",
+      "release-5.3",
+      ["5.3.1", "5.4.0"],
+      { latest: "5.4.0" },
+    ],
+  ]) {
+    it(`passes when ${name}`, async () => {
+      respond = () => packument(versions, distTags);
+      const result = await verify(version, distTag);
+      assert.equal(result.status, 0, result.stderr);
+      assert.equal(requests.length, 1);
     });
+  }
 
-    assert.equal(registry.requests.length, 3);
-  });
+  for (const [name, version, distTag, versions, distTags] of [
+    [
+      "the version is not published, even though the dist-tag is newer",
+      "5.4.0-rc.1",
+      "next",
+      ["5.4.0-rc.2"],
+      { next: "5.4.0-rc.2" },
+    ],
+    [
+      "next points at a stable version",
+      "5.4.0-rc.1",
+      "next",
+      ["5.4.0-rc.1", "5.4.0"],
+      { latest: "5.4.0", next: "5.4.0" },
+    ],
+    [
+      "the release line points at a version from another line",
+      "5.3.1",
+      "release-5.3",
+      ["5.3.1", "5.4.0"],
+      { latest: "5.4.0", "release-5.3": "5.4.0" },
+    ],
+    [
+      "the release line is missing and latest is older",
+      "5.3.1",
+      "release-5.3",
+      ["5.3.1", "5.2.0"],
+      { latest: "5.2.0" },
+    ],
+  ]) {
+    it(`fails when ${name}`, async () => {
+      respond = () => packument(versions, distTags);
+      const result = await verify(version, distTag, failFast);
+      assert.equal(result.status, 1);
+      assert.match(result.stderr, /::error::.*did not appear/);
+    });
+  }
 
-  it("fails after the timeout, naming what the dist-tag points at", async () => {
-    const registry = fakeRegistry([
-      {
-        "dist-tags": { latest: "3.3.1", next: "3.4.0-rc.1" },
-        versions: { "3.3.1": {}, "3.4.0-rc.1": {} },
-      },
+  it("passes once the dist-tag points at the version", async () => {
+    respond = () =>
+      packument(["5.4.0-rc.1"], { latest: "5.3.0", next: "5.4.0-rc.1" });
+    const result = await run([
+      "verify",
+      "@formbricks/react-native",
+      "5.4.0-rc.1",
+      "next",
+      ...fast,
     ]);
-
-    await assert.rejects(
-      waitForDistTag({
-        name: NAME,
-        version: "3.4.0-rc.1",
-        distTag: "latest",
-        timeoutMs: 60_000,
-        intervalMs: 10_000,
-        fetch: registry.fetch,
-        ...fakeClock(),
-      }),
-      /@formbricks\/react-native@3\.4\.0-rc\.1 is not on dist-tag "latest" after 60s \(it points at 3\.3\.1\)/,
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(
+      result.stdout,
+      /@formbricks\/react-native@5\.4\.0-rc\.1 is live on the "next" dist-tag/,
     );
-    assert.equal(registry.requests.length, 7);
   });
+
+  it("keeps polling until the registry catches up", async () => {
+    respond = (attempt) =>
+      attempt < 3
+        ? packument(["5.3.0"], { latest: "5.3.0" })
+        : packument(["5.3.0", "5.4.0"], { latest: "5.4.0" });
+    const result = await run([
+      "verify",
+      "@formbricks/react-native",
+      "5.4.0",
+      "latest",
+      ...fast,
+    ]);
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(requests.length, 3);
+  });
+
+  it("fails when the dist-tag never points at the version before the timeout", async () => {
+    // Published, but the dist-tag went elsewhere: verify must not accept that.
+    respond = () => packument(["5.3.0", "5.4.0"], { latest: "5.3.0" });
+    const started = Date.now();
+    const result = await run([
+      "verify",
+      "@formbricks/react-native",
+      "5.4.0",
+      "latest",
+      "--interval-seconds",
+      "0.05",
+      "--timeout-seconds",
+      "0.3",
+    ]);
+    assert.equal(result.status, 1);
+    assert.match(
+      result.stderr,
+      /::error::@formbricks\/react-native@5\.4\.0 did not appear on the "latest" dist-tag within 0\.3s \(it points at 5\.3\.0\)/,
+    );
+    assert.ok(requests.length >= 2, `polled ${requests.length} time(s)`);
+    assert.ok(Date.now() - started < 1500, "gave up close to the timeout");
+  });
+
+  it("rides out a transient registry error while polling", async () => {
+    respond = (attempt) =>
+      attempt === 1
+        ? { status: 502, body: { error: "Bad Gateway" } }
+        : packument(["5.4.0"], { latest: "5.4.0" });
+    const result = await run([
+      "verify",
+      "@formbricks/react-native",
+      "5.4.0",
+      "latest",
+      ...fast,
+    ]);
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stdout, /HTTP 502/);
+  });
+});
+
+describe("npm-registry usage", () => {
+  for (const args of [
+    ["publish", "@formbricks/react-native", "5.4.0"],
+    ["exists", "@formbricks/react-native"],
+    ["latest"],
+    ["verify", "@formbricks/react-native", "5.4.0"],
+  ]) {
+    it(`rejects "${args.join(" ")}" with a usage error`, async () => {
+      const result = await run(args);
+      assert.equal(result.status, 1);
+      assert.match(result.stderr, /::error::Usage: npm-registry\.mjs/);
+      assert.equal(requests.length, 0);
+    });
+  }
 });

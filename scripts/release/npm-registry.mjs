@@ -1,103 +1,179 @@
-import { appendFileSync } from "node:fs";
-import { setTimeout as sleep } from "node:timers/promises";
-import { pathToFileURL } from "node:url";
+// Reads the npm registry for the release workflow.
+//
+//   node scripts/release/npm-registry.mjs exists <package> <version>
+//     Prints `exists=true|false` (a GitHub step output). Fails if the registry errors,
+//     so the publish step never guesses.
+//
+//   node scripts/release/npm-registry.mjs latest <package>
+//     Prints `latest=<version>` (empty when nothing is on `latest` yet), the input to
+//     resolve-release.mjs --latest. Fails if the registry errors.
+//
+//   node scripts/release/npm-registry.mjs verify <package> <version> <dist-tag>
+//       [--timeout-seconds 600] [--interval-seconds 15]
+//     Polls until <version> is published and <dist-tag> points at it, or at a newer version on
+//     the same channel (so re-running an old release stays green). Fails after the timeout.
+//
+// All accept --registry <url> (default https://registry.npmjs.org).
 
-const REGISTRY = "https://registry.npmjs.org";
+import { setTimeout } from "node:timers/promises";
+import { parseArgs } from "node:util";
+import {
+  compareVersions,
+  parseVersion,
+  releaseLineTag,
+} from "./resolve-release.mjs";
 
-// An npm package name is `name` or `@scope/name`, each part lowercase and URL-safe.
-const PACKAGE_NAME = /^(?:@([a-z0-9][a-z0-9._~-]*)\/)?([a-z0-9][a-z0-9._~-]*)$/;
+const USAGE =
+  "Usage: npm-registry.mjs exists <package> <version> | latest <package> | verify <package> <version> <dist-tag> [--timeout-seconds N] [--interval-seconds N] [--registry URL]";
 
-// The registry path for a package: a scoped name keeps its `@` and encodes the
-// separating slash as %2f. The name is validated first, so nothing else needs escaping.
-function packumentUrl(name) {
-  const match = PACKAGE_NAME.exec(name);
-  if (!match) throw new Error(`"${name}" is not a valid npm package name.`);
-  const [, scope, pkg] = match;
-  return `${REGISTRY}/${scope ? `@${scope}%2f${pkg}` : pkg}`;
-}
-
-async function fetchPackument(name, fetch) {
-  const url = packumentUrl(name);
-  const response = await fetch(url);
-  if (response.status === 404) return { "dist-tags": {}, versions: {} };
+// Returns the package document, or null when the registry has never seen the package.
+async function fetchPackument(registry, name) {
+  // Escape the whole name (a scoped name's slash becomes %2F), keeping the leading @ the
+  // registry expects.
+  const escapedName = encodeURIComponent(name).replace(/^%40/, "@");
+  const url = `${registry.replace(/\/$/, "")}/${escapedName}`;
+  const response = await fetch(url, {
+    headers: {
+      // The abbreviated document holds `versions` and `dist-tags`, which is all we read.
+      accept: "application/vnd.npm.install-v1+json",
+      "cache-control": "no-cache",
+    },
+  });
+  if (response.status === 404) return null;
   if (!response.ok) {
-    throw new Error(`${url}: registry returned HTTP ${response.status}`);
+    throw new Error(`GET ${url} returned HTTP ${response.status}.`);
   }
   return response.json();
 }
 
-export async function isVersionPublished({ name, version, fetch }) {
-  const packument = await fetchPackument(name, fetch);
-  return Object.hasOwn(packument.versions, version);
+async function exists({ registry, name, version }) {
+  const packument = await fetchPackument(registry, name);
+  const found = Object.hasOwn(packument?.versions ?? {}, version);
+  process.stdout.write(`exists=${found}\n`);
 }
 
-export async function waitForDistTag({
+async function latest({ registry, name }) {
+  const packument = await fetchPackument(registry, name);
+  process.stdout.write(`latest=${packument?.["dist-tags"]?.latest ?? ""}\n`);
+}
+
+// Whether `candidate` belongs on the channel `distTag` names: `next` holds prereleases,
+// `latest` stable versions, and `release-X.Y` stable X.Y.* backports.
+function isOnChannel(candidate, distTag) {
+  const parsed = parseVersion(candidate ?? "");
+  if (!parsed) return false;
+  if (distTag === "next") return parsed.prerelease.length > 0;
+  if (parsed.prerelease.length > 0) return false;
+  return distTag === "latest" || distTag === releaseLineTag(parsed);
+}
+
+// The version `distTag` points at, when that version is `version` or a newer one on the same
+// channel. A `release-X.Y` tag that does not exist yet falls back to `latest`: `version` then
+// shipped on `latest` and a newer line has superseded it since, which resolve-release now
+// reports as a backport.
+function servingVersion(distTags, version, distTag) {
+  const fallback =
+    distTag.startsWith("release-") && !Object.hasOwn(distTags, distTag)
+      ? "latest"
+      : distTag;
+  const current = distTags[fallback];
+  if (current === version) return current;
+  if (isOnChannel(current, fallback) && compareVersions(current, version) > 0) {
+    return current;
+  }
+  return null;
+}
+
+async function verify({
+  registry,
   name,
   version,
   distTag,
-  timeoutMs,
-  intervalMs,
-  fetch,
-  sleep,
-  now,
+  timeoutSeconds,
+  intervalSeconds,
 }) {
-  const deadline = now() + timeoutMs;
+  const deadline = Date.now() + timeoutSeconds * 1000;
+  let current;
   for (;;) {
-    const packument = await fetchPackument(name, fetch);
-    const current = packument["dist-tags"][distTag];
-    if (current === version) return;
-    if (now() >= deadline) {
-      throw new Error(
-        `${name}@${version} is not on dist-tag "${distTag}" after ${timeoutMs / 1000}s (it points at ${current ?? "nothing"}).`,
-      );
+    let status;
+    try {
+      const packument = await fetchPackument(registry, name);
+      const distTags = packument?.["dist-tags"] ?? {};
+      current = distTags[distTag];
+      const published = Object.hasOwn(packument?.versions ?? {}, version);
+      const serving = published && servingVersion(distTags, version, distTag);
+      if (serving) {
+        const note =
+          serving === version ? "" : ` (now at the newer ${serving})`;
+        process.stdout.write(
+          `${name}@${version} is live on the "${distTag}" dist-tag${note}.\n`,
+        );
+        return;
+      }
+      status = published
+        ? `"${distTag}" points at ${current ?? "nothing"}`
+        : `${version} is not published yet`;
+    } catch (error) {
+      // The registry CDN has hiccups; keep polling until the deadline.
+      status = error.message;
     }
-    await sleep(intervalMs);
+    if (Date.now() + intervalSeconds * 1000 > deadline) break;
+    process.stdout.write(`${status}; waiting for ${version}...\n`);
+    await setTimeout(intervalSeconds * 1000);
   }
+  throw new Error(
+    `${name}@${version} did not appear on the "${distTag}" dist-tag within ${timeoutSeconds}s (it points at ${current ?? "nothing"}).`,
+  );
 }
 
-// CLI, configured through PACKAGE_NAME, VERSION and (for verify) DIST_TAG and
-// TIMEOUT_SECONDS:
-//   published  writes published=true|false to $GITHUB_OUTPUT
-//   verify     polls until VERSION is live on DIST_TAG, fails after the timeout
-if (import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const { PACKAGE_NAME, VERSION, DIST_TAG, TIMEOUT_SECONDS, GITHUB_OUTPUT } =
-    process.env;
-  const command = process.argv[2];
-  try {
-    if (command === "published") {
-      const published = await isVersionPublished({
-        name: PACKAGE_NAME,
-        version: VERSION,
-        fetch,
-      });
-      appendFileSync(GITHUB_OUTPUT, `published=${published}\n`);
-      console.log(
-        published
-          ? `${PACKAGE_NAME}@${VERSION} is already on npm; skipping publish.`
-          : `${PACKAGE_NAME}@${VERSION} is not on npm yet.`,
-      );
-    } else if (command === "verify") {
-      await waitForDistTag({
-        name: PACKAGE_NAME,
-        version: VERSION,
-        distTag: DIST_TAG,
-        timeoutMs: Number(TIMEOUT_SECONDS ?? 600) * 1000,
-        intervalMs: 15_000,
-        fetch: (url) =>
-          fetch(url, { headers: { "Cache-Control": "no-cache" } }),
-        sleep,
-        now: Date.now,
-      });
-      console.log(
-        `${PACKAGE_NAME}@${VERSION} is live on dist-tag "${DIST_TAG}".`,
-      );
-    } else {
-      throw new Error(
-        `Unknown command "${command}". Use "published" or "verify".`,
-      );
-    }
-  } catch (error) {
-    console.error(error.message);
-    process.exitCode = 1;
+function parseSeconds(name, value) {
+  const seconds = Number(value);
+  if (!Number.isFinite(seconds) || seconds <= 0) {
+    throw new Error(`--${name} must be a positive number. ${USAGE}`);
   }
+  return seconds;
+}
+
+async function main() {
+  const { positionals, values } = parseArgs({
+    allowPositionals: true,
+    options: {
+      registry: { type: "string", default: "https://registry.npmjs.org" },
+      "timeout-seconds": { type: "string", default: "600" },
+      "interval-seconds": { type: "string", default: "15" },
+    },
+  });
+  const [command, name, version, distTag] = positionals;
+  const { registry } = values;
+
+  if (command === "exists" && positionals.length === 3) {
+    return exists({ registry, name, version });
+  }
+  if (command === "latest" && positionals.length === 2) {
+    return latest({ registry, name });
+  }
+  if (command === "verify" && positionals.length === 4) {
+    return verify({
+      registry,
+      name,
+      version,
+      distTag,
+      timeoutSeconds: parseSeconds(
+        "timeout-seconds",
+        values["timeout-seconds"],
+      ),
+      intervalSeconds: parseSeconds(
+        "interval-seconds",
+        values["interval-seconds"],
+      ),
+    });
+  }
+  throw new Error(USAGE);
+}
+
+try {
+  await main();
+} catch (error) {
+  process.stderr.write(`::error::${error.message}\n`);
+  process.exitCode = 1;
 }
