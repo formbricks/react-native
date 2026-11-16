@@ -72,14 +72,27 @@ const tap = async (testID) => {
 };
 
 /**
- * Clicks a survey element. Android: Espresso-Web's click. iOS: Detox's web tap only dispatches
- * synthetic mouse events, which do not activate a <label> in WKWebView (NPS 9 stayed unselected),
- * so the element's own click() runs instead.
+ * Clicks a survey element. Android: Espresso-Web's click. iOS: the element's own click(), which
+ * runs the browser's activation behavior (a <label> selects its radio); Detox's iOS web tap only
+ * dispatches synthetic mouse events.
  */
 const press = (matcher) =>
   device.getPlatform() === "ios"
     ? webElement(matcher).runScript("(el) => el.click()")
     : webElement(matcher).tap();
+
+/**
+ * Runs `fn` (a function source taking the element) in the WebView and returns its result as a
+ * string. Detox for iOS hands back a result only as `{ result: "<string>" }`; anything else comes
+ * back as undefined (so a plain boolean never arrives). Android returns the value itself.
+ */
+const read = async (matcher, fn) => {
+  const script =
+    device.getPlatform() === "ios"
+      ? `(el) => ({ result: String((${fn})(el)) })`
+      : `(el) => String((${fn})(el))`;
+  return webElement(matcher).runScript(script);
+};
 
 /** Whether any WebView is on screen: the survey's is the only one. */
 const webViewExists = async () => {
@@ -169,12 +182,11 @@ describe("golden journey", () => {
     await until(
       async () => {
         await press(by.web.xpath(NPS_9));
-        const selected = await webElement(
+        const checked = await read(
           by.web.cssSelector("input[name='qa_nps'][value='9']"),
-        ).runScript(
-          "(input) => input.parentElement.dataset.checked === 'true'",
+          "(input) => input.parentElement.dataset.checked",
         );
-        if (!selected) throw new Error("NPS 9 is not selected");
+        if (checked !== "true") throw new Error("NPS 9 is not selected");
       },
       { what: "NPS 9 to be selected", timeoutMs: STEP_TIMEOUT_MS },
     );
@@ -187,7 +199,10 @@ describe("golden journey", () => {
       async () => {
         const input = webElement(by.web.cssSelector(FEEDBACK_INPUT));
         await input.replaceText(feedback);
-        const typed = await input.runScript("(input) => input.value");
+        const typed = await read(
+          by.web.cssSelector(FEEDBACK_INPUT),
+          "(input) => input.value",
+        );
         if (typed !== feedback) throw new Error(`the input holds "${typed}"`);
       },
       { what: "the open-text answer", timeoutMs: STEP_TIMEOUT_MS },
