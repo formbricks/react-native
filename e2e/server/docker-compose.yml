@@ -1,0 +1,89 @@
+# Formbricks server under test for the SDK E2E golden journey.
+# Usage: e2e/server/up.sh (reads FORMBRICKS_VERSION and ENTERPRISE_LICENSE_KEY from the env).
+# Every secret below is a fixed test-only value. The only real secret is the Enterprise license.
+name: formbricks-sdk-e2e
+
+services:
+  postgres:
+    # pgvector: a migration runs CREATE EXTENSION vector.
+    image: pgvector/pgvector:pg18
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: formbricks
+    shm_size: 256mb
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d formbricks || exit 1"]
+      interval: 3s
+      timeout: 3s
+      retries: 40
+      start_period: 10s
+
+  redis:
+    image: valkey/valkey@sha256:418652cfb58ef879d4978c33553735d7147016032d5aefaa14c828e611eb9dfd
+    command: valkey-server --appendonly no --maxmemory-policy noeviction
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 40
+
+  spicedb:
+    image: authzed/spicedb:v1.57.0
+    command: serve
+    environment:
+      SPICEDB_GRPC_PRESHARED_KEY: e2e-spicedb-preshared-key-not-a-secret
+      # The stack is thrown away after every run, so an in-memory datastore is enough.
+      SPICEDB_DATASTORE_ENGINE: memory
+      SPICEDB_LOG_LEVEL: warn
+      SPICEDB_TELEMETRY_ENDPOINT: ""
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/grpc_health_probe", "-addr=localhost:50051"]
+      interval: 3s
+      timeout: 5s
+      retries: 40
+      start_period: 5s
+
+  formbricks:
+    image: ghcr.io/formbricks/formbricks:${FORMBRICKS_VERSION:-latest}
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      spicedb: { condition: service_healthy }
+    ports:
+      # Playwright and cloudflared use http://localhost:3000; the Android emulator http://10.0.2.2:3000.
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/formbricks?schema=public
+      REDIS_URL: redis://redis:6379
+      WEBAPP_URL: http://localhost:3000
+      BETTER_AUTH_URL: http://localhost:3000
+      BETTER_AUTH_SECRET: 77f2c04b50e65dc7c97d24444b9aeb398ce5ae3c7d568e325fb2532b9d9a14c4
+      ENCRYPTION_KEY: 28f4329c58830021a080e9ebd8e9c9ca5a9a047689634123623aa76021cecf48
+      CRON_SECRET: 4b7f3cdccff85c4f2cb0664605e8a3eb25d97850aa72106b744a13784c1de0d6
+      # Hub and Cube are validated at boot but never dialled by the journey.
+      HUB_API_URL: http://localhost:8080
+      HUB_API_KEY: e2e-hub-unused
+      CUBEJS_API_URL: http://localhost:4000
+      CUBEJS_API_SECRET: e2e-cube-unused
+      AUTHZED_ENABLED: "true"
+      AUTHZED_ENDPOINT: spicedb:50051
+      AUTHZED_TOKEN: e2e-spicedb-preshared-key-not-a-secret
+      AUTHZED_SYSTEM_KEY: formbricks
+      AUTHZED_INSECURE: "true"
+      AUTHZED_CONSISTENCY: fully_consistent
+      # Empty boots the server without Enterprise features; seed.sh then stops at the license gate.
+      ENTERPRISE_LICENSE_KEY: ${ENTERPRISE_LICENSE_KEY:-}
+      # License check without instanceId and without an existing organization; no telemetry.
+      E2E_TESTING: "1"
+      RATE_LIMITING_DISABLED: "1"
+      TELEMETRY_DISABLED: "1"
+      EMAIL_VERIFICATION_DISABLED: "1"
+      PASSWORD_RESET_DISABLED: "1"
+      # Migrations run on boot: SKIP_STARTUP_MIGRATION stays unset.
+    healthcheck:
+      # The image has no curl. /health/ready is 200 once migrations ran and the jobs worker started.
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+      start_period: 120s

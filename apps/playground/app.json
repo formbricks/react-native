@@ -4,15 +4,17 @@
       "adaptiveIcon": {
         "backgroundColor": "#ffffff",
         "foregroundImage": "./assets/adaptive-icon.png"
-      }
+      },
+      "package": "com.formbricks.playground"
     },
     "assetBundlePatterns": ["**/*"],
     "icon": "./assets/icon.png",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.formbricks.playground"
     },
     "jsEngine": "hermes",
-    "name": "react-native-demo",
+    "name": "FormbricksPlayground",
     "newArchEnabled": true,
     "orientation": "portrait",
     "slug": "react-native-demo",
@@ -25,6 +27,7 @@
     "version": "1.0.0",
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": ["./plugins/with-detox"]
   }
 }

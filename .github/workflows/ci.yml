@@ -334,6 +334,18 @@ jobs:
           version: 1.32.0
           advanced-security: false
 
+  e2e-tests:
+    # Fork PRs have no secrets; PR Check Summary allows this skip only there.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    # A called workflow cannot exceed these; e2e.yml polls the run's artifacts for the iOS hand-off.
+    permissions:
+      contents: read
+      actions: read
+    # actionlint 1.7.12 rejects the `$/` form zizmor suggests.
+    uses: ./.github/workflows/e2e.yml # zizmor: ignore[self-repository]
+    secrets:
+      ENTERPRISE_LICENSE_KEY: ${{ secrets.ENTERPRISE_LICENSE_KEY }}
+
   pr-check-summary:
     name: PR Check Summary
     needs:
@@ -347,6 +359,7 @@ jobs:
       - sonarqube
       - dependency-review
       - workflow-lint
+      - e2e-tests
     # `always()`, not `!cancelled()`: this is the only required check, and a skipped required job
     # counts as passing. scripts/pr-check-summary.mjs decides which skips are allowed.
     if: always()
