@@ -308,6 +308,11 @@ jobs:
         with:
           base-ref: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
           head-ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha }}
+          # stream-json 1.9.1 comes in only through Detox (E2E test tooling, a playground
+          # devDependency); the SDK never ships it and it parses only Detox's own files.
+          # The fix (3.6.0) is ESM-only and Detox doesn't support it. GitHub can't tell
+          # dev scope from pnpm-lock, so allow these three until Detox upgrades.
+          allow-ghsas: GHSA-hqr4-qq8f-hg3x, GHSA-mjw6-4jj6-33hc, GHSA-528h-pc64-c93x
 
   workflow-lint:
     runs-on: ubuntu-latest
