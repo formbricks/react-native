@@ -58,9 +58,7 @@ const fill = async (testID, text) => {
     .whileElement(by.id("playground-scroll"))
     .scroll(150, "down");
   await element(by.id(testID)).replaceText(text);
-  // iOS leaves the keyboard up, and the survey would open underneath it.
-  if (device.getPlatform() === "ios")
-    await element(by.id(testID)).tapReturnKey();
+  await platform().afterFill(testID);
 };
 
 const tap = async (testID) => {
@@ -70,16 +68,6 @@ const tap = async (testID) => {
     .scroll(150, "down");
   await element(by.id(testID)).tap();
 };
-
-/**
- * Clicks a survey element. Android: Espresso-Web's click. iOS: the element's own click(), which
- * runs the browser's activation behavior (a <label> selects its radio); Detox's iOS web tap only
- * dispatches synthetic mouse events.
- */
-const press = (matcher) =>
-  device.getPlatform() === "ios"
-    ? webElement(matcher).runScript("(el) => el.click()")
-    : webElement(matcher).tap();
 
 /**
  * Runs `fn` (a function source taking the element and `args`) in the WebView and returns its
@@ -95,13 +83,30 @@ const read = async (matcher, fn, args = []) => {
 };
 
 /**
- * Types into a survey text field. Android: Espresso-Web's key events. iOS: Detox's web typing left
- * the field empty, so the value is set the way the browser does it and an input event follows,
- * which is what the renderer listens to.
+ * Everything that differs between the platforms, picked once per run by `platform()`.
+ *
+ * - `afterFill`: iOS leaves the keyboard up after replaceText, and the survey would open
+ *   underneath it.
+ * - `press` clicks a survey element. Android: Espresso-Web's click. iOS: the element's own
+ *   click(), which runs the browser's activation behavior (a <label> selects its radio); Detox's
+ *   iOS web tap only dispatches synthetic mouse events.
+ * - `typeInto` types into a survey text field. Android: Espresso-Web's key events. iOS: Detox's
+ *   web typing left the field empty, so the value is set the way the browser does it and an input
+ *   event follows, which is what the renderer listens to.
+ * - `webViewClass`: the native class of the survey's WebView.
  */
-const typeInto = (matcher, text) =>
-  device.getPlatform() === "ios"
-    ? read(
+const PLATFORMS = {
+  android: {
+    afterFill: async () => {},
+    press: (matcher) => webElement(matcher).tap(),
+    typeInto: (matcher, text) => webElement(matcher).replaceText(text),
+    webViewClass: "android.webkit.WebView",
+  },
+  ios: {
+    afterFill: (testID) => element(by.id(testID)).tapReturnKey(),
+    press: (matcher) => webElement(matcher).runScript("(el) => el.click()"),
+    typeInto: (matcher, text) =>
+      read(
         matcher,
         `(el, text) => {
           const proto = Object.getPrototypeOf(el);
@@ -110,8 +115,22 @@ const typeInto = (matcher, text) =>
           return el.value;
         }`,
         [text],
-      )
-    : webElement(matcher).replaceText(text);
+      ),
+    webViewClass: "WKWebView",
+  },
+};
+
+let currentPlatform;
+const platform = () => {
+  if (!currentPlatform) {
+    const name = device.getPlatform();
+    currentPlatform = PLATFORMS[name];
+    if (!currentPlatform) throw new Error(`No golden journey for "${name}"`);
+  }
+  return currentPlatform;
+};
+const press = (matcher) => platform().press(matcher);
+const typeInto = (matcher, text) => platform().typeInto(matcher, text);
 
 /** Whether any WebView is on screen: the survey's is the only one. */
 const webViewExists = async () => {
@@ -131,9 +150,7 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
  * WebView is still being created can take the app down on a cold Android emulator.
  */
 const surveyIsOpen = async () => {
-  const webViewClass =
-    device.getPlatform() === "ios" ? "WKWebView" : "android.webkit.WebView";
-  await expect(element(by.type(webViewClass))).toExist();
+  await expect(element(by.type(platform().webViewClass))).toExist();
   await sleep(SETTLE_MS);
   await expect(webElement(by.web.xpath(NPS_9))).toExist();
 };
