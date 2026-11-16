@@ -83,16 +83,11 @@ const press = (matcher) =>
 
 /**
  * Runs `fn` (a function source taking the element) in the WebView and returns its result as a
- * string. Detox for iOS hands back a result only as `{ result: "<string>" }`; anything else comes
- * back as undefined (so a plain boolean never arrives). Android returns the value itself.
+ * string. Detox for iOS passes a runScript result back only when it is a string; a boolean comes
+ * back undefined. Android returns any value; a string works on both.
  */
-const read = async (matcher, fn) => {
-  const script =
-    device.getPlatform() === "ios"
-      ? `(el) => ({ result: String((${fn})(el)) })`
-      : `(el) => String((${fn})(el))`;
-  return webElement(matcher).runScript(script);
-};
+const read = (matcher, fn) =>
+  webElement(matcher).runScript(`(el) => String((${fn})(el))`);
 
 /** Whether any WebView is on screen: the survey's is the only one. */
 const webViewExists = async () => {
