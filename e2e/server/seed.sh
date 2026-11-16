@@ -25,8 +25,6 @@ survey_id="$(api_ok POST /api/v1/management/surveys "$(build_survey_payload "${E
 save SURVEY_ID "${survey_id}"
 authzed_expect drained outbox drain
 
-if [[ "${E2E_EXPERIMENT_ANON:-}" == 1 ]]; then log "EXPERIMENT: no targeting"; exit 0; fi
-
 log "Targeting the survey to ${E2E_ATTRIBUTE_KEY} = ${E2E_ATTRIBUTE_VALUE}"
 updated="$(build_segment_filter_sql "${E2E_WORKSPACE_ID}" "${survey_id}" | psql_exec -f - 2>&1)"
 [[ "${updated}" == *"UPDATE 1"* ]] || die "expected to update the survey's private segment once, got: ${updated}"

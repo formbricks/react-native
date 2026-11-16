@@ -44,7 +44,6 @@ env:
   E2E_FEEDBACK: Golden journey feedback ${{ github.run_id }}
   SERVER_ARTIFACT: e2e-server-attempt-${{ github.run_attempt }}
   DONE_ARTIFACT: e2e-journey-done-attempt-${{ github.run_attempt }}
-  E2E_EXPERIMENT_ANON: "1"
 
 jobs:
   android:
@@ -128,10 +127,7 @@ jobs:
           script: e2e/react-native/run-journey.sh android test
 
       - name: Assert the response through the V1 API
-        run: |
-          source e2e/server/lib.sh && require_state
-          api_ok GET "/api/v1/management/responses?surveyId=${SURVEY_ID}&limit=50" |
-            jq -e --arg f "${E2E_FEEDBACK}" '[.data[] | select(.finished and .data.qa_nps == 9 and .data.qa_feedback == $f) | {id, finished, data}] | if length == 1 then . else error("no matching response") end'
+        run: e2e/server/assert-response.sh
 
       - name: Delete the seeded data through the V1 API
         run: e2e/server/cleanup.sh
@@ -239,10 +235,7 @@ jobs:
           fi
 
       - name: Assert the response through the V1 API
-        run: |
-          source e2e/server/lib.sh && require_state
-          api_ok GET "/api/v1/management/responses?surveyId=${SURVEY_ID}&limit=50" |
-            jq -e --arg f "${E2E_FEEDBACK}" '[.data[] | select(.finished and .data.qa_nps == 9 and .data.qa_feedback == $f) | {id, finished, data}] | if length == 1 then . else error("no matching response") end'
+        run: e2e/server/assert-response.sh
 
       - name: Delete the seeded data through the V1 API
         run: e2e/server/cleanup.sh

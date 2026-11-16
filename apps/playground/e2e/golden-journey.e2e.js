@@ -150,12 +150,10 @@ const identifyAndTrackUntilTheSurveyOpens = () => {
       pass += 1;
       // A failed setup (a dropped request through the tunnel) is retried by setting up again.
       if (pass > 1) await setUp();
-      if (!process.env.E2E_EXPERIMENT_ANON) {
-        await tap("set-user-id-button");
-        await expectStatus(`setUserId(${userId}) done`);
-        await tap("set-attribute-button");
-        await expectStatus("setAttribute(plan=pro) done");
-      }
+      await tap("set-user-id-button");
+      await expectStatus(`setUserId(${userId}) done`);
+      await tap("set-attribute-button");
+      await expectStatus("setAttribute(plan=pro) done");
       await tap("track-action-button");
       await expectStatus("track(qa-action) done");
       await until(surveyIsOpen, {
