@@ -18,7 +18,7 @@ Run commands from the repository root unless package-scoped work is needed.
 - `pnpm format` / `pnpm format:check`: format with Biome, or only check formatting.
 - `pnpm check-types`: run TypeScript checks across the workspace.
 - `pnpm test`: run unit tests with Vitest.
-- `pnpm test:coverage`: generate coverage reports for SonarQube.
+- `pnpm test:coverage`: run the unit tests with coverage; CI's `unit-tests` job runs this and hands the report to SonarQube.
 - `pnpm test:scripts`: test the CI and release helper scripts under `scripts/`.
 - `pnpm api:check`: compare the public API with `packages/react-native/etc/react-native.api.md` (api-extractor in check mode); CI's `api-check` runs it.
 - `pnpm api:update`: regenerate `packages/react-native/etc/react-native.api.md`. Commit it whenever the public API changes.
@@ -31,7 +31,7 @@ Use TypeScript with strict compiler settings. Biome is the formatter and linter;
 Follow existing naming patterns: React components in lowercase kebab-style filenames such as `survey-web-view.tsx`, domain modules in concise lowercase names such as `state.ts`, and tests as `*.test.ts`. Keep imports using the `@/` alias inside `packages/react-native` when referencing `src/`.
 
 ## Testing Guidelines
-Unit tests live beside each domain under `src/lib/**/tests/`. Prefer small, focused Vitest suites and place reusable doubles in local `__mocks__/` folders. Add or update tests with every behavior change; there is no published coverage threshold, but `test:coverage` is part of the release workflow, so changed code should stay covered.
+Unit tests live beside each domain under `src/lib/**/tests/`. Prefer small, focused Vitest suites and place reusable doubles in local `__mocks__/` folders. Add or update tests with every behavior change; there is no published coverage threshold, but CI's `unit-tests` job runs `test:coverage` and SonarQube reads the report, so changed code should stay covered.
 
 ## Commit & Pull Request Guidelines
 Recent history mostly follows Conventional Commit-style subjects such as `feat:`, `fix:`, and `chore:` with short imperative summaries. Keep commits narrowly scoped and descriptive.
