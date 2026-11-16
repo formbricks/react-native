@@ -19,7 +19,7 @@ on:
         type: string
         default: latest
     secrets:
-      FORMBRICKS_QA_LICENSE_KEY:
+      ENTERPRISE_LICENSE_KEY:
         description: QA Enterprise license with the Contacts feature
         required: false
   # TEMPORARY: proves the workflow before it is on main; removed before merge.
@@ -98,13 +98,13 @@ jobs:
 
       - name: Start the Formbricks server and bootstrap the tenant
         env:
-          FORMBRICKS_QA_LICENSE_KEY: ${{ secrets.FORMBRICKS_QA_LICENSE_KEY }}
+          ENTERPRISE_LICENSE_KEY: ${{ secrets.ENTERPRISE_LICENSE_KEY }}
         run: e2e/server/up.sh
 
-      # Stops with a clear error at the license gate when FORMBRICKS_QA_LICENSE_KEY is missing.
+      # Stops with a clear error at the license gate when ENTERPRISE_LICENSE_KEY is missing.
       - name: Seed the survey through the V1 API
         env:
-          FORMBRICKS_QA_LICENSE_KEY: ${{ secrets.FORMBRICKS_QA_LICENSE_KEY }}
+          ENTERPRISE_LICENSE_KEY: ${{ secrets.ENTERPRISE_LICENSE_KEY }}
         run: e2e/server/seed.sh
 
       # Hosted runners already expose /dev/kvm; the emulator only needs permission to use it.
@@ -192,13 +192,13 @@ jobs:
 
       - name: Start the Formbricks server and bootstrap the tenant
         env:
-          FORMBRICKS_QA_LICENSE_KEY: ${{ secrets.FORMBRICKS_QA_LICENSE_KEY }}
+          ENTERPRISE_LICENSE_KEY: ${{ secrets.ENTERPRISE_LICENSE_KEY }}
         run: e2e/server/up.sh
 
-      # Stops with a clear error at the license gate when FORMBRICKS_QA_LICENSE_KEY is missing.
+      # Stops with a clear error at the license gate when ENTERPRISE_LICENSE_KEY is missing.
       - name: Seed the survey through the V1 API
         env:
-          FORMBRICKS_QA_LICENSE_KEY: ${{ secrets.FORMBRICKS_QA_LICENSE_KEY }}
+          ENTERPRISE_LICENSE_KEY: ${{ secrets.ENTERPRISE_LICENSE_KEY }}
         run: e2e/server/seed.sh
 
       - name: Open a tunnel to the server

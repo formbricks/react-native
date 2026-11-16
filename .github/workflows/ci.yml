@@ -344,7 +344,7 @@ jobs:
     # actionlint 1.7.12 rejects the `$/` form zizmor suggests.
     uses: ./.github/workflows/e2e.yml # zizmor: ignore[self-repository]
     secrets:
-      FORMBRICKS_QA_LICENSE_KEY: ${{ secrets.FORMBRICKS_QA_LICENSE_KEY }}
+      ENTERPRISE_LICENSE_KEY: ${{ secrets.ENTERPRISE_LICENSE_KEY }}
 
   pr-check-summary:
     name: PR Check Summary

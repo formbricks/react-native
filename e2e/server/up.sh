@@ -5,14 +5,14 @@
 #   3. bootstrap.sql: Organization, Workspace, Language, attribute keys, ApiKey, ApiKeyWorkspace
 #   4. formbricks-authzed outbox drain + status: projects those rows into SpiceDB
 #   5. GET /api/v1/management/me: the API key works
-# Env: FORMBRICKS_VERSION (image tag, default latest), FORMBRICKS_QA_LICENSE_KEY (optional here).
+# Env: FORMBRICKS_VERSION (image tag, default latest), ENTERPRISE_LICENSE_KEY (optional here).
 set -euo pipefail
 # shellcheck source-path=SCRIPTDIR source=lib.sh
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib.sh"
 
 export FORMBRICKS_VERSION="${FORMBRICKS_VERSION:-latest}"
-if [[ -z "${FORMBRICKS_QA_LICENSE_KEY:-}" ]]; then
-  printf '::warning::%s\n' "FORMBRICKS_QA_LICENSE_KEY is empty: the server boots without Enterprise features and seeding stops at the license gate."
+if [[ -z "${ENTERPRISE_LICENSE_KEY:-}" ]]; then
+  printf '::warning::%s\n' "ENTERPRISE_LICENSE_KEY is empty: the server boots without Enterprise features and seeding stops at the license gate."
 fi
 
 log "Starting ghcr.io/formbricks/formbricks:${FORMBRICKS_VERSION} with Postgres, Valkey and SpiceDB"

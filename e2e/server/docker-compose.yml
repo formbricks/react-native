@@ -1,5 +1,5 @@
 # Formbricks server under test for the SDK E2E golden journey.
-# Usage: e2e/server/up.sh (reads FORMBRICKS_VERSION and FORMBRICKS_QA_LICENSE_KEY from the env).
+# Usage: e2e/server/up.sh (reads FORMBRICKS_VERSION and ENTERPRISE_LICENSE_KEY from the env).
 # Every secret below is a fixed test-only value. The only real secret is the QA license.
 name: formbricks-sdk-e2e
 
@@ -72,7 +72,7 @@ services:
       AUTHZED_INSECURE: "true"
       AUTHZED_CONSISTENCY: fully_consistent
       # Empty boots the server without Enterprise features; seed.sh then stops at the license gate.
-      ENTERPRISE_LICENSE_KEY: ${FORMBRICKS_QA_LICENSE_KEY:-}
+      ENTERPRISE_LICENSE_KEY: ${ENTERPRISE_LICENSE_KEY:-}
       # License check without instanceId and without an existing organization; no telemetry.
       E2E_TESTING: "1"
       RATE_LIMITING_DISABLED: "1"
