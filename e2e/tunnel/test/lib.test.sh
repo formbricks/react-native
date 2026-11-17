@@ -87,5 +87,24 @@ assert_eq "picks the newest unexpired artifact with exactly that name" \
 assert_fails "finds nothing while the artifact is not uploaded yet" \
   artifact_id e2e-journey-done-attempt-1 <<<'{"total_count":0,"artifacts":[]}'
 
+# --- job_last_attempt -----------------------------------------------------------------------------
+
+# GET /repos/{owner}/{repo}/actions/runs/{run_id}/jobs?filter=all, trimmed: attempt 2 re-ran only
+# the server job.
+jobs='{"total_count":4,"jobs":[
+  {"name":"e2e-tests / Server and tunnel for iOS (Linux)","run_attempt":1},
+  {"name":"e2e-tests / Golden journey (Detox, iOS)","run_attempt":1},
+  {"name":"e2e-tests / Server and tunnel for iOS (Linux)","run_attempt":2},
+  {"name":"Golden journey (Detox, Android)","run_attempt":2}]}'
+
+assert_eq "finds the last attempt of a called job" \
+  "$(job_last_attempt "Server and tunnel for iOS (Linux)" <<<"${jobs}")" "2"
+assert_eq "a job kept from an earlier attempt keeps that attempt" \
+  "$(job_last_attempt "Golden journey (Detox, iOS)" <<<"${jobs}")" "1"
+assert_eq "matches a job of an uncalled workflow by its exact name" \
+  "$(job_last_attempt "Golden journey (Detox, Android)" <<<"${jobs}")" "2"
+assert_fails "finds nothing for an unknown job" job_last_attempt "Golden journey (Detox, Web)" <<<"${jobs}"
+assert_fails "does not match a name that only ends the same" job_last_attempt "iOS)" <<<"${jobs}"
+
 printf '%d passed, %d failed\n' "${passes}" "${failures}"
 [[ ${failures} -eq 0 ]]

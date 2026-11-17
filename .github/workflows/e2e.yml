@@ -179,6 +179,12 @@ jobs:
         with:
           persist-credentials: false
 
+      # The pair swaps per-attempt artifacts, so both must run in every attempt.
+      - name: Stop a partial re-run
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: e2e/tunnel/require-full-rerun.sh "Golden journey (Detox, iOS)"
+
       - name: Install cloudflared
         run: |
           curl -fsSL -o "$RUNNER_TEMP/cloudflared" \
@@ -278,6 +284,12 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+
+      # The pair swaps per-attempt artifacts, so both must run in every attempt.
+      - name: Stop a partial re-run
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: e2e/tunnel/require-full-rerun.sh "Server and tunnel for iOS (Linux)"
 
       - name: Select Xcode
         # xcode-select, not DEVELOPER_DIR, so the simulator service follows it too.

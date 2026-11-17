@@ -43,6 +43,15 @@ artifact_id() {
     | sort_by(.created_at) | last | .id // empty'
 }
 
+# job_last_attempt <job-name> < run-jobs-listing: prints the highest run_attempt among the jobs
+# named <job-name> (or "<caller> / <job-name>" when the workflow is called) in
+# GET /repos/{owner}/{repo}/actions/runs/{run_id}/jobs?filter=all. Fails when there is none.
+job_last_attempt() {
+  jq -er --arg name "$1" '
+    [.jobs[] | select(.name == $name or (.name | endswith(" / " + $name))) | .run_attempt]
+    | max // empty'
+}
+
 # --- I/O ------------------------------------------------------------------------------------------
 
 log() { printf '==> %s\n' "$*" >&2; }
