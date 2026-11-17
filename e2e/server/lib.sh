@@ -188,11 +188,12 @@ authzed_drain_outbox() {
 }
 
 # api <method> <path> [jsonBody]: calls the management API with the test key.
-# Sets API_STATUS (000 on a network error) and API_BODY.
+# Sets API_STATUS (000 on a network error or timeout) and API_BODY. Each request is bounded by
+# E2E_HTTP_TIMEOUT_SECONDS (default 30), so a stalled server cannot hold a caller's deadline.
 api() {
   local method="$1" path="$2" body="${3:-}" tmp
   tmp="$(mktemp)"
-  local args=(-sS -o "${tmp}" -w '%{http_code}' -X "${method}" -H "x-api-key: ${E2E_API_KEY}" -H "Accept: application/json")
+  local args=(-sS --connect-timeout 10 --max-time "${E2E_HTTP_TIMEOUT_SECONDS:-30}" -o "${tmp}" -w '%{http_code}' -X "${method}" -H "x-api-key: ${E2E_API_KEY}" -H "Accept: application/json")
   if [[ -n "${body}" ]]; then
     args+=(-H "Content-Type: application/json" --data-binary "${body}")
   fi

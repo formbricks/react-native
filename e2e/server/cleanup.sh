@@ -28,4 +28,6 @@ fi
 [[ -n "${ACTION_CLASS_ID:-}" ]] && delete "/api/v1/management/action-classes/${ACTION_CLASS_ID}"
 [[ -n "${ATTRIBUTE_KEY_ID:-}" ]] && delete "/api/v1/management/contact-attribute-keys/${ATTRIBUTE_KEY_ID}"
 
+# Everything is gone, so seed.sh may run again.
+((failed)) || : >"${E2E_STATE_FILE}"
 exit "${failed}"

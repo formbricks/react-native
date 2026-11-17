@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Stops the stack and deletes its volumes. With a directory argument, first saves each service's
+# Stops the stack and deletes its volumes, and with them the seed state. With a directory argument, first saves each service's
 # logs there (for a CI artifact).
 set -euo pipefail
 # shellcheck source-path=SCRIPTDIR source=lib.sh
@@ -13,3 +13,5 @@ if [[ $# -gt 0 ]]; then
   done
 fi
 compose down --volumes --remove-orphans
+# The seeded resources went with the database.
+rm -f "${E2E_STATE_FILE}"

@@ -10,6 +10,10 @@ set -euo pipefail
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib.sh"
 
 mkdir -p "$(dirname "${E2E_STATE_FILE}")"
+# A previous seed's ids are the only way cleanup.sh finds its resources, so never drop them.
+if [[ -s "${E2E_STATE_FILE}" ]]; then
+  die "${E2E_STATE_FILE} still holds ids from a previous seed; run cleanup.sh first"
+fi
 : >"${E2E_STATE_FILE}"
 save() {
   printf '%s=%q\n' "$1" "$2" >>"${E2E_STATE_FILE}"
