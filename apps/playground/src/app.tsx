@@ -107,6 +107,18 @@ export default function App(): JSX.Element {
               appUrl: appUrl.trim(),
               workspaceId: workspaceId.trim(),
             };
+            // The SDK keeps the first setup for the life of the app, so a different config
+            // would be reported here but ignored by the SDK.
+            if (
+              sdkConfig &&
+              (sdkConfig.appUrl !== config.appUrl ||
+                sdkConfig.workspaceId !== config.workspaceId)
+            ) {
+              setStatus(
+                `Already set up with ${sdkConfig.appUrl} ${sdkConfig.workspaceId}; restart the app to change it`,
+              );
+              return;
+            }
             setSdkConfig(config);
             setSetupCount((count) => count + 1);
             setStatus(`Set up with ${config.appUrl} ${config.workspaceId}`);

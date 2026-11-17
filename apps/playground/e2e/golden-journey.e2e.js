@@ -132,15 +132,13 @@ const platform = () => {
 const press = (matcher) => platform().press(matcher);
 const typeInto = (matcher, text) => platform().typeInto(matcher, text);
 
-/** Whether any WebView is on screen: the survey's is the only one. */
-const webViewExists = async () => {
-  try {
-    await webElement(by.web.tag("body")).runScript("() => true");
-    return true;
-  } catch {
-    return false;
-  }
-};
+/**
+ * Passes only once no WebView is on screen (the survey's is the only one). A native query, so a
+ * failed web query is never mistaken for a closed survey, and errors such as the app being gone
+ * propagate.
+ */
+const surveyIsClosed = () =>
+  expect(element(by.type(platform().webViewClass))).not.toExist();
 
 const SETTLE_MS = 2_000;
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -256,12 +254,10 @@ describe("golden journey", () => {
     await until(
       async () => {
         await press(by.web.cssSelector(CLOSE_BUTTON)).catch(() => {});
-        await until(
-          async () => {
-            if (await webViewExists()) throw new Error("the survey is open");
-          },
-          { what: "the survey to close", timeoutMs: 3_000 },
-        );
+        await until(surveyIsClosed, {
+          what: "the survey to close",
+          timeoutMs: 3_000,
+        });
       },
       { what: "the survey to close", timeoutMs: STEP_TIMEOUT_MS },
     );
