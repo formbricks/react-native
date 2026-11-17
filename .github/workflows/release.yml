@@ -10,8 +10,11 @@ on:
 
 permissions: {}
 
+# One group for every release: each run reads npm's dist-tags and then publishes, so two runs
+# at once could both see the same `latest` and move it backwards. GitHub keeps only one pending
+# run per group; a third release cancels the waiting one, which is then re-run (RELEASING.md).
 concurrency:
-  group: release-${{ github.event.release.tag_name }}
+  group: release
   cancel-in-progress: false
 
 env:
@@ -27,7 +30,6 @@ jobs:
       contents: read
     outputs:
       version: ${{ steps.release.outputs.version }}
-      dist-tag: ${{ steps.release.outputs.dist-tag }}
 
     steps:
       - name: Harden the runner
@@ -55,8 +57,8 @@ jobs:
         id: npm
         run: node scripts/release/npm-registry.mjs latest "$PACKAGE_NAME" >> "$GITHUB_OUTPUT"
 
-      # A prerelease goes to `next`, a stable version to `latest` unless it is older than the
-      # current latest (a backport), which goes to `release-<major>.<minor>`.
+      # Checks the tag before building. The publish job picks the dist-tag again from fresh
+      # registry state, so a re-run of a failed publish never acts on a stale `latest`.
       - name: Resolve the version and dist-tag from the tag
         id: release
         env:
@@ -103,6 +105,9 @@ jobs:
     permissions:
       contents: read
       id-token: write # npm trusted publishing (OIDC)
+    outputs:
+      dist-tag: ${{ steps.release.outputs.dist-tag }}
+      already-published: ${{ steps.registry.outputs.exists }}
 
     steps:
       - name: Harden the runner
@@ -130,6 +135,23 @@ jobs:
           name: package
           path: ${{ runner.temp }}/package
 
+      - name: Read the version on the latest dist-tag
+        id: npm
+        run: node scripts/release/npm-registry.mjs latest "$PACKAGE_NAME" >> "$GITHUB_OUTPUT"
+
+      # A prerelease goes to `next`, a stable version to `latest` unless it is older than the
+      # current latest (a backport), which goes to `release-<major>.<minor>`.
+      - name: Resolve the dist-tag from the tag
+        id: release
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          RELEASE_PRERELEASE: ${{ github.event.release.prerelease }}
+          CURRENT_LATEST: ${{ steps.npm.outputs.latest }}
+        run: >-
+          node scripts/release/resolve-release.mjs
+          "$RELEASE_TAG" "$RELEASE_PRERELEASE" --latest "$CURRENT_LATEST"
+          >> "$GITHUB_OUTPUT"
+
       - name: Check whether the version is already on npm
         id: registry
         env:
@@ -139,7 +161,7 @@ jobs:
       - name: Publish
         if: steps.registry.outputs.exists == 'false'
         env:
-          DIST_TAG: ${{ needs.build.outputs.dist-tag }}
+          DIST_TAG: ${{ steps.release.outputs.dist-tag }}
         run: npm publish "$RUNNER_TEMP/package/package.tgz" --tag "$DIST_TAG" --access public
 
       - name: Skip a version that is already published
@@ -180,8 +202,9 @@ jobs:
       - name: Wait for the version on its dist-tag
         env:
           VERSION: ${{ needs.build.outputs.version }}
-          DIST_TAG: ${{ needs.build.outputs.dist-tag }}
-        run: >-
-          node scripts/release/npm-registry.mjs verify
-          "$PACKAGE_NAME" "$VERSION" "$DIST_TAG"
-          --timeout-seconds 600 --interval-seconds 15
+          DIST_TAG: ${{ needs.publish.outputs.dist-tag }}
+          ALREADY_PUBLISHED: ${{ needs.publish.outputs.already-published }}
+        run: |
+          args=(--timeout-seconds 600 --interval-seconds 15)
+          if [[ "$ALREADY_PUBLISHED" == true ]]; then args+=(--already-published); fi
+          node scripts/release/npm-registry.mjs verify "$PACKAGE_NAME" "$VERSION" "$DIST_TAG" "${args[@]}"

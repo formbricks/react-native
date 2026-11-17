@@ -15,11 +15,17 @@ commit, so the release scripts come from the tag, not from `main`. It does three
 1. **Build** reads the tag, checks that it is plain semver and that it agrees with the GitHub
    "pre-release" box, and picks the npm dist-tag (see the table). It writes the version into
    `packages/react-native/package.json` on the runner only, then builds and packs the SDK.
-2. **Publish** publishes that tarball with npm trusted publishing (OIDC, no token). If the version
-   is already on npm, it skips the publish, so re-running is always safe.
+2. **Publish** reads npm again and picks the dist-tag from what is there now, so a re-run never
+   moves `latest` back to an older version. It publishes the tarball with npm trusted publishing
+   (OIDC, no token). If the version is already on npm, it skips the publish, so re-running is
+   always safe.
 3. **Verify** polls npm until the version is published and its dist-tag points at it, or at a
    newer version on the same channel (so re-running an old release stays green). It fails after
    10 minutes.
+
+Release runs never overlap: a second release waits for the first to finish. GitHub keeps only
+one waiting run, so publishing a third release while one runs and one waits cancels the waiting
+one. Re-run the cancelled run once the others are done.
 
 | Tag             | GitHub "Set as a pre-release" | npm dist-tag                                     |
 | --------------- | ----------------------------- | ------------------------------------------------ |

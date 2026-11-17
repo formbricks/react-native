@@ -9,9 +9,12 @@
 //     resolve-release.mjs --latest. Fails if the registry errors.
 //
 //   node scripts/release/npm-registry.mjs verify <package> <version> <dist-tag>
-//       [--timeout-seconds 600] [--interval-seconds 15]
+//       [--timeout-seconds 600] [--interval-seconds 15] [--already-published]
 //     Polls until <version> is published and <dist-tag> points at it, or at a newer version on
 //     the same channel (so re-running an old release stays green). Fails after the timeout.
+//     --already-published says the version was on npm before this run (its publish was skipped):
+//     a release-line <dist-tag> then also accepts a newer `latest`, because the version may have
+//     shipped on `latest` before a newer line superseded it.
 //
 // All accept --registry <url> (default https://registry.npmjs.org).
 
@@ -24,7 +27,7 @@ import {
 } from "./resolve-release.mjs";
 
 const USAGE =
-  "Usage: npm-registry.mjs exists <package> <version> | latest <package> | verify <package> <version> <dist-tag> [--timeout-seconds N] [--interval-seconds N] [--registry URL]";
+  "Usage: npm-registry.mjs exists <package> <version> | latest <package> | verify <package> <version> <dist-tag> [--timeout-seconds N] [--interval-seconds N] [--already-published] [--registry URL]";
 
 // Returns the package document, or null when the registry has never seen the package.
 async function fetchPackument(registry, name) {
@@ -68,18 +71,26 @@ function isOnChannel(candidate, distTag) {
 }
 
 // The version `distTag` points at, when that version is `version` or a newer one on the same
-// channel. A `release-X.Y` tag that does not exist yet falls back to `latest`: `version` then
-// shipped on `latest` and a newer line has superseded it since, which resolve-release now
-// reports as a backport.
-function servingVersion(distTags, version, distTag) {
-  const fallback =
-    distTag.startsWith("release-") && !Object.hasOwn(distTags, distTag)
-      ? "latest"
-      : distTag;
-  const current = distTags[fallback];
-  if (current === version) return current;
-  if (isOnChannel(current, fallback) && compareVersions(current, version) > 0) {
-    return current;
+// channel. A `release-X.Y` tag also accepts `latest` when the tag does not exist yet, or when
+// `version` was already published: `version` then shipped on `latest` and a newer line has
+// superseded it since, which resolve-release now reports as a backport.
+function servingVersion(distTags, version, distTag, alreadyPublished) {
+  const channels = [distTag];
+  if (
+    distTag.startsWith("release-") &&
+    (alreadyPublished || !Object.hasOwn(distTags, distTag))
+  ) {
+    channels.push("latest");
+  }
+  for (const channel of channels) {
+    const current = distTags[channel];
+    if (current === version) return current;
+    if (
+      isOnChannel(current, channel) &&
+      compareVersions(current, version) > 0
+    ) {
+      return current;
+    }
   }
   return null;
 }
@@ -91,6 +102,7 @@ async function verify({
   distTag,
   timeoutSeconds,
   intervalSeconds,
+  alreadyPublished,
 }) {
   const deadline = Date.now() + timeoutSeconds * 1000;
   let current;
@@ -101,7 +113,9 @@ async function verify({
       const distTags = packument?.["dist-tags"] ?? {};
       current = distTags[distTag];
       const published = Object.hasOwn(packument?.versions ?? {}, version);
-      const serving = published && servingVersion(distTags, version, distTag);
+      const serving =
+        published &&
+        servingVersion(distTags, version, distTag, alreadyPublished);
       if (serving) {
         const note =
           serving === version ? "" : ` (now at the newer ${serving})`;
@@ -141,6 +155,7 @@ async function main() {
       registry: { type: "string", default: "https://registry.npmjs.org" },
       "timeout-seconds": { type: "string", default: "600" },
       "interval-seconds": { type: "string", default: "15" },
+      "already-published": { type: "boolean", default: false },
     },
   });
   const [command, name, version, distTag] = positionals;
@@ -166,6 +181,7 @@ async function main() {
         "interval-seconds",
         values["interval-seconds"],
       ),
+      alreadyPublished: values["already-published"],
     });
   }
   throw new Error(USAGE);

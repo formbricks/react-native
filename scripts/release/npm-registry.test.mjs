@@ -205,6 +205,31 @@ describe("npm-registry verify", () => {
     });
   }
 
+  // 5.3.1 shipped on latest, 5.4.0 replaced it, then backport 5.3.0 created release-5.3. A re-run
+  // of 5.3.1 now resolves to release-5.3, which points at an older version.
+  const superseded = () =>
+    packument(["5.3.0", "5.3.1", "5.4.0"], {
+      latest: "5.4.0",
+      "release-5.3": "5.3.0",
+    });
+
+  it("passes a re-run of a release that a newer line superseded on latest", async () => {
+    respond = superseded;
+    const result = await verify("5.3.1", "release-5.3", [
+      ...fast,
+      "--already-published",
+    ]);
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stdout, /now at the newer 5\.4\.0/);
+  });
+
+  it("waits for the release line on a fresh backport, even when latest is newer", async () => {
+    respond = superseded;
+    const result = await verify("5.3.1", "release-5.3", failFast);
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /::error::.*did not appear/);
+  });
+
   it("passes once the dist-tag points at the version", async () => {
     respond = () =>
       packument(["5.4.0-rc.1"], { latest: "5.3.0", next: "5.4.0-rc.1" });
