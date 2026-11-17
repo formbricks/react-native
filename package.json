@@ -4,11 +4,16 @@
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
-    "lint": "node scripts/check-exact-deps.mjs && biome check .",
+    "lint": "node scripts/check-exact-deps.mjs && biome check --formatter-enabled=false --error-on-warnings .",
     "format": "biome format --write .",
+    "format:check": "biome format .",
     "check-types": "turbo run check-types",
     "test": "turbo run test --no-cache",
-    "test:coverage": "turbo run test:coverage --no-cache"
+    "test:coverage": "turbo run test:coverage --no-cache",
+    "test:scripts": "node --test scripts/pr-check-summary.test.mjs scripts/release/npm-registry.test.mjs scripts/release/resolve-release.test.mjs",
+    "api:check": "pnpm --filter @formbricks/react-native api:check",
+    "api:update": "pnpm --filter @formbricks/react-native api:update",
+    "package-check": "pnpm --filter @formbricks/react-native package-check && ./scripts/consumer-check.sh"
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.9",
@@ -18,12 +23,14 @@
   },
   "pnpm": {
     "overrides": {
-      "@xmldom/xmldom": "0.9.12",
+      "@xmldom/xmldom": "0.8.15",
       "baseline-browser-mapping": "2.11.23",
       "brace-expansion@1": "1.1.21",
       "brace-expansion@5": "5.0.12",
       "browserslist": "4.28.9",
       "compression": "1.8.2",
+      "glob@10": "14.0.2",
+      "glob@13": "14.0.2",
       "image-size": "2.0.4",
       "js-yaml@3": "3.15.2",
       "js-yaml@4": "4.3.2",

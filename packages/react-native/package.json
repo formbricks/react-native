@@ -1,12 +1,12 @@
 {
   "name": "@formbricks/react-native",
-  "version": "3.3.1",
+  "version": "0.0.0-dev",
   "license": "MIT",
   "description": "Formbricks React Native SDK allows you to connect your app to Formbricks, display surveys and trigger events.",
   "homepage": "https://formbricks.com",
   "repository": {
     "type": "git",
-    "url": "https://github.com/formbricks/react-native"
+    "url": "git+https://github.com/formbricks/react-native.git"
   },
   "keywords": [
     "Formbricks",
@@ -26,33 +26,45 @@
   ],
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
     }
   },
   "scripts": {
-    "build": "rimraf dist tsconfig.build.tsbuildinfo && tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json && vite build",
-    "build:dev": "rimraf dist tsconfig.build.tsbuildinfo && tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json && vite build --mode dev",
+    "build": "rimraf dist build && tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json && vite build && pnpm run build:dts",
+    "build:dev": "rimraf dist build && tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json && vite build --mode dev && pnpm run build:dts",
+    "build:dts": "api-extractor run --local && node -e \"require('node:fs').copyFileSync('dist/index.d.ts','dist/index.d.cts')\"",
     "lint": "biome check .",
     "dev": "vite build --watch --mode dev",
-    "clean": "rimraf .turbo node_modules dist tsconfig.build.tsbuildinfo",
+    "clean": "rimraf .turbo node_modules dist build",
     "check-types": "tsc -p tsconfig.json --noEmit",
+    "api:check": "tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json && api-extractor run",
+    "api:update": "tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json && api-extractor run --local",
     "test": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "package-check": "publint --strict && attw --pack ."
   },
   "dependencies": {
     "@react-native-community/netinfo": "12.0.1",
     "zod": "4.6.6"
   },
   "devDependencies": {
+    "@arethetypeswrong/cli": "0.18.5",
+    "@microsoft/api-extractor": "7.60.1",
     "@types/node": "24.7.2",
     "@types/react": "19.2.14",
     "@vitest/coverage-v8": "4.1.12",
+    "publint": "0.3.25",
     "react": "19.2.4",
     "react-native": "0.84.1",
-    "typescript": "6.0.2",
     "tsc-alias": "1.8.16",
+    "typescript": "6.0.2",
     "vite": "8.3.5",
     "vitest": "4.1.12"
   },
