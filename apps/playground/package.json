@@ -9,7 +9,7 @@
     "clean": "rimraf .turbo node_modules .expo",
     "build": "expo export --no-bytecode",
     "check-types": "tsc --noEmit",
-    "test": "node --test \"plugins/*.test.js\" \"e2e/support/*.test.js\""
+    "test": "node --test plugins/with-detox.test.js e2e/support/poll.test.js"
   },
   "dependencies": {
     "@expo/dom-webview": "55.0.6",
