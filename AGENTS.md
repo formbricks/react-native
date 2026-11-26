@@ -37,3 +37,17 @@ Unit tests live beside each domain under `src/lib/**/tests/`. Prefer small, focu
 Recent history mostly follows Conventional Commit-style subjects such as `feat:`, `fix:`, and `chore:` with short imperative summaries. Keep commits narrowly scoped and descriptive.
 
 PRs should include a clear summary, linked issue if applicable, and the commands you ran locally (`pnpm lint`, `pnpm check-types`, relevant tests). Include screenshots or screen recordings when a playground or UI behavior changes. Avoid loose dependency ranges: this repo enforces exact versions in every `package.json`.
+
+## Agent skills
+
+### Issue tracker
+
+Linear, Engineering team (`ENG`); skills use the Linear MCP tools. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+No triage labels: the five roles map onto Linear workflow states. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: `GLOSSARY.md` at the repo root and ADRs in `docs/adr/`. See `docs/agents/domain.md`.
