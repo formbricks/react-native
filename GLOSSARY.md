@@ -26,7 +26,7 @@ Terms the React Native SDK (`packages/react-native`) uses, grouped by area. Use 
 - **Filtered surveys**: the surveys this user is eligible for after display options, recontact days and segments are applied (`filterSurveys`).
 - **Display**: one time a survey was shown to a user.
 - **Response**: a user's answers to a survey.
-- **Embedded Data**: app context attached to future responses with `setEmbeddedData()` / `clearEmbeddedData()`. Held in memory, synchronous and never queued; values land only on fields the survey declares as ingested.
+- **Embedded Data**: app context attached to responses with `setEmbeddedData()` / `clearEmbeddedData()`. Held in memory, synchronous and never queued. A survey takes a snapshot of it when it opens, so later changes reach only surveys opened afterwards; values land only on fields the survey declares as ingested.
 - **Survey web view**: the WebView that renders a survey with the Formbricks renderer (`src/components/survey-web-view.tsx`), mounted by the `<Formbricks />` component.
 - **Appearance**: how surveys render, `light`, `dark` or `system` (`setAppearance()`); kept in memory only, never sent to the server.
 

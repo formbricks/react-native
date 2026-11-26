@@ -22,3 +22,5 @@ If the concept you need isn't in the glossary yet, that's a signal: either you'r
 If your output contradicts an existing ADR, surface it explicitly rather than silently overriding:
 
 > _Contradicts ADR-0002 (Embedded Data stays in memory and never goes through the command queue), but worth reopening because…_
+
+(Illustrative only: there is no ADR-0002 yet.)

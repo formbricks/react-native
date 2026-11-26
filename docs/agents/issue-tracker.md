@@ -12,7 +12,7 @@ SDK work items live as Linear issues in the Engineering team (`ENG`), the same t
 - **Labels**: `addLabels` / `removeLabels`, using existing labels only. Don't create labels without asking.
 - **Close**: state `Done`; won't do → `Canceled`; duplicate → `duplicateOf`.
 - **Blocking**: `blocks` / `blockedBy` relations.
-- Never put unpublished exploit details or secrets in Linear.
+- Never put secrets (keys, passwords, tokens) in Linear. A vulnerability ticket holds everything needed to fix it, exploit detail included.
 
 ## Pull requests
 
