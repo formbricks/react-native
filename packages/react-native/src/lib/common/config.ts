@@ -105,8 +105,9 @@ export class RNConfig {
 
         // check if the config has expired
         if (
-          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- need to check if expiresAt is set
-          parsedConfig.workspace.expiresAt &&
+          // A failed first setup stores only the error status, with no workspace, so both can be missing.
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- see above
+          parsedConfig.workspace?.expiresAt &&
           new Date(parsedConfig.workspace.expiresAt) <= new Date()
         ) {
           return err(new Error("Config in local storage has expired"));

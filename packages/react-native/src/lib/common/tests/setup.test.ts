@@ -271,6 +271,10 @@ describe("setup.ts", () => {
         );
       });
 
+      afterEach(() => {
+        (isNowExpired as unknown as Mock).mockReset();
+      });
+
       test.each([
         ["a Date", new Date(Date.now() + 5 * 60000)],
         // Configs read back from AsyncStorage carry dates as ISO strings.
@@ -303,11 +307,12 @@ describe("setup.ts", () => {
           errorConfig(expiresAt) as unknown as Promise<RNConfig>,
         );
 
-        await setup({
+        const result = await setup({
           workspaceId: "env_123",
           appUrl: "https://my.url",
         });
 
+        expect(result.ok).toBe(true);
         expect(mockLogger.debug).toHaveBeenCalledWith(
           "Error state is expired. Continue with setup.",
         );
