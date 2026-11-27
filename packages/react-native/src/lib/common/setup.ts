@@ -226,7 +226,7 @@ const shouldReturnEarlyForErrorState = (
   if (existingConfig?.status.value === "error") {
     logger.debug("Formbricks was set to an error state.");
     const expiresAt = existingConfig.status.expiresAt;
-    if (expiresAt && isNowExpired(expiresAt)) {
+    if (expiresAt && !isNowExpired(expiresAt)) {
       logger.debug("Error state is not expired, skipping setup");
       return true;
     }

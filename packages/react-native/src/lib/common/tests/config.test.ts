@@ -75,6 +75,23 @@ describe("RNConfig", () => {
     }
   });
 
+  test("loadFromStorage() reads back the error state a failed first setup writes", async () => {
+    const expiresAt = new Date(Date.now() + 10 * 60000);
+    // handleErrorOnFirstSetup stores only the status, with no workspace.
+    vi.spyOn(AsyncStorage, "getItem").mockResolvedValueOnce(
+      JSON.stringify({ status: { value: "error", expiresAt } }),
+    );
+
+    const result = await configInstance.loadFromStorage();
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.data.status).toEqual({
+        value: "error",
+        expiresAt: expiresAt.toISOString(),
+      });
+    }
+  });
+
   test("loadFromStorage() migrates legacy { environmentId, environment } shape", async () => {
     const { workspaceId, workspace, ...rest } = mockConfig;
     const legacyStored = {

@@ -9,6 +9,7 @@ import {
   getDefaultLanguageCode,
   getLanguageCode,
   getStyling,
+  isNowExpired,
   shouldDisplayBasedOnPercentage,
   wrapThrowsAsync,
 } from "@/lib/common/utils";
@@ -45,6 +46,25 @@ describe("utils.ts", () => {
     test("0 if same day", () => {
       const date = new Date("2023-01-01");
       expect(diffInDays(date, date)).toBe(0);
+    });
+  });
+
+  // ---------------------------------------------------------------------------------
+  // isNowExpired
+  // ---------------------------------------------------------------------------------
+  describe("isNowExpired()", () => {
+    test("is false before the expiry and true from it on", () => {
+      expect(isNowExpired(new Date(Date.now() + 60000))).toBe(false);
+      expect(isNowExpired(new Date(Date.now() - 1))).toBe(true);
+    });
+
+    test("reads an ISO string, the shape a date has after AsyncStorage", () => {
+      expect(isNowExpired(new Date(Date.now() + 60000).toISOString())).toBe(
+        false,
+      );
+      expect(isNowExpired(new Date(Date.now() - 60000).toISOString())).toBe(
+        true,
+      );
     });
   });
 
