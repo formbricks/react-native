@@ -9,6 +9,7 @@ import {
   getDefaultLanguageCode,
   getLanguageCode,
   getStyling,
+  isNowExpired,
   shouldDisplayBasedOnPercentage,
   wrapThrowsAsync,
 } from "@/lib/common/utils";
@@ -489,6 +490,25 @@ describe("utils.ts", () => {
   // ---------------------------------------------------------------------------------
   // delayedResult
   // ---------------------------------------------------------------------------------
+  describe("isNowExpired()", () => {
+    test("is false before the expiry and true from it on", () => {
+      expect(isNowExpired(new Date(Date.now() + 60000))).toBe(false);
+      expect(isNowExpired(new Date(Date.now() - 1))).toBe(true);
+    });
+
+    test("reads an ISO string, the shape a date has after AsyncStorage", () => {
+      const future = JSON.parse(
+        JSON.stringify(new Date(Date.now() + 60000)),
+      ) as unknown as Date;
+      const past = JSON.parse(
+        JSON.stringify(new Date(Date.now() - 60000)),
+      ) as unknown as Date;
+
+      expect(isNowExpired(future)).toBe(false);
+      expect(isNowExpired(past)).toBe(true);
+    });
+  });
+
   describe("delayedResult()", () => {
     test("returns the value after the delay", async () => {
       const result = await delayedResult(10, 10);

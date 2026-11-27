@@ -251,62 +251,93 @@ describe("setup.ts", () => {
       );
     });
 
-    test("skips setup if existing config is in error state and not expired", async () => {
-      const mockConfig = {
+    describe("error state back-off", () => {
+      const errorConfig = (expiresAt: Date | string) => ({
         get: vi.fn().mockReturnValue({
           workspaceId: "env_123",
           appUrl: "https://my.url",
           workspace: {},
           user: { data: {}, expiresAt: null },
-          status: { value: "error", expiresAt: new Date(Date.now() + 10000) },
+          status: { value: "error", expiresAt },
         }),
-      };
-
-      getInstanceConfigMock.mockReturnValue(
-        mockConfig as unknown as Promise<RNConfig>,
-      );
-
-      (isNowExpired as unknown as Mock).mockReturnValue(true);
-
-      const result = await setup({
-        environmentId: "env_123",
-        appUrl: "https://my.url",
       });
-      expect(result.ok).toBe(true);
-      expect(mockLogger.debug).toHaveBeenCalledWith(
-        "Formbricks was set to an error state.",
-      );
-      expect(mockLogger.debug).toHaveBeenCalledWith(
-        "Error state is not expired, skipping setup",
-      );
-    });
 
-    test("proceeds if error state is expired", async () => {
-      const mockConfig = {
-        get: vi.fn().mockReturnValue({
+      beforeEach(async () => {
+        // Exercise the real expiry check instead of pinning a mocked answer.
+        const actual =
+          await vi.importActual<typeof CommonUtilsModule>("@/lib/common/utils");
+        (isNowExpired as unknown as Mock).mockImplementation(
+          actual.isNowExpired,
+        );
+      });
+
+      test.each([
+        ["a Date", new Date(Date.now() + 5 * 60000)],
+        // Configs read back from AsyncStorage carry dates as ISO strings.
+        ["an ISO string", new Date(Date.now() + 5 * 60000).toISOString()],
+      ])("skips setup while the error state has not expired (%s)", async (_, expiresAt) => {
+        getInstanceConfigMock.mockReturnValue(
+          errorConfig(expiresAt) as unknown as Promise<RNConfig>,
+        );
+
+        const result = await setup({
           workspaceId: "env_123",
           appUrl: "https://my.url",
-          workspace: {},
-          user: { data: {}, expiresAt: null },
-          status: { value: "error", expiresAt: new Date(Date.now() - 10000) }, // expired
-        }),
-      };
+        });
 
-      getInstanceConfigMock.mockReturnValue(
-        mockConfig as unknown as Promise<RNConfig>,
-      );
-
-      const result = await setup({
-        environmentId: "env_123",
-        appUrl: "https://my.url",
+        expect(result.ok).toBe(true);
+        expect(mockLogger.debug).toHaveBeenCalledWith(
+          "Formbricks was set to an error state.",
+        );
+        expect(mockLogger.debug).toHaveBeenCalledWith(
+          "Error state is not expired, skipping setup",
+        );
+        expect(mockLogger.debug).not.toHaveBeenCalledWith("Start setup");
       });
-      expect(result.ok).toBe(true);
-      expect(mockLogger.debug).toHaveBeenCalledWith(
-        "Formbricks was set to an error state.",
-      );
-      expect(mockLogger.debug).toHaveBeenCalledWith(
-        "Error state is expired. Continue with setup.",
-      );
+
+      test.each([
+        ["a Date", new Date(Date.now() - 1000)],
+        ["an ISO string", new Date(Date.now() - 1000).toISOString()],
+      ])("continues setup once the error state has expired (%s)", async (_, expiresAt) => {
+        getInstanceConfigMock.mockReturnValue(
+          errorConfig(expiresAt) as unknown as Promise<RNConfig>,
+        );
+
+        await setup({
+          workspaceId: "env_123",
+          appUrl: "https://my.url",
+        });
+
+        expect(mockLogger.debug).toHaveBeenCalledWith(
+          "Error state is expired. Continue with setup.",
+        );
+        expect(mockLogger.debug).not.toHaveBeenCalledWith(
+          "Error state is not expired, skipping setup",
+        );
+        expect(mockLogger.debug).toHaveBeenCalledWith("Start setup");
+      });
+
+      test("skips setup inside the window and continues after it", async () => {
+        vi.useFakeTimers();
+        try {
+          vi.setSystemTime(new Date("2026-01-01T00:00:00Z"));
+          getInstanceConfigMock.mockReturnValue(
+            errorConfig(
+              new Date("2026-01-01T00:10:00Z"),
+            ) as unknown as Promise<RNConfig>,
+          );
+
+          vi.setSystemTime(new Date("2026-01-01T00:09:59Z"));
+          await setup({ workspaceId: "env_123", appUrl: "https://my.url" });
+          expect(mockLogger.debug).not.toHaveBeenCalledWith("Start setup");
+
+          vi.setSystemTime(new Date("2026-01-01T00:10:00Z"));
+          await setup({ workspaceId: "env_123", appUrl: "https://my.url" });
+          expect(mockLogger.debug).toHaveBeenCalledWith("Start setup");
+        } finally {
+          vi.useRealTimers();
+        }
+      });
     });
 
     test("uses existing config if workspaceId/appUrl match, checks for expiration sync", async () => {

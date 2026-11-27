@@ -228,8 +228,10 @@ export const shouldDisplayBasedOnPercentage = (
   return Math.random() * 100 < displayPercentage; // NOSONAR: Math.random() is sufficient for non-security survey display logic
 };
 
-export const isNowExpired = (expirationDate: Date): boolean => {
-  return new Date() >= expirationDate;
+// A date read back from AsyncStorage is an ISO string, so normalise before comparing:
+// `new Date() >= "2026-…"` compares a number with NaN and is always false.
+export const isNowExpired = (expirationDate: Date | string): boolean => {
+  return Date.now() >= new Date(expirationDate).getTime();
 };
 
 export const delayedResult = async <T>(value: T, ms: number): Promise<T> => {
